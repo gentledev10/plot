@@ -1,6 +1,6 @@
-import { join, normalize, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { net, protocol, session, shell, type WebContents } from 'electron';
+import { isWithinOrigin, resolveRendererFile } from './navigation';
 
 const SCHEME = 'app';
 export const APP_ORIGIN = `${SCHEME}://viewer`;
@@ -28,10 +28,8 @@ export function registerAppScheme(): void {
 
 export function serveRenderer(rendererDir: string): void {
   protocol.handle(SCHEME, async (request) => {
-    const filePath = normalize(
-      join(rendererDir, decodeURIComponent(new URL(request.url).pathname)),
-    );
-    if (!filePath.startsWith(rendererDir + sep)) {
+    const filePath = resolveRendererFile(rendererDir, request.url);
+    if (!filePath) {
       return new Response(null, { status: 404 });
     }
     const response = await net.fetch(pathToFileURL(filePath).toString());
@@ -49,7 +47,7 @@ export function denyPermissionRequests(): void {
 
 export function confineNavigation(contents: WebContents, origin: string): void {
   contents.on('will-navigate', (event, url) => {
-    if (url !== origin && !url.startsWith(`${origin}/`)) {
+    if (!isWithinOrigin(url, origin)) {
       event.preventDefault();
     }
   });

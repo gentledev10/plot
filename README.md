@@ -26,6 +26,10 @@ npm run dev
 | `npm test`          | Run unit tests with Vitest                      |
 | `npm run dist:mac`  | Build a macOS app into `dist/`                  |
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the app is structured. Report security issues as described in [SECURITY.md](SECURITY.md).
+
 ## License
 
 Not decided yet.
