@@ -1,0 +1,36 @@
+{
+  "name": "viewer",
+  "productName": "Viewer",
+  "version": "0.1.0",
+  "description": "A lightweight pull request diff viewer with IntelliJ-style navigation and AI review maps.",
+  "private": true,
+  "main": "./out/main/index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit --composite false -p tsconfig.node.json && tsc --noEmit --composite false -p tsconfig.web.json",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run --passWithNoTests",
+    "dist:mac": "electron-vite build && electron-builder --mac"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

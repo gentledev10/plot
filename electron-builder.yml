@@ -1,0 +1,14 @@
+appId: io.github.gentledev10.viewer
+productName: Viewer
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+mac:
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  target:
+    - dmg
+    - zip
