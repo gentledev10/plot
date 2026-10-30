@@ -8,6 +8,8 @@ function bridge(overrides: Partial<ViewerBridge> = {}): ViewerBridge {
     getSession: vi.fn().mockResolvedValue({ ok: true, value: { status: 'signed-out' } }),
     listInbox: vi.fn(),
     getPullRequest: vi.fn(),
+    getPullRequestDiff: vi.fn(),
+    readBlob: vi.fn(),
     ...overrides,
   };
 }

@@ -1,0 +1,41 @@
+import { describe, expect, it } from 'vitest';
+import { argumentParsers } from './arguments';
+
+const ref = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const blob = 'a'.repeat(40);
+
+describe('argumentParsers', () => {
+  it('takes no arguments for parameterless methods, whatever the renderer sends', () => {
+    expect(argumentParsers.getSession(['ignored'])).toEqual([]);
+    expect(argumentParsers.listInbox([])).toEqual([]);
+  });
+
+  it('copies only the known fields of a pull request reference', () => {
+    expect(argumentParsers.getPullRequestDiff([{ ...ref, __proto__: { polluted: true } }])).toEqual(
+      [ref],
+    );
+  });
+
+  it('accepts SHA-1 and SHA-256 object ids', () => {
+    expect(argumentParsers.readBlob([ref, blob])).toEqual([ref, blob]);
+    expect(argumentParsers.readBlob([ref, 'b'.repeat(64)])).toEqual([ref, 'b'.repeat(64)]);
+  });
+
+  it.each([
+    ['an abbreviated id', 'abc123'],
+    ['a revision expression', 'HEAD:src/app.ts'],
+    ['an option', '--output=/tmp/x'],
+    ['an uppercase id', 'A'.repeat(40)],
+    ['a number', 42],
+  ])('rejects %s where an object id is expected', (_name, value) => {
+    expect(() => argumentParsers.readBlob([ref, value])).toThrow(
+      expect.objectContaining({ code: 'invalid-argument' }),
+    );
+  });
+
+  it('rejects a missing pull request reference', () => {
+    expect(() => argumentParsers.getPullRequest([])).toThrow(
+      expect.objectContaining({ code: 'invalid-argument' }),
+    );
+  });
+});

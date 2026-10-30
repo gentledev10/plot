@@ -155,3 +155,24 @@ describe('createGitHubClient', () => {
     });
   });
 });
+
+describe('getMergeBase', () => {
+  it('asks GitHub where the pull request branched off', async () => {
+    const { client, fetch } = setup(json({ merge_base_commit: { sha: 'c'.repeat(40) } }));
+
+    await expect(client.getMergeBase(ref, 'a'.repeat(40), 'b'.repeat(40))).resolves.toBe(
+      'c'.repeat(40),
+    );
+    const url = new URL(fetch.mock.calls[0]?.[0] ?? '');
+    expect(url.pathname).toBe(
+      `/repos/octocat/hello-world/compare/${'a'.repeat(40)}...${'b'.repeat(40)}`,
+    );
+  });
+
+  it('rejects comparisons without a merge base', async () => {
+    const { client } = setup(json({ status: 'diverged' }));
+    await expect(client.getMergeBase(ref, 'a'.repeat(40), 'b'.repeat(40))).rejects.toMatchObject({
+      code: 'github-request-failed',
+    });
+  });
+});

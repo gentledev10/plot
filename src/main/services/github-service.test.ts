@@ -22,6 +22,7 @@ function fakeClient(overrides: Partial<GitHubClient> = {}): GitHubClient {
     getViewer: vi.fn().mockResolvedValue(user),
     searchPullRequests: vi.fn().mockResolvedValue([]),
     getPullRequest: vi.fn(),
+    getMergeBase: vi.fn(),
     ...overrides,
   };
 }

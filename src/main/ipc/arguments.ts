@@ -1,3 +1,4 @@
+import { isObjectId } from '@shared/diff';
 import type { PullRequestRef } from '@shared/github';
 import type { IpcMethod, ViewerApi } from '@shared/ipc';
 import { isPullRequestRef } from '@shared/pull-request-ref';
@@ -11,6 +12,8 @@ export const argumentParsers: ArgumentParsers = {
   getSession: () => [],
   listInbox: () => [],
   getPullRequest: ([ref]) => [pullRequestRef(ref)],
+  getPullRequestDiff: ([ref]) => [pullRequestRef(ref)],
+  readBlob: ([ref, blob]) => [pullRequestRef(ref), objectId(blob)],
 };
 
 function pullRequestRef(value: unknown): PullRequestRef {
@@ -18,4 +21,11 @@ function pullRequestRef(value: unknown): PullRequestRef {
     throw new AppError('invalid-argument', 'Expected a pull request reference.');
   }
   return { owner: value.owner, repo: value.repo, number: value.number };
+}
+
+function objectId(value: unknown): string {
+  if (!isObjectId(value)) {
+    throw new AppError('invalid-argument', 'Expected a git object id.');
+  }
+  return value;
 }

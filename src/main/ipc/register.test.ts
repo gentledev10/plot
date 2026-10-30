@@ -14,6 +14,8 @@ function setup(api: Partial<ViewerApi> = {}) {
     getSession: vi.fn().mockResolvedValue({ status: 'signed-out' }),
     listInbox: vi.fn().mockResolvedValue({ reviewRequested: [], authored: [] }),
     getPullRequest: vi.fn(),
+    getPullRequestDiff: vi.fn(),
+    readBlob: vi.fn(),
     ...api,
   };
   registerIpcHandlers(ipc, fullApi, {

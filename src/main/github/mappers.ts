@@ -49,6 +49,12 @@ export function toPullRequestDetail(value: unknown, ref: PullRequestRef): PullRe
   };
 }
 
+export function toMergeBase(value: unknown): string {
+  const comparison = object(value, 'comparison');
+  const commit = object(comparison.merge_base_commit, 'merge_base_commit');
+  return string(commit.sha, 'merge_base_commit.sha');
+}
+
 export function repositoryFromApiUrl(url: string): { owner: string; repo: string } {
   const match = /\/repos\/([^/]+)\/([^/]+)$/.exec(url);
   if (!match?.[1] || !match[2]) {

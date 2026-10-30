@@ -14,6 +14,8 @@ export function fakeApi(overrides: Partial<ViewerApi> = {}): ViewerApi {
     getSession: notStubbed('getSession'),
     listInbox: notStubbed('listInbox'),
     getPullRequest: notStubbed('getPullRequest'),
+    getPullRequestDiff: notStubbed('getPullRequestDiff'),
+    readBlob: notStubbed('readBlob'),
     ...overrides,
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CommandError, runCommand } from './process';
+import { CommandError, runCommand, runCommandForBuffer } from './process';
 
 const node = process.execPath;
 
@@ -44,10 +44,28 @@ describe('runCommand', () => {
     expect(error).toMatchObject({ failure: 'not-found' });
   });
 
+  it('decodes multi-byte characters split across output chunks', async () => {
+    const result = await runCommand(node, [
+      '-e',
+      'const b = Buffer.from("한글 diff"); process.stdout.write(b.subarray(0, 2)); setTimeout(() => process.stdout.write(b.subarray(2)), 20)',
+    ]);
+    expect(result.stdout).toBe('한글 diff');
+  });
+
   it('kills commands that run past the timeout', async () => {
     const error = await runCommand(node, ['-e', 'setTimeout(() => {}, 10000)'], {
       timeoutMs: 100,
     }).catch((e: unknown) => e);
     expect(error).toMatchObject({ failure: 'timeout' });
+  });
+});
+
+describe('runCommandForBuffer', () => {
+  it('returns stdout as raw bytes, so binary output survives', async () => {
+    const result = await runCommandForBuffer(node, [
+      '-e',
+      'process.stdout.write(Buffer.from([0, 255, 137, 80]))',
+    ]);
+    expect([...result.stdout]).toEqual([0, 255, 137, 80]);
   });
 });

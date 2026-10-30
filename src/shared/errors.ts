@@ -9,6 +9,8 @@ export type ErrorCode =
   | 'github-rate-limited'
   | 'github-request-failed'
   | 'network'
+  | 'git-not-installed'
+  | 'git-failed'
   | 'unknown';
 
 export interface ErrorPayload {

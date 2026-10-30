@@ -48,11 +48,26 @@ function describeFailure(
   }
 }
 
+export interface BufferRunResult {
+  stdout: Buffer;
+  stderr: string;
+}
+
+export type BufferCommandRunner = (
+  command: string,
+  args: readonly string[],
+  options?: RunOptions,
+) => Promise<BufferRunResult>;
+
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_MAX_BUFFER_BYTES = 256 * 1024 * 1024;
 
-export const runCommand: CommandRunner = (command, args, options = {}) =>
-  new Promise((resolve, reject) => {
+function execute(
+  command: string,
+  args: readonly string[],
+  options: RunOptions,
+): Promise<{ stdout: Buffer; stderr: string }> {
+  return new Promise((resolve, reject) => {
     execFile(
       command,
       [...args],
@@ -61,10 +76,11 @@ export const runCommand: CommandRunner = (command, args, options = {}) =>
         env: options.env,
         timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
         maxBuffer: options.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES,
-        encoding: 'utf8',
+        encoding: 'buffer',
         windowsHide: true,
       },
-      (error, stdout, stderr) => {
+      (error, stdout, stderrBuffer) => {
+        const stderr = stderrBuffer.toString('utf8');
         if (!error) {
           resolve({ stdout, stderr });
           return;
@@ -80,3 +96,12 @@ export const runCommand: CommandRunner = (command, args, options = {}) =>
       },
     );
   });
+}
+
+export const runCommand: CommandRunner = async (command, args, options = {}) => {
+  const { stdout, stderr } = await execute(command, args, options);
+  return { stdout: stdout.toString('utf8'), stderr };
+};
+
+export const runCommandForBuffer: BufferCommandRunner = (command, args, options = {}) =>
+  execute(command, args, options);

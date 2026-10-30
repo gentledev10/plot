@@ -5,13 +5,19 @@ import type {
   PullRequestSummary,
 } from '@shared/github';
 import { AppError } from '../errors';
-import { toGitHubUser, toPullRequestDetail, toPullRequestSummaryFromSearch } from './mappers';
+import {
+  toGitHubUser,
+  toMergeBase,
+  toPullRequestDetail,
+  toPullRequestSummaryFromSearch,
+} from './mappers';
 import type { TokenProvider } from './token';
 
 export interface GitHubClient {
   getViewer(): Promise<GitHubUser>;
   searchPullRequests(query: string, limit: number): Promise<PullRequestSummary[]>;
   getPullRequest(ref: PullRequestRef): Promise<PullRequestDetail>;
+  getMergeBase(ref: PullRequestRef, base: string, head: string): Promise<string>;
 }
 
 export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
@@ -76,10 +82,19 @@ export function createGitHubClient({
     },
 
     async getPullRequest(ref) {
-      const path = `/repos/${encodeURIComponent(ref.owner)}/${encodeURIComponent(ref.repo)}/pulls/${ref.number}`;
-      return toPullRequestDetail(await request(path), ref);
+      return toPullRequestDetail(await request(`${repositoryPath(ref)}/pulls/${ref.number}`), ref);
+    },
+
+    async getMergeBase(ref, base, head) {
+      return toMergeBase(
+        await request(`${repositoryPath(ref)}/compare/${base}...${head}?per_page=1`),
+      );
     },
   };
+}
+
+function repositoryPath({ owner, repo }: PullRequestRef): string {
+  return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
 }
 
 async function toAppError(response: Response): Promise<AppError> {

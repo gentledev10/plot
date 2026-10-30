@@ -52,6 +52,7 @@ To add a method, add it to `ViewerApi` and `METHODS` in `src/shared/ipc.ts`, the
 | `src/main/ipc`      | The IPC adapter: sender checks, argument parsing, and error mapping                               |
 | `src/main/services` | Use cases such as "load the inbox", built from adapters                                           |
 | `src/main/github`   | GitHub adapter: the token from the GitHub CLI, the REST client, and response mappers              |
+| `src/main/git`      | Repository cache: fetches the commits a pull request needs and parses `git diff` output           |
 | `src/main/system`   | Running commands, and reading `PATH` from the login shell                                         |
 
 Adapters receive what they depend on as arguments, for example `createGitHubClient({ fetch, tokens })`, so tests can pass fakes instead of mocking modules. Pure logic is kept out of files that import `electron`, so it can be tested in plain Node.js.
@@ -63,6 +64,20 @@ Commands run through `runCommand`, which uses `execFile` without a shell. Argume
 Viewer does not have its own GitHub login. It asks the GitHub CLI for a token with `gh auth token`, keeps it in memory, and asks again if GitHub rejects it. This reuses the account and organization access people already set up for `gh`.
 
 Apps opened from Finder get a minimal `PATH` that does not include Homebrew. The packaged app reads `PATH` from the user's login shell at startup so it can find `gh` and `git`.
+
+### Reading a pull request's changes
+
+Viewer computes diffs with git instead of using the diff GitHub returns. That keeps whole files available for context, works for pull requests of any size, and gives later features such as symbol navigation a real repository to read.
+
+Cloning large repositories would make opening a pull request slow, so `getPullRequestDiff` fetches only what the diff needs:
+
+1. Ask GitHub for the merge base of the pull request (`/compare/{base}...{head}`). Diffing against the merge base matches the "Files changed" tab on GitHub.
+2. Fetch exactly two commits, the merge base and the head, with `--depth=1 --filter=blob:none` into an app-owned bare repository under `userData/repositories/<owner>/<repo>.git`. No history and no file contents are downloaded at this point.
+3. Run `git diff --numstat` and `git diff --raw` between the two commits. Git downloads the contents of the changed files on demand, and nothing else.
+
+`readBlob` reads one file version by its object id when the renderer opens a file. Files larger than 4 MB are reported as too large instead of being sent to the renderer.
+
+The cache runs git in an isolated environment (`isolatedGitEnvironment`): the user's global and system config, hooks, and URL rewrites do not apply. The token reaches git as an `http.extraheader` set through `GIT_CONFIG_*` environment variables, so it never appears in command arguments or in the repository config. Fetches into the same repository run one at a time, because concurrent shallow fetches conflict on git's lock files.
 
 ## Renderer layout
 
@@ -84,6 +99,8 @@ Components get the API from `useApi()` instead of reading `window.viewer`, and f
 | React components      | Vitest with jsdom and Testing Library | `src/renderer/**/*.test.tsx`                       |
 
 Tests sit next to the code they cover. Tests use made-up data, such as `octocat/hello-world`, never real repositories.
+
+The repository cache is tested against real git. `createFixtureRepository` builds a throwaway repository with a base branch and a pull request branch, and the tests fetch from it over `file://` exactly as the app fetches from GitHub.
 
 ## Dependencies
 
