@@ -1,0 +1,44 @@
+:root {
+  color-scheme: light dark;
+
+  --font-ui: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  --font-code: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-size: 13px;
+  --font-size-small: 12px;
+  --radius: 6px;
+  --header-height: 40px;
+
+  --color-bg-editor: #ffffff;
+  --color-bg-panel: #f7f8fa;
+  --color-bg-hover: #ebecf0;
+  --color-bg-selected: #d4e2ff;
+  --color-bg-input: #ffffff;
+  --color-border: #ebecf0;
+  --color-border-strong: #c9ccd6;
+  --color-text: #1e1f22;
+  --color-text-muted: #6c707e;
+  --color-accent: #3574f0;
+  --color-focus: #3574f0;
+  --color-success: #208a3c;
+  --color-danger: #db3b4b;
+  --color-merged: #834dff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-editor: #1e1f22;
+    --color-bg-panel: #2b2d30;
+    --color-bg-hover: #393b40;
+    --color-bg-selected: #2e436e;
+    --color-bg-input: #1e1f22;
+    --color-border: #1e1f22;
+    --color-border-strong: #43454a;
+    --color-text: #dfe1e5;
+    --color-text-muted: #868a91;
+    --color-accent: #548af7;
+    --color-focus: #548af7;
+    --color-success: #57965c;
+    --color-danger: #db5c5c;
+    --color-merged: #a571e6;
+  }
+}

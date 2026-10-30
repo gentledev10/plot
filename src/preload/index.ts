@@ -1,8 +1,13 @@
-import type { ViewerApi } from '@shared/api';
-import { contextBridge } from 'electron';
+import { IPC_METHODS, ipcChannel, type ViewerBridge } from '@shared/ipc';
+import { contextBridge, ipcRenderer } from 'electron';
 
-const api: ViewerApi = {
-  platform: process.platform,
-};
+const methods = Object.fromEntries(
+  IPC_METHODS.map((method) => [
+    method,
+    (...args: unknown[]) => ipcRenderer.invoke(ipcChannel(method), ...args),
+  ]),
+);
 
-contextBridge.exposeInMainWorld('viewer', api);
+const bridge = { platform: process.platform, ...methods } as ViewerBridge;
+
+contextBridge.exposeInMainWorld('viewer', bridge);

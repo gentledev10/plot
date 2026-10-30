@@ -1,7 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './App';
-import './styles.css';
+import { App } from './app/App';
+import { AppProviders, createQueryClient } from './app/providers';
+import { createApi } from './lib/api';
+import './styles/tokens.css';
+import './styles/base.css';
 
 const root = document.getElementById('root');
 if (!root) {
@@ -10,6 +13,8 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <AppProviders api={createApi(window.viewer)} queryClient={createQueryClient()}>
+      <App platform={window.viewer.platform} />
+    </AppProviders>
   </StrictMode>,
 );

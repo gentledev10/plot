@@ -1,0 +1,21 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--color-bg-panel);
+  border-left: 1px solid var(--color-border);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  height: var(--header-height);
+  padding: 0 12px;
+  -webkit-app-region: drag;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size);
+  font-weight: 600;
+}

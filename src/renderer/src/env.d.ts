@@ -1,7 +1,7 @@
-import type { ViewerApi } from '@shared/api';
+import type { ViewerBridge } from '@shared/ipc';
 
 declare global {
   interface Window {
-    viewer: ViewerApi;
+    viewer: ViewerBridge;
   }
 }

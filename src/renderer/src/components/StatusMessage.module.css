@@ -1,0 +1,31 @@
+.message {
+  padding: 16px 12px;
+  color: var(--color-text-muted);
+  user-select: text;
+}
+
+.title {
+  margin: 0 0 4px;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.message[data-tone="error"] .title {
+  color: var(--color-danger);
+}
+
+.body p {
+  margin: 0 0 8px;
+}
+
+.retry {
+  margin-top: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-input);
+}
+
+.retry:hover {
+  border-color: var(--color-accent);
+}
