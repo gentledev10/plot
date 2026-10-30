@@ -91,6 +91,16 @@ The cache runs git in an isolated environment (`isolatedGitEnvironment`): the us
 
 Components get the API from `useApi()` instead of reading `window.viewer`, and fetch data through React Query hooks. Tests render components with a fake API through `renderWithApi` in `src/renderer/test/render.tsx`.
 
+### The diff view
+
+The diff is drawn by Monaco's diff editor. `features/diff/monaco.ts` loads only the editor features a read-only review needs (find, copy, word highlighting, expanding the selection, and highlighting invisible Unicode characters) and the syntax definitions, without language services or their workers.
+
+IntelliJ colors a block by what happened to it: blue for edited lines, green for inserted lines, and gray for deleted lines. Monaco only knows which side a line is on, so in the side-by-side view its own diff colors are turned off (`themes.ts`), and `changeDecorations` in `changes.ts` classifies each block and paints it. The unified view keeps Monaco's colors, because deleted lines there are not real editor lines that could be decorated.
+
+Navigation follows IntelliJ's keymap. F7 and Shift+F7 move between differences; at the last difference of a file, a second press opens the next file (`decideNavigation` in `features/pull-request/navigation.ts`). Ctrl+Shift+Right and Ctrl+Shift+Left switch files directly. Shortcuts are handled at the window level in the capture phase, so they also work while the editor has focus.
+
+Monaco needs a real browser, so component tests replace `DiffViewer` with `src/renderer/test/fake-diff-viewer.tsx`, which honors the same contract: `goToChange`, `onChangesComputed`, and `onReveal`. Everything that decides what to show lives outside `DiffViewer` and is tested directly.
+
 ## Testing
 
 | Layer                 | Tool                                  | Location                                           |

@@ -22,6 +22,18 @@
   --color-success: #208a3c;
   --color-danger: #db3b4b;
   --color-merged: #834dff;
+
+  --color-status-added: #208a3c;
+  --color-status-modified: #3574f0;
+  --color-status-deleted: #6c707e;
+
+  --diff-inserted-line: #e3f2df;
+  --diff-inserted-marker: #5fb865;
+  --diff-modified-line: #e2ebfc;
+  --diff-modified-word: #c3d6fb;
+  --diff-modified-marker: #4c86f7;
+  --diff-deleted-line: #ececec;
+  --diff-deleted-marker: #a8adbd;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -40,5 +52,17 @@
     --color-success: #57965c;
     --color-danger: #db5c5c;
     --color-merged: #a571e6;
+
+    --color-status-added: #73bd79;
+    --color-status-modified: #6aa6f8;
+    --color-status-deleted: #868a91;
+
+    --diff-inserted-line: #294436;
+    --diff-inserted-marker: #549159;
+    --diff-modified-line: #2f4462;
+    --diff-modified-word: #43648f;
+    --diff-modified-marker: #4a7fd6;
+    --diff-deleted-line: #3d3f41;
+    --diff-deleted-marker: #6f737a;
   }
 }

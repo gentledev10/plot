@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatRelativeTime, sizedAvatarUrl } from './format';
+import { formatBytes, formatRelativeTime, sizedAvatarUrl } from './format';
 
 describe('formatRelativeTime', () => {
   const now = new Date('2026-10-30T12:00:00Z');
@@ -43,5 +43,18 @@ describe('sizedAvatarUrl', () => {
 
   it('leaves unparsable URLs alone', () => {
     expect(sizedAvatarUrl('not a url', 40)).toBe('not a url');
+  });
+});
+
+describe('formatBytes', () => {
+  it.each([
+    [0, '0 B'],
+    [512, '512 B'],
+    [1536, '1.5 KB'],
+    [20_000, '20 KB'],
+    [4 * 1024 * 1024, '4.0 MB'],
+    [12 * 1024 * 1024 * 1024, '12 GB'],
+  ])('formats %d bytes as %s', (bytes, expected) => {
+    expect(formatBytes(bytes)).toBe(expected);
   });
 });

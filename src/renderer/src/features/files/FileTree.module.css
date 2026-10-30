@@ -1,0 +1,65 @@
+.tree {
+  padding: 0 4px 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding-right: 8px;
+  border-radius: var(--radius);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.row:hover {
+  background: var(--color-bg-hover);
+}
+
+.row[aria-selected="true"] {
+  background: var(--color-bg-selected);
+}
+
+.icon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row[data-status="added"] .name {
+  color: var(--color-status-added);
+}
+
+.row[data-status="deleted"] .name {
+  color: var(--color-status-deleted);
+}
+
+.row[data-status="modified"] .name,
+.row[data-status="renamed"] .name,
+.row[data-status="copied"] .name,
+.row[data-status="type-changed"] .name {
+  color: var(--color-status-modified);
+}
+
+.counts {
+  display: inline-flex;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 11px;
+}
+
+.additions {
+  color: var(--color-success);
+}
+
+.deletions {
+  color: var(--color-danger);
+}

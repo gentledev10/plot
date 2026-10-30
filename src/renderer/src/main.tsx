@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { AppProviders, createQueryClient } from './app/providers';
 import { createApi } from './lib/api';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/700.css';
 import './styles/tokens.css';
 import './styles/base.css';
 

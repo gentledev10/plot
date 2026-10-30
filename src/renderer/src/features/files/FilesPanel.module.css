@@ -1,0 +1,68 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--color-bg-panel);
+  border-right: 1px solid var(--color-border);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  height: var(--header-height);
+  padding: 0 8px;
+  -webkit-app-region: drag;
+}
+
+:global([data-platform="darwin"]) .header {
+  padding-left: 76px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px 3px 4px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  font-weight: 600;
+  -webkit-app-region: no-drag;
+}
+
+.back:hover {
+  background: var(--color-bg-hover);
+}
+
+.target {
+  margin: 0;
+  padding: 0 12px 6px;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.footer {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.additions {
+  color: var(--color-success);
+}
+
+.deletions {
+  color: var(--color-danger);
+}

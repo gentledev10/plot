@@ -1,0 +1,16 @@
+.monaco-editor .diff-line-inserted {
+  background: var(--diff-inserted-line);
+}
+
+.monaco-editor .diff-line-modified {
+  background: var(--diff-modified-line);
+}
+
+.monaco-editor .diff-line-deleted {
+  background: var(--diff-deleted-line);
+}
+
+.monaco-editor .diff-word-modified {
+  background: var(--diff-modified-word);
+  border-radius: 2px;
+}

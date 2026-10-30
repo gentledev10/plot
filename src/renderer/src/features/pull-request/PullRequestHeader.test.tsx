@@ -4,13 +4,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { aPullRequestDetail } from '../../../test/builders';
 import { renderWithApi } from '../../../test/render';
 import { ViewerError } from '../../lib/api';
-import { PullRequestView } from './PullRequestView';
+import { PullRequestHeader } from './PullRequestHeader';
 
 const target = { owner: 'octocat', repo: 'hello-world', number: 42 };
 
-describe('PullRequestView', () => {
+describe('PullRequestHeader', () => {
   it('shows the title, branches, and size of the change', async () => {
-    renderWithApi(<PullRequestView target={target} />, {
+    renderWithApi(<PullRequestHeader target={target} />, {
       getPullRequest: vi.fn().mockResolvedValue(aPullRequestDetail()),
     });
 
@@ -27,14 +27,37 @@ describe('PullRequestView', () => {
     );
   });
 
+  it('keeps the description folded until asked', async () => {
+    renderWithApi(<PullRequestHeader target={target} />, {
+      getPullRequest: vi.fn().mockResolvedValue(aPullRequestDetail({ body: 'Adds a dark theme.' })),
+    });
+
+    const toggle = await screen.findByRole('button', { name: 'Description' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Adds a dark theme.')).not.toBeInTheDocument();
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Adds a dark theme.')).toBeInTheDocument();
+  });
+
+  it('hides the description toggle when there is no description', async () => {
+    renderWithApi(<PullRequestHeader target={target} />, {
+      getPullRequest: vi.fn().mockResolvedValue(aPullRequestDetail({ body: '  \n' })),
+    });
+    await screen.findByRole('heading', { name: 'Add dark mode' });
+    expect(screen.queryByRole('button', { name: 'Description' })).not.toBeInTheDocument();
+  });
+
   it('shows the description as plain text, never as HTML', async () => {
-    renderWithApi(<PullRequestView target={target} />, {
+    renderWithApi(<PullRequestHeader target={target} />, {
       getPullRequest: vi
         .fn()
         .mockResolvedValue(aPullRequestDetail({ body: '<img src=x onerror=alert(1)> hello' })),
     });
 
-    expect(await screen.findByText('<img src=x onerror=alert(1)> hello')).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Description' }));
+    expect(screen.getByText('<img src=x onerror=alert(1)> hello')).toBeInTheDocument();
     expect(document.querySelector('img[src="x"]')).toBeNull();
   });
 
@@ -43,7 +66,7 @@ describe('PullRequestView', () => {
     [{ state: 'closed' as const }, 'Closed'],
     [{ isDraft: true }, 'Draft'],
   ])('labels %o pull requests as %s', async (overrides, label) => {
-    renderWithApi(<PullRequestView target={target} />, {
+    renderWithApi(<PullRequestHeader target={target} />, {
       getPullRequest: vi.fn().mockResolvedValue(aPullRequestDetail(overrides)),
     });
     expect(await screen.findByText(label)).toBeInTheDocument();
@@ -54,7 +77,7 @@ describe('PullRequestView', () => {
       .fn()
       .mockRejectedValueOnce(new ViewerError('network', 'Could not reach GitHub.'))
       .mockResolvedValue(aPullRequestDetail());
-    renderWithApi(<PullRequestView target={target} />, { getPullRequest });
+    renderWithApi(<PullRequestHeader target={target} />, { getPullRequest });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach GitHub.');
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));

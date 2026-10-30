@@ -1,0 +1,100 @@
+.toolbar {
+  border-bottom: 1px solid var(--color-border-strong);
+  background: var(--color-bg-panel);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 8px 0 12px;
+}
+
+.status {
+  flex: none;
+  width: 16px;
+  font-family: var(--font-code);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  text-align: center;
+}
+
+.status[data-status="added"] {
+  color: var(--color-status-added);
+}
+
+.status[data-status="deleted"] {
+  color: var(--color-status-deleted);
+}
+
+.status:not([data-status="added"], [data-status="deleted"]) {
+  color: var(--color-status-modified);
+}
+
+.path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.directory {
+  color: var(--color-text-muted);
+}
+
+.name {
+  font-weight: 600;
+}
+
+.renamed {
+  margin-left: 8px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.counter {
+  margin-right: 4px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}
+
+.separator {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--color-border-strong);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.button:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text);
+}
+
+.button[aria-pressed="true"] {
+  background: var(--color-bg-selected);
+  color: var(--color-text);
+}
+
+.hint {
+  margin: 0;
+  padding: 4px 12px 6px 32px;
+  color: var(--color-accent);
+  font-size: var(--font-size-small);
+}
