@@ -16,6 +16,9 @@ export function fakeApi(overrides: Partial<ViewerApi> = {}): ViewerApi {
     getPullRequest: notStubbed('getPullRequest'),
     getPullRequestDiff: notStubbed('getPullRequestDiff'),
     readBlob: notStubbed('readBlob'),
+    getReviewStatus: vi.fn().mockResolvedValue({ state: 'idle' }),
+    startReview: notStubbed('startReview'),
+    cancelReview: notStubbed('cancelReview'),
     ...overrides,
   };
 }

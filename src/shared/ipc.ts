@@ -1,6 +1,7 @@
 import type { BlobContent, PullRequestDiff } from './diff';
 import type { ErrorPayload } from './errors';
 import type { Inbox, PullRequestDetail, PullRequestRef, Session } from './github';
+import type { ReviewStatus } from './review';
 
 export interface ViewerApi {
   getSession(): Promise<Session>;
@@ -8,6 +9,9 @@ export interface ViewerApi {
   getPullRequest(ref: PullRequestRef): Promise<PullRequestDetail>;
   getPullRequestDiff(ref: PullRequestRef): Promise<PullRequestDiff>;
   readBlob(ref: PullRequestRef, blob: string): Promise<BlobContent>;
+  getReviewStatus(ref: PullRequestRef): Promise<ReviewStatus>;
+  startReview(ref: PullRequestRef): Promise<void>;
+  cancelReview(ref: PullRequestRef): Promise<void>;
 }
 
 export type IpcMethod = keyof ViewerApi;
@@ -18,6 +22,9 @@ const METHODS: Record<IpcMethod, true> = {
   getPullRequest: true,
   getPullRequestDiff: true,
   readBlob: true,
+  getReviewStatus: true,
+  startReview: true,
+  cancelReview: true,
 };
 
 export const IPC_METHODS = Object.keys(METHODS) as readonly IpcMethod[];

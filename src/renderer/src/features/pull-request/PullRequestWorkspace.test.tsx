@@ -64,7 +64,7 @@ describe('PullRequestWorkspace', () => {
 
     await screen.findByTestId('diff-viewer');
     expect(shownPath()).toBe('src/a.ts');
-    expect(counter()).toHaveTextContent('1 of 2');
+    await waitFor(() => expect(counter()).toHaveTextContent('1 of 2'));
   });
 
   it('walks through differences and files with F7, like IntelliJ', async () => {

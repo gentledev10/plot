@@ -11,6 +11,10 @@ export type ErrorCode =
   | 'network'
   | 'git-not-installed'
   | 'git-failed'
+  | 'ai-not-installed'
+  | 'ai-failed'
+  | 'ai-cancelled'
+  | 'ai-invalid-output'
   | 'unknown';
 
 export interface ErrorPayload {

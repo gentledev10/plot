@@ -32,6 +32,10 @@ function setup() {
     fetchCommits: vi.fn().mockResolvedValue(undefined),
     diff: vi.fn().mockResolvedValue([file]),
     readBlob: vi.fn().mockResolvedValue({ kind: 'text', text: 'hi' }),
+    unifiedDiff: vi.fn(),
+    listFiles: vi.fn(),
+    checkoutDirectories: vi.fn(),
+    removeCheckout: vi.fn(),
   };
   return { service: createDiffService({ github, repositories }), github, repositories };
 }

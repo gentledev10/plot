@@ -69,6 +69,37 @@ describe('App', () => {
     expect(screen.getByText('Select a pull request to start reviewing.')).toBeInTheDocument();
   });
 
+  it('jumps to the line a review item points at', async () => {
+    const fake = {
+      ...api(),
+      getReviewStatus: vi.fn().mockResolvedValue({
+        state: 'done',
+        head: 'd'.repeat(40),
+        createdAt: new Date().toISOString(),
+        review: {
+          summary: 'Fixes the redirect.',
+          readingOrder: [],
+          flows: [],
+          architecture: { nodes: [], edges: [] },
+          risks: [
+            {
+              title: 'Open redirect',
+              detail: 'The target is not validated.',
+              severity: 'high',
+              location: { path: 'src/login.ts', line: 7, verified: true },
+            },
+          ],
+        },
+      }),
+    };
+    renderWithApi(<App platform="darwin" />, fake);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'src/login.ts:7' }));
+
+    expect(await screen.findByTestId('diff-viewer')).toHaveAttribute('data-reveal-line', '7');
+  });
+
   it('opens a pull request pasted as a URL', async () => {
     const fake = { ...api(), getSession: vi.fn().mockResolvedValue({ status: 'signed-out' }) };
     renderWithApi(<App platform="darwin" />, fake);

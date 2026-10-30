@@ -14,6 +14,9 @@ export const argumentParsers: ArgumentParsers = {
   getPullRequest: ([ref]) => [pullRequestRef(ref)],
   getPullRequestDiff: ([ref]) => [pullRequestRef(ref)],
   readBlob: ([ref, blob]) => [pullRequestRef(ref), objectId(blob)],
+  getReviewStatus: ([ref]) => [pullRequestRef(ref)],
+  startReview: ([ref]) => [pullRequestRef(ref)],
+  cancelReview: ([ref]) => [pullRequestRef(ref)],
 };
 
 function pullRequestRef(value: unknown): PullRequestRef {

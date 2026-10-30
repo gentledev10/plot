@@ -12,6 +12,6 @@ You can expect a first response within a week.
 
 - Pull request content or AI output that runs script in the app window.
 - Anything that leaks the GitHub token or lets the renderer reach privileged main-process features it should not.
-- Ways to make AI tools that Viewer launches modify files or run commands.
+- Ways to make AI tools that Viewer launches modify files, run commands, reach the network, or read files outside the pull request.
 
 The security model is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#trust-boundaries).

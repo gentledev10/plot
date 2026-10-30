@@ -1,6 +1,9 @@
 import { join } from 'node:path';
 import type { ViewerApi } from '@shared/ipc';
 import { app, BrowserWindow, ipcMain, net } from 'electron';
+import { createClaudeCodeAgent } from './ai/claude-code';
+import { languageName } from './ai/language';
+import { createFileReviewStore } from './ai/review-store';
 import { isWithinOrigin } from './app/navigation';
 import {
   APP_ORIGIN,
@@ -17,6 +20,7 @@ import { argumentParsers } from './ipc/arguments';
 import { registerIpcHandlers } from './ipc/register';
 import { createDiffService } from './services/diff-service';
 import { createGitHubService } from './services/github-service';
+import { createReviewService } from './services/review-service';
 import { runCommand, runCommandForBuffer } from './system/process';
 import { mergePaths, resolveLoginShellPath } from './system/shell-env';
 
@@ -44,7 +48,21 @@ function createApi(): ViewerApi {
     env: process.env,
     authHeader: async () => basicAuthHeader(await tokens.getToken()),
   });
-  return { ...createGitHubService(github), ...createDiffService({ github, repositories }) };
+  const userData = app.getPath('userData');
+  const reviews = createReviewService({
+    github,
+    repositories,
+    agent: createClaudeCodeAgent(),
+    store: createFileReviewStore(join(userData, 'reviews')),
+    workspaceRoot: join(userData, 'review-workspaces'),
+    language: languageName(app.getLocale()),
+    onUnexpectedError: (error) => console.error('[review] failed', error),
+  });
+  return {
+    ...createGitHubService(github),
+    ...createDiffService({ github, repositories }),
+    ...reviews,
+  };
 }
 
 function openWindow(): void {

@@ -16,6 +16,9 @@ function setup(api: Partial<ViewerApi> = {}) {
     getPullRequest: vi.fn(),
     getPullRequestDiff: vi.fn(),
     readBlob: vi.fn(),
+    getReviewStatus: vi.fn(),
+    startReview: vi.fn(),
+    cancelReview: vi.fn(),
     ...api,
   };
   registerIpcHandlers(ipc, fullApi, {

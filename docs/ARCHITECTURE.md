@@ -53,6 +53,7 @@ To add a method, add it to `ViewerApi` and `METHODS` in `src/shared/ipc.ts`, the
 | `src/main/services` | Use cases such as "load the inbox", built from adapters                                           |
 | `src/main/github`   | GitHub adapter: the token from the GitHub CLI, the REST client, and response mappers              |
 | `src/main/git`      | Repository cache: fetches the commits a pull request needs and parses `git diff` output           |
+| `src/main/ai`       | AI review: the Claude Code runner, the prompt, the output schema, and stored reviews              |
 | `src/main/system`   | Running commands, and reading `PATH` from the login shell                                         |
 
 Adapters receive what they depend on as arguments, for example `createGitHubClient({ fetch, tokens })`, so tests can pass fakes instead of mocking modules. Pure logic is kept out of files that import `electron`, so it can be tested in plain Node.js.
@@ -78,6 +79,22 @@ Cloning large repositories would make opening a pull request slow, so `getPullRe
 `readBlob` reads one file version by its object id when the renderer opens a file. Files larger than 4 MB are reported as too large instead of being sent to the renderer.
 
 The cache runs git in an isolated environment (`isolatedGitEnvironment`): the user's global and system config, hooks, and URL rewrites do not apply. The token reaches git as an `http.extraheader` set through `GIT_CONFIG_*` environment variables, so it never appears in command arguments or in the repository config. Fetches into the same repository run one at a time, because concurrent shallow fetches conflict on git's lock files.
+
+### AI review maps
+
+`createReviewService` turns a pull request into a review map: a summary, a reading order, sequence diagrams of the flows the change touches, a component diagram, and risks, each tied to a file and line. It runs the user's own Claude Code, so Viewer needs no API key and adds no new place that code is sent to.
+
+1. Check out the directories the pull request touches at its head commit, as a sparse worktree of the repository cache. Write the diff, the list of every file in the repository (from git trees, without downloading contents), and the description next to it.
+2. Run `claude --print` in that worktree (`claude-code.ts`). Claude Code reads the files and returns JSON that must match `REVIEW_SCHEMA`. Its tool calls stream back as progress such as "Reading src/app.ts", which the renderer polls once a second.
+3. `parseReviewMap` checks the result, caps its size, and drops anything malformed. `verifyLocations` marks every cited line that does not exist in the checked-out files as unverified, so the UI can flag it.
+4. Store the result under `userData/reviews`, keyed by pull request and head commit, and delete the worktree. A new push gets a new review; reopening the same commit shows the stored one.
+
+The pull request is written by someone else, so the agent is treated as if its input may try to take it over:
+
+- Claude Code runs with `--restricted` and only the `Read`, `Grep`, and `Glob` tools. It cannot run commands, edit files, or fetch URLs, and file access is confined to the worktree and the context directory.
+- `--strict-mcp-config` keeps the user's MCP servers, such as mail or chat integrations, out of reach, so injected instructions have no tool that could send code anywhere.
+- `--no-session-persistence` keeps the run out of the user's Claude Code history.
+- Diagrams are built from the structured result by `mermaid-source.ts`, not from Mermaid text the model writes. Labels are reduced to characters that cannot start a new Mermaid statement, and Mermaid runs with `securityLevel: 'strict'`.
 
 ## Renderer layout
 

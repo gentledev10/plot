@@ -1,21 +1,21 @@
 import type { BlobContent, ChangedFile } from '@shared/diff';
 import type { PullRequestRef } from '@shared/github';
-import type { Ref } from 'react';
+import { lazy, type Ref, Suspense } from 'react';
 import { StatusMessage } from '../../components/StatusMessage';
 import { formatBytes } from '../../lib/format';
-import {
-  type ChangePosition,
-  type DiffSettings,
-  DiffViewer,
-  type DiffViewerHandle,
-} from './DiffViewer';
+import type { ChangePosition, DiffSettings, DiffViewerHandle, LineRequest } from './DiffViewer';
 import { useBlob } from './queries';
+
+const DiffViewer = lazy(() =>
+  import('./DiffViewer').then((module) => ({ default: module.DiffViewer })),
+);
 
 interface FileDiffProps {
   target: PullRequestRef;
   file: ChangedFile;
   settings: DiffSettings;
   initialChange?: 'first' | 'last';
+  revealLine?: LineRequest;
   onChangesComputed?(total: number): void;
   onReveal?(position: ChangePosition): void;
   viewerRef?: Ref<DiffViewerHandle>;
@@ -26,6 +26,7 @@ export function FileDiff({
   file,
   settings,
   initialChange,
+  revealLine,
   onChangesComputed,
   onReveal,
   viewerRef,
@@ -77,16 +78,19 @@ export function FileDiff({
   }
 
   return (
-    <DiffViewer
-      ref={viewerRef}
-      path={file.path}
-      original={textOf(original.data)}
-      modified={textOf(modified.data)}
-      settings={settings}
-      initialChange={initialChange}
-      onChangesComputed={onChangesComputed}
-      onReveal={onReveal}
-    />
+    <Suspense fallback={<StatusMessage>Loading the editor…</StatusMessage>}>
+      <DiffViewer
+        ref={viewerRef}
+        path={file.path}
+        original={textOf(original.data)}
+        modified={textOf(modified.data)}
+        settings={settings}
+        initialChange={initialChange}
+        revealLine={revealLine}
+        onChangesComputed={onChangesComputed}
+        onReveal={onReveal}
+      />
+    </Suspense>
   );
 }
 

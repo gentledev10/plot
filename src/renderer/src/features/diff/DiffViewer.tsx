@@ -24,6 +24,11 @@ export interface DiffViewerHandle {
   goToChange(direction: Direction): ChangePosition | undefined;
 }
 
+export interface LineRequest {
+  line: number;
+  key: number;
+}
+
 export interface DiffSettings {
   collapseUnchanged: boolean;
   ignoreWhitespace: boolean;
@@ -36,6 +41,7 @@ interface DiffViewerProps {
   modified: string;
   settings: DiffSettings;
   initialChange?: 'first' | 'last';
+  revealLine?: LineRequest;
   onChangesComputed?(total: number): void;
   onReveal?(position: ChangePosition): void;
   ref?: Ref<DiffViewerHandle>;
@@ -79,6 +85,7 @@ export function DiffViewer({
   modified,
   settings,
   initialChange,
+  revealLine,
   onChangesComputed,
   onReveal,
   ref,
@@ -165,6 +172,18 @@ export function DiffViewer({
   useEffect(() => {
     pendingJump.current = initialChange;
   }, [initialChange]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || !revealLine) {
+      return;
+    }
+    pendingJump.current = undefined;
+    const modified = editor.getModifiedEditor();
+    modified.setPosition({ lineNumber: revealLine.line, column: 1 });
+    modified.revealLineInCenter(revealLine.line);
+    caretTouched.current = true;
+  }, [revealLine]);
 
   useEffect(() => {
     editorRef.current?.updateOptions({

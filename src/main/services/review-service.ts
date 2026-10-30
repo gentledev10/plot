@@ -1,0 +1,192 @@
+import { readFileSync } from 'node:fs';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import type { ChangedFile } from '@shared/diff';
+import type { ErrorPayload } from '@shared/errors';
+import type { PullRequestRef } from '@shared/github';
+import type { ViewerApi } from '@shared/ipc';
+import { formatPullRequestRef } from '@shared/pull-request-ref';
+import type { ReviewAgent } from '../ai/claude-code';
+import { verifyLocations } from '../ai/review-locations';
+import { buildReviewPrompt, CONTEXT_FILES } from '../ai/review-prompt';
+import { parseReviewMap, REVIEW_SCHEMA } from '../ai/review-schema';
+import type { ReviewStore } from '../ai/review-store';
+import { AppError, toErrorPayload } from '../errors';
+import type { RepositoryCache } from '../git/repository-cache';
+import type { GitHubClient } from '../github/client';
+
+export type ReviewService = Pick<ViewerApi, 'getReviewStatus' | 'startReview' | 'cancelReview'>;
+
+interface ReviewServiceOptions {
+  github: GitHubClient;
+  repositories: RepositoryCache;
+  agent: ReviewAgent;
+  store: ReviewStore;
+  workspaceRoot: string;
+  language: string;
+  now?(): Date;
+  onUnexpectedError?(error: unknown): void;
+}
+
+type Job =
+  | { state: 'running'; startedAt: string; activity: string[]; controller: AbortController }
+  | { state: 'failed'; error: ErrorPayload };
+
+const MAX_ACTIVITY = 50;
+
+export function createReviewService({
+  github,
+  repositories,
+  agent,
+  store,
+  workspaceRoot,
+  language,
+  now = () => new Date(),
+  onUnexpectedError = () => {},
+}: ReviewServiceOptions): ReviewService {
+  const jobs = new Map<string, Job>();
+
+  async function execute(ref: PullRequestRef, key: string, controller: AbortController) {
+    const job = jobs.get(key);
+    const note = (activity: string) => {
+      if (job?.state === 'running') {
+        job.activity = [...job.activity, activity].slice(-MAX_ACTIVITY);
+      }
+    };
+    const checkpoint = () => {
+      if (controller.signal.aborted) {
+        throw new AppError('ai-cancelled', 'The AI review was cancelled.');
+      }
+    };
+    const workspace = join(
+      workspaceRoot,
+      ref.owner.toLowerCase(),
+      ref.repo.toLowerCase(),
+      String(ref.number),
+    );
+    const repoDir = join(workspace, 'repo');
+    const contextDir = join(workspace, 'context');
+
+    try {
+      note('Loading the pull request');
+      const pull = await github.getPullRequest(ref);
+      const mergeBase = await github.getMergeBase(ref, pull.base.sha, pull.head.sha);
+      await repositories.fetchCommits(ref, [mergeBase, pull.head.sha]);
+      const files = await repositories.diff(ref, mergeBase, pull.head.sha);
+      checkpoint();
+
+      note('Checking out the changed directories');
+      await removeWorkspace(ref, workspace, repoDir);
+      await mkdir(contextDir, { recursive: true });
+      await repositories.checkoutDirectories(ref, pull.head.sha, directoriesOf(files), repoDir);
+      await writeFile(
+        join(contextDir, CONTEXT_FILES.diff),
+        await repositories.unifiedDiff(ref, mergeBase, pull.head.sha),
+      );
+      await writeFile(
+        join(contextDir, CONTEXT_FILES.files),
+        (await repositories.listFiles(ref, pull.head.sha)).join('\n'),
+      );
+      await writeFile(
+        join(contextDir, CONTEXT_FILES.description),
+        `# ${pull.title}\n\n${pull.body}\n`,
+      );
+      checkpoint();
+
+      const result = await agent.run({
+        cwd: repoDir,
+        contextDir,
+        prompt: buildReviewPrompt({ files, contextDir, language }),
+        schema: REVIEW_SCHEMA,
+        signal: controller.signal,
+        onActivity: note,
+      });
+      const review = verifyLocations(parseReviewMap(result.output), lineCounter(repoDir));
+      await store.write(ref, {
+        review,
+        head: pull.head.sha,
+        createdAt: now().toISOString(),
+        costUsd: result.costUsd,
+      });
+      jobs.delete(key);
+    } catch (error) {
+      if (error instanceof AppError && error.code === 'ai-cancelled') {
+        jobs.delete(key);
+      } else {
+        if (!(error instanceof AppError)) {
+          onUnexpectedError(error);
+        }
+        jobs.set(key, { state: 'failed', error: toErrorPayload(error) });
+      }
+    } finally {
+      await removeWorkspace(ref, workspace, repoDir).catch(onUnexpectedError);
+    }
+  }
+
+  async function removeWorkspace(ref: PullRequestRef, workspace: string, repoDir: string) {
+    await repositories.removeCheckout(ref, repoDir);
+    await rm(workspace, { recursive: true, force: true });
+  }
+
+  return {
+    async getReviewStatus(ref) {
+      const job = jobs.get(keyOf(ref));
+      if (job?.state === 'running') {
+        return { state: 'running', startedAt: job.startedAt, activity: job.activity };
+      }
+      if (job?.state === 'failed') {
+        return { state: 'failed', error: job.error };
+      }
+      const pull = await github.getPullRequest(ref);
+      const stored = await store.read(ref, pull.head.sha);
+      return stored ? { state: 'done', ...stored } : { state: 'idle' };
+    },
+
+    async startReview(ref) {
+      const key = keyOf(ref);
+      if (jobs.get(key)?.state === 'running') {
+        return;
+      }
+      const controller = new AbortController();
+      jobs.set(key, { state: 'running', startedAt: now().toISOString(), activity: [], controller });
+      void execute(ref, key, controller);
+    },
+
+    async cancelReview(ref) {
+      const job = jobs.get(keyOf(ref));
+      if (job?.state === 'running') {
+        job.controller.abort();
+      }
+    },
+  };
+}
+
+function keyOf(ref: PullRequestRef): string {
+  return formatPullRequestRef(ref).toLowerCase();
+}
+
+export function directoriesOf(files: readonly ChangedFile[]): string[] {
+  const directories = new Set<string>();
+  for (const file of files) {
+    const directory = dirname(file.path);
+    if (directory !== '.') {
+      directories.add(directory);
+    }
+  }
+  return [...directories].sort();
+}
+
+function lineCounter(repoDir: string) {
+  const counts = new Map<string, number | undefined>();
+  return (path: string) => {
+    if (!counts.has(path)) {
+      try {
+        const text = readFileSync(join(repoDir, path), 'utf8');
+        counts.set(path, text === '' ? 0 : text.split('\n').length - (text.endsWith('\n') ? 1 : 0));
+      } catch {
+        counts.set(path, undefined);
+      }
+    }
+    return counts.get(path);
+  };
+}

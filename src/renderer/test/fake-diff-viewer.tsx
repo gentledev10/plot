@@ -4,6 +4,7 @@ import type {
   ChangePosition,
   DiffSettings,
   DiffViewerHandle,
+  LineRequest,
 } from '../src/features/diff/DiffViewer';
 
 const changeCounts = new Map<string, number>();
@@ -22,6 +23,7 @@ interface FakeDiffViewerProps {
   modified: string;
   settings: DiffSettings;
   initialChange?: 'first' | 'last';
+  revealLine?: LineRequest;
   onChangesComputed?(total: number): void;
   onReveal?(position: ChangePosition): void;
   ref?: Ref<DiffViewerHandle>;
@@ -32,6 +34,7 @@ export function DiffViewer({
   original,
   modified,
   initialChange,
+  revealLine,
   onChangesComputed,
   onReveal,
   ref,
@@ -61,7 +64,7 @@ export function DiffViewer({
   }));
 
   return (
-    <div data-testid="diff-viewer" data-path={path}>
+    <div data-testid="diff-viewer" data-path={path} data-reveal-line={revealLine?.line}>
       <pre data-testid="original">{original}</pre>
       <pre data-testid="modified">{modified}</pre>
     </div>

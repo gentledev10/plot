@@ -10,6 +10,9 @@ function bridge(overrides: Partial<ViewerBridge> = {}): ViewerBridge {
     getPullRequest: vi.fn(),
     getPullRequestDiff: vi.fn(),
     readBlob: vi.fn(),
+    getReviewStatus: vi.fn(),
+    startReview: vi.fn(),
+    cancelReview: vi.fn(),
     ...overrides,
   };
 }

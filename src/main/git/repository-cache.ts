@@ -16,6 +16,15 @@ export interface RepositoryCache {
   fetchCommits(repository: RepositoryRef, commits: readonly string[]): Promise<void>;
   diff(repository: RepositoryRef, from: string, to: string): Promise<ChangedFile[]>;
   readBlob(repository: RepositoryRef, blob: string, maxBytes: number): Promise<BlobContent>;
+  unifiedDiff(repository: RepositoryRef, from: string, to: string): Promise<string>;
+  listFiles(repository: RepositoryRef, commit: string): Promise<string[]>;
+  checkoutDirectories(
+    repository: RepositoryRef,
+    commit: string,
+    directories: readonly string[],
+    target: string,
+  ): Promise<void>;
+  removeCheckout(repository: RepositoryRef, target: string): Promise<void>;
 }
 
 export interface RepositoryCacheOptions {
@@ -45,9 +54,17 @@ export function createRepositoryCache({
   }
 
   async function git(dir: string, args: readonly string[], timeoutMs?: number): Promise<string> {
+    return gitIn(['--git-dir', dir], args, timeoutMs);
+  }
+
+  async function gitIn(
+    location: readonly string[],
+    args: readonly string[],
+    timeoutMs?: number,
+  ): Promise<string> {
     const options = { env: isolatedGitEnvironment(env, await authHeader()), timeoutMs };
     try {
-      return (await run('git', ['--git-dir', dir, ...args], options)).stdout;
+      return (await run('git', [...location, ...args], options)).stdout;
     } catch (error) {
       throw toGitError(args, error);
     }
@@ -120,6 +137,49 @@ export function createRepositoryCache({
       const numstat = await git(dir, [...options, '--numstat', from, to], FETCH_TIMEOUT_MS);
       const raw = await git(dir, [...options, '--raw', '--no-abbrev', from, to]);
       return toChangedFiles(parseRawDiff(raw), parseNumstat(numstat));
+    },
+
+    unifiedDiff(repository, from, to) {
+      return git(directory(repository), [
+        'diff',
+        '--no-color',
+        '--no-ext-diff',
+        '--no-textconv',
+        '-M',
+        from,
+        to,
+      ]);
+    },
+
+    async listFiles(repository, commit) {
+      const output = await git(directory(repository), [
+        'ls-tree',
+        '-r',
+        '-z',
+        '--name-only',
+        commit,
+      ]);
+      return output.split('\0').filter(Boolean);
+    },
+
+    checkoutDirectories(repository, commit, directories, target) {
+      const dir = directory(repository);
+      return serialized(dir, async () => {
+        await git(dir, ['worktree', 'add', '--no-checkout', '--detach', '--quiet', target, commit]);
+        await gitIn(['-C', target], ['sparse-checkout', 'set', '--cone', '--', ...directories]);
+        await gitIn(['-C', target], ['reset', '--hard', '--quiet', commit], FETCH_TIMEOUT_MS);
+      });
+    },
+
+    removeCheckout(repository, target) {
+      const dir = directory(repository);
+      return serialized(dir, async () => {
+        if (!existsSync(join(dir, 'HEAD'))) {
+          return;
+        }
+        await git(dir, ['worktree', 'remove', '--force', target]).catch(() => undefined);
+        await git(dir, ['worktree', 'prune']);
+      });
     },
 
     async readBlob(repository, blob, maxBytes) {

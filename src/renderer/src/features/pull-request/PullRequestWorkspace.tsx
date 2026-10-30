@@ -13,9 +13,16 @@ import { adjacentFile, decideNavigation } from './navigation';
 import { PullRequestHeader } from './PullRequestHeader';
 import styles from './PullRequestWorkspace.module.css';
 
+export interface LocationRequest {
+  path: string;
+  line: number;
+  key: number;
+}
+
 interface PullRequestWorkspaceProps {
   target: PullRequestRef;
   selectedPath?: string;
+  reveal?: LocationRequest;
   onSelectPath(path: string): void;
 }
 
@@ -36,6 +43,7 @@ interface FileState {
 export function PullRequestWorkspace({
   target,
   selectedPath,
+  reveal,
   onSelectPath,
 }: PullRequestWorkspaceProps) {
   const diff = usePullRequestDiff(target);
@@ -145,6 +153,7 @@ export function PullRequestWorkspace({
     if (!current) {
       return <StatusMessage>This pull request does not change any files.</StatusMessage>;
     }
+    const revealHere = reveal?.path === current.path ? reveal : undefined;
     return (
       <>
         <DiffToolbar
@@ -161,7 +170,8 @@ export function PullRequestWorkspace({
           target={target}
           file={current}
           settings={settings}
-          initialChange={jump?.path === current.path ? jump.at : 'first'}
+          initialChange={revealHere ? undefined : jump?.path === current.path ? jump.at : 'first'}
+          revealLine={revealHere ? { line: revealHere.line, key: revealHere.key } : undefined}
           onChangesComputed={(total) => mergeFileState(current.path, { total })}
           onReveal={(position) => mergeFileState(current.path, { position })}
           viewerRef={viewer}

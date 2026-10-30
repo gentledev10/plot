@@ -191,3 +191,45 @@ describe('createRepositoryCache', () => {
     expect(new Set(gitDirs)).toEqual(new Set([join(rootDir, 'octocat', 'hello-world.git')]));
   });
 });
+
+describe('review workspace helpers', () => {
+  it('checks out only the requested directories of a commit', async () => {
+    const { cache } = setup();
+    await cache.fetchCommits(repository, [fixture.mergeBase, fixture.head]);
+    const target = join(fixture.root, 'workspace-sparse');
+
+    await cache.checkoutDirectories(repository, fixture.head, ['src'], target);
+
+    await expect(readFile(join(target, 'src/new.ts'), 'utf8')).resolves.toContain('fresh');
+    await expect(readFile(join(target, 'README.md'), 'utf8')).resolves.toBe('# Fixture\n');
+    await expect(readFile(join(target, 'assets/logo.png'))).rejects.toThrow();
+
+    await cache.removeCheckout(repository, target);
+    await expect(readFile(join(target, 'README.md'))).rejects.toThrow();
+  });
+
+  it('writes the unified diff and lists every file without downloading contents', async () => {
+    const { cache } = setup();
+    await cache.fetchCommits(repository, [fixture.mergeBase, fixture.head]);
+
+    const diff = await cache.unifiedDiff(repository, fixture.mergeBase, fixture.head);
+    expect(diff).toContain('+++ b/src/new.ts');
+    expect(diff).toContain('rename from src/rename-me.ts');
+
+    await expect(cache.listFiles(repository, fixture.head)).resolves.toEqual([
+      'README.md',
+      'assets/logo.png',
+      'big.txt',
+      'src/app.ts',
+      'src/new.ts',
+      'src/renamed.ts',
+    ]);
+  });
+
+  it('ignores removal requests for repositories it never created', async () => {
+    const { cache } = setup();
+    await expect(
+      cache.removeCheckout({ owner: 'nobody', repo: 'nothing' }, '/tmp/none'),
+    ).resolves.toBeUndefined();
+  });
+});
