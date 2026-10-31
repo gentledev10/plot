@@ -47,8 +47,8 @@ export function AiReviewSettings() {
   return (
     <div className={styles.settings}>
       <p className={styles.intro}>
-        Review maps are made by an AI coding tool on this Mac, with your own account and plan.
-        Viewer has no server and no API key of its own.
+        Overviews are made by an AI coding tool on this Mac, with your own account and plan. Viewer
+        has no server and no API key of its own.
       </p>
       <fieldset className={styles.providers}>
         <legend className={styles.legend}>

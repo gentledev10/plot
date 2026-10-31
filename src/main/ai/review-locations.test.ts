@@ -4,42 +4,42 @@ import { verifyLocations } from './review-locations';
 
 const review: ReviewMap = {
   summary: 's',
-  readingOrder: [],
+  changes: [{ title: 'c', before: 'b', after: 'a', location: { path: 'src/a.ts', line: 3 } }],
   flows: [
     {
-      title: 'Flow',
-      steps: [
-        { from: 'a', to: 'b', label: 'ok', location: { path: 'src/app.ts', line: 10 } },
-        { from: 'b', to: 'c', label: 'past end', location: { path: 'src/app.ts', line: 99 } },
-        { from: 'c', to: 'd', label: 'no location' },
-      ],
+      title: 'f',
+      before: [{ from: 'x', to: 'y', label: 'old' }],
+      after: [{ from: 'x', to: 'y', label: 'new', location: { path: 'src/a.ts', line: 10 } }],
     },
   ],
   architecture: {
-    nodes: [{ id: 'n', label: 'N', changed: true, location: { path: 'missing.ts', line: 1 } }],
+    nodes: [{ id: 'n', label: 'N', status: 'changed', location: { path: 'src/gone.ts', line: 1 } }],
     edges: [],
   },
-  risks: [{ title: 'r', detail: 'd', severity: 'low', location: { path: 'src/app.ts', line: 50 } }],
+  impacts: [{ area: 'i', detail: 'd', location: { path: 'src/a.ts', line: 4 } }],
+  readingOrder: [],
 };
 
-const lineCount = (path: string) => (path === 'src/app.ts' ? 50 : undefined);
+const lines = (path: string) => (path === 'src/a.ts' ? 5 : undefined);
 
 describe('verifyLocations', () => {
   it('marks locations that point at real lines', () => {
-    const verified = verifyLocations(review, lineCount);
-    const steps = verified.flows[0]?.steps ?? [];
-    expect(steps[0]?.location).toEqual({ path: 'src/app.ts', line: 10, verified: true });
-    expect(verified.risks[0]?.location?.verified).toBe(true);
+    const verified = verifyLocations(review, lines);
+    expect(verified.changes[0]?.location?.verified).toBe(true);
+    expect(verified.impacts[0]?.location?.verified).toBe(true);
   });
 
   it('flags lines past the end of the file and files that do not exist', () => {
-    const verified = verifyLocations(review, lineCount);
-    expect(verified.flows[0]?.steps[1]?.location?.verified).toBe(false);
+    const verified = verifyLocations(review, lines);
+    expect(verified.flows[0]?.after[0]?.location?.verified).toBe(false);
     expect(verified.architecture.nodes[0]?.location?.verified).toBe(false);
   });
 
   it('leaves items without a location alone', () => {
-    const verified = verifyLocations(review, lineCount);
-    expect(verified.flows[0]?.steps[2]).toEqual({ from: 'c', to: 'd', label: 'no location' });
+    expect(verifyLocations(review, lines).flows[0]?.before[0]).toEqual({
+      from: 'x',
+      to: 'y',
+      label: 'old',
+    });
   });
 });

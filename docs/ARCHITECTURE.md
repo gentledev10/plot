@@ -85,14 +85,16 @@ Cloning large repositories would make opening a pull request slow, so `getPullRe
 
 The cache runs git in an isolated environment (`isolatedGitEnvironment`): the user's global and system config, hooks, and URL rewrites do not apply. The token reaches git as an `http.extraheader` set through `GIT_CONFIG_*` environment variables, so it never appears in command arguments or in the repository config. Fetches into the same repository run one at a time, because concurrent shallow fetches conflict on git's lock files.
 
-### AI review maps
+### AI overviews
 
-`createReviewService` turns a pull request into a review map: a summary, a reading order, sequence diagrams of the flows the change touches, a component diagram, and risks, each tied to a file and line. It runs an AI coding tool the user already has, Claude Code or Codex CLI, chosen in Settings > AI review, so Viewer needs no API key and adds no new place that code is sent to.
+`createReviewService` turns a pull request into an overview that helps someone understand the change quickly, rather than judge it. In code it is a `ReviewMap`: a summary, the main changes described as before and now, the runtime flows the change alters with their steps before and after it, the components around the change marked as added, changed, removed, or unchanged, what else it affects, and a reading order. Items point to a file and line. It runs an AI coding tool the user already has, Claude Code or Codex CLI, chosen in Settings > AI overview, so Viewer needs no API key and adds no new place that code is sent to.
 
 1. Check out the directories the pull request touches at its head commit, as a sparse worktree of the repository cache. Write the diff, the list of every file in the repository (from git trees, without downloading contents), and the description next to it.
 2. Run the chosen tool in that worktree: `claude --print` (`ai/claude-code.ts`) or `codex exec` (`ai/codex.ts`). The tool reads the files and returns JSON that must match `REVIEW_SCHEMA`. Its tool calls stream back as progress such as "Reading src/app.ts", which the renderer polls once a second.
 3. `parseReviewMap` checks the result, caps its size, and drops anything malformed. `verifyLocations` marks every cited line that does not exist in the checked-out files as unverified, so the UI can flag it.
-4. Store the result under `userData/reviews`, keyed by pull request and head commit, and delete the worktree. A new push gets a new review; reopening the same commit shows the stored one.
+4. Store the result under `userData/reviews`, keyed by pull request and head commit, and delete the worktree. A new push gets a new overview; reopening the same commit shows the stored one. Stored files carry a format number, and files in an older format are ignored, so they are generated again after the shape changes.
+
+Steps before the change keep no code location, because the code they describe may be gone from the pull request's version. `compareFlow` finds the steps that only exist on one side, and the before and after diagrams shade them red and green.
 
 Each tool is a `ReviewAgent` (`ai/agent.ts`). `runAgentProcess` gives every runner the same timeout, cancellation, and "not installed" handling, and `ai/detect.ts` reports in Settings whether each tool is installed and signed in. `REVIEW_SCHEMA` stays within the strict subset that OpenAI structured outputs accept, with every property required and optional values nullable, so one schema serves both tools. Supporting another tool means writing one runner and adding it to `AI_PROVIDERS` in `src/shared/ai.ts`.
 

@@ -211,7 +211,7 @@ export function App() {
       <div className={styles.rightBar}>
         <ToolWindowBar side="right" label="Right tool windows">
           <ToolWindowButton
-            label="AI review"
+            label="AI overview"
             shortcut={reviewShortcut}
             pressed={reviewShown}
             onClick={() => toggle('review')}

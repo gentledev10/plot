@@ -30,13 +30,24 @@ const changed: ChangedFile = {
 
 const reviewOutput = {
   summary: 'Greets by name.',
-  readingOrder: [{ path: 'src/app.ts', reason: 'The only change.' }],
+  changes: [
+    {
+      title: 'Real line',
+      before: 'Said hello.',
+      after: 'Says hello with the name.',
+      location: { path: 'src/app.ts', line: 2 },
+    },
+    {
+      title: 'Made up',
+      before: 'x',
+      after: 'y',
+      location: { path: 'src/app.ts', line: 90 },
+    },
+  ],
   flows: [],
   architecture: { nodes: [], edges: [] },
-  risks: [
-    { title: 'Real line', detail: 'd', severity: 'low', location: { path: 'src/app.ts', line: 2 } },
-    { title: 'Made up', detail: 'd', severity: 'low', location: { path: 'src/app.ts', line: 90 } },
-  ],
+  impacts: [],
+  readingOrder: [{ path: 'src/app.ts', reason: 'The only change.' }],
 };
 
 function deferred<T>() {
@@ -142,7 +153,7 @@ describe('createReviewService', () => {
     if (status.state !== 'done') {
       throw new Error('expected a finished review');
     }
-    expect(status.review.risks.map((risk) => risk.location?.verified)).toEqual([true, false]);
+    expect(status.review.changes.map((change) => change.location?.verified)).toEqual([true, false]);
   });
 
   it('gives the agent the changed directories and the context files', async () => {

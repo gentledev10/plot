@@ -79,17 +79,18 @@ describe('App', () => {
         createdAt: new Date().toISOString(),
         review: {
           summary: 'Fixes the redirect.',
-          readingOrder: [],
-          flows: [],
-          architecture: { nodes: [], edges: [] },
-          risks: [
+          changes: [
             {
               title: 'Open redirect',
-              detail: 'The target is not validated.',
-              severity: 'high',
+              before: 'Redirects went anywhere.',
+              after: 'The target is checked first.',
               location: { path: 'src/login.ts', line: 7, verified: true },
             },
           ],
+          flows: [],
+          architecture: { nodes: [], edges: [] },
+          impacts: [],
+          readingOrder: [],
         },
       }),
     };
@@ -110,17 +111,18 @@ describe('App', () => {
         createdAt: new Date().toISOString(),
         review: {
           summary: 'Fixes the redirect.',
-          readingOrder: [],
-          flows: [],
-          architecture: { nodes: [], edges: [] },
-          risks: [
+          changes: [
             {
               title: 'Open redirect',
-              detail: 'The target is not validated.',
-              severity: 'high',
+              before: 'Redirects went anywhere.',
+              after: 'The target is checked first.',
               location: { path: 'src/login.ts', line: 7, verified: true },
             },
           ],
+          flows: [],
+          architecture: { nodes: [], edges: [] },
+          impacts: [],
+          readingOrder: [],
         },
       }),
     };
@@ -131,7 +133,7 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: "Maximize (⇧⌘')" }));
     expect(screen.queryByRole('main')).not.toBeInTheDocument();
     expect(screen.queryByRole('complementary', { name: 'Changed files' })).not.toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: 'AI review' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'AI overview' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'src/login.ts:7' }));
     expect(screen.getByRole('main')).toBeInTheDocument();
@@ -157,13 +159,13 @@ describe('App', () => {
 
   it('remembers which panels were hidden', async () => {
     const { unmount } = renderWithApi(<App />, api());
-    await userEvent.click(screen.getByRole('button', { name: 'AI review', pressed: true }));
+    await userEvent.click(screen.getByRole('button', { name: 'AI overview', pressed: true }));
     unmount();
 
     renderWithApi(<App />, api());
 
-    expect(screen.getByRole('button', { name: 'AI review', pressed: false })).toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: 'AI review' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'AI overview', pressed: false })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'AI overview' })).not.toBeInTheDocument();
   });
 
   it('remembers panel widths set by dragging their edge', () => {
@@ -187,7 +189,7 @@ describe('App', () => {
   it('toggles panels from the keyboard', async () => {
     renderWithApi(<App />, api());
     const sidebar = () => screen.queryByRole('complementary', { name: 'Pull requests' });
-    const review = () => screen.queryByRole('complementary', { name: 'AI review' });
+    const review = () => screen.queryByRole('complementary', { name: 'AI overview' });
 
     fireEvent.keyDown(document.body, { key: '2', code: 'Digit2', metaKey: true });
     expect(review()).not.toBeInTheDocument();

@@ -1,4 +1,4 @@
-export const COMMAND_GROUPS = ['Diff', 'Editor', 'View', 'Pull requests', 'AI review'] as const;
+export const COMMAND_GROUPS = ['Diff', 'Editor', 'View', 'Pull requests', 'AI overview'] as const;
 
 export type CommandGroup = (typeof COMMAND_GROUPS)[number];
 
@@ -52,10 +52,15 @@ export const COMMANDS = [
     keys: ['Alt+ArrowDown'],
   },
   { id: 'view.toggleSidebar', title: 'Show or hide the sidebar', group: 'View', keys: ['Meta+1'] },
-  { id: 'view.toggleReview', title: 'Show or hide the AI review', group: 'View', keys: ['Meta+2'] },
+  {
+    id: 'view.toggleReview',
+    title: 'Show or hide the AI overview',
+    group: 'View',
+    keys: ['Meta+2'],
+  },
   {
     id: 'view.maximizeReview',
-    title: 'Maximize or restore the AI panel',
+    title: 'Maximize or restore the AI overview',
     group: 'View',
     keys: ["Shift+Meta+'"],
   },
@@ -79,7 +84,7 @@ export const COMMANDS = [
   },
   { id: 'pullRequest.refresh', title: 'Refresh', group: 'Pull requests', keys: ['Meta+R'] },
   { id: 'pullRequest.openOnGitHub', title: 'Open on GitHub', group: 'Pull requests', keys: [] },
-  { id: 'review.generate', title: 'Generate a review map', group: 'AI review', keys: [] },
+  { id: 'review.generate', title: 'Explain this change', group: 'AI overview', keys: [] },
 ] as const satisfies readonly CommandDefinition[];
 
 export type CommandId = (typeof COMMANDS)[number]['id'];

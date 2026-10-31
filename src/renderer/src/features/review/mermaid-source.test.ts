@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   architectureToMermaid,
-  flowToMermaid,
+  compareFlow,
   nodeIndexFromElementId,
   safeLabel,
+  sequenceToMermaid,
 } from './mermaid-source';
 
 describe('safeLabel', () => {
@@ -25,17 +26,15 @@ describe('safeLabel', () => {
   });
 });
 
-describe('flowToMermaid', () => {
+describe('sequenceToMermaid', () => {
+  const steps = [
+    { from: 'PostController', to: 'PostService', label: 'create(request)' },
+    { from: 'PostService', to: 'PostRepository', label: 'save(post)' },
+    { from: 'PostService', to: 'PostController', label: 'return id' },
+  ];
+
   it('builds a sequence diagram with stable participant ids', () => {
-    const source = flowToMermaid({
-      title: 'Save post',
-      steps: [
-        { from: 'PostController', to: 'PostService', label: 'create(request)' },
-        { from: 'PostService', to: 'PostRepository', label: 'save(post)' },
-        { from: 'PostService', to: 'PostController', label: 'return id' },
-      ],
-    });
-    expect(source).toBe(
+    expect(sequenceToMermaid(steps)).toBe(
       [
         'sequenceDiagram',
         '  participant p0 as PostController',
@@ -47,31 +46,67 @@ describe('flowToMermaid', () => {
       ].join('\n'),
     );
   });
+
+  it('shades the steps it is asked to highlight', () => {
+    const lines = sequenceToMermaid(steps, new Set([1]), 'removed').split('\n');
+    expect(lines.slice(-4)).toEqual([
+      '  rect rgba(219, 92, 92, 0.18)',
+      '    p1->>p2: save(post)',
+      '  end',
+      '  p1->>p0: return id',
+    ]);
+  });
+});
+
+describe('compareFlow', () => {
+  it('finds the steps that were added and removed by the change', () => {
+    const comparison = compareFlow({
+      title: 'Save post',
+      before: [
+        { from: 'Controller', to: 'Repository', label: 'save(post)' },
+        { from: 'Controller', to: 'Client', label: 'return id' },
+      ],
+      after: [
+        { from: 'Controller', to: 'Service', label: 'create(post)' },
+        { from: 'Service', to: 'Repository', label: 'save(post)' },
+        { from: 'controller', to: 'client', label: 'return  id' },
+      ],
+    });
+    expect([...comparison.removed]).toEqual([0]);
+    expect([...comparison.added]).toEqual([0, 1]);
+  });
+
+  it('highlights nothing in a flow that is entirely new or entirely gone', () => {
+    const step = { from: 'A', to: 'B', label: 'call()' };
+    expect(compareFlow({ title: 'New', before: [], after: [step] }).added.size).toBe(0);
+    expect(compareFlow({ title: 'Gone', before: [step], after: [] }).removed.size).toBe(0);
+  });
 });
 
 describe('architectureToMermaid', () => {
   const architecture = {
     nodes: [
-      { id: 'api', label: 'API layer', changed: true },
-      { id: 'db.store', label: 'Database "store"', changed: false },
+      { id: 'api', label: 'API layer', status: 'changed' as const },
+      { id: 'db.store', label: 'Database "store"', status: 'unchanged' as const },
+      { id: 'cache', label: 'Cache', status: 'added' as const },
     ],
     edges: [
       { from: 'api', to: 'db.store', label: 'writes' },
-      { from: 'db.store', to: 'api' },
+      { from: 'api', to: 'cache' },
     ],
   };
 
-  it('draws a left-to-right flowchart and marks changed components', () => {
-    const { source, nodeIds } = architectureToMermaid(architecture, 'light');
-    expect(source.split('\n')).toEqual([
+  it('draws a left-to-right flowchart and colors components by what happened to them', () => {
+    const { source } = architectureToMermaid(architecture, 'light');
+    expect(source.split('\n').slice(0, 6)).toEqual([
       'flowchart LR',
       '  n0["API layer"]:::changed',
       '  n1["Database store"]',
+      '  n2["Cache"]:::added',
       '  n0 -->|"writes"| n1',
-      '  n1 --> n0',
-      expect.stringMatching(/^ {2}classDef changed fill:#d4e2ff/),
+      '  n0 --> n2',
     ]);
-    expect(nodeIds).toEqual(['api', 'db.store']);
+    expect(source).toContain('classDef removed');
   });
 
   it('uses darker colors in dark mode', () => {

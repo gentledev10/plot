@@ -1,12 +1,27 @@
-import type { Flow, ReviewMap } from '@shared/review';
+import type { ChangeStatus, Flow, FlowStep, ReviewMap } from '@shared/review';
 import type { ColorScheme } from '../../lib/color-scheme';
 
 const MAX_LABEL = 60;
 
-const CHANGED_STYLE: Record<ColorScheme, string> = {
-  light: 'fill:#d4e2ff,stroke:#3574f0,stroke-width:2px,color:#1e1f22',
-  dark: 'fill:#2e436e,stroke:#548af7,stroke-width:2px,color:#dfe1e5',
+const STATUS_STYLE: Record<ColorScheme, Record<Exclude<ChangeStatus, 'unchanged'>, string>> = {
+  light: {
+    added: 'fill:#e3f2df,stroke:#208a3c,stroke-width:2px,color:#1e1f22',
+    changed: 'fill:#d4e2ff,stroke:#3574f0,stroke-width:2px,color:#1e1f22',
+    removed: 'fill:#f2f2f2,stroke:#a8adbd,stroke-width:2px,stroke-dasharray:4 3,color:#6c707e',
+  },
+  dark: {
+    added: 'fill:#294436,stroke:#57965c,stroke-width:2px,color:#dfe1e5',
+    changed: 'fill:#2e436e,stroke:#548af7,stroke-width:2px,color:#dfe1e5',
+    removed: 'fill:#2b2d30,stroke:#6f737a,stroke-width:2px,stroke-dasharray:4 3,color:#868a91',
+  },
 };
+
+const HIGHLIGHT = {
+  added: 'rgba(95, 184, 101, 0.2)',
+  removed: 'rgba(219, 92, 92, 0.18)',
+} as const;
+
+export type StepHighlight = keyof typeof HIGHLIGHT;
 
 export function safeLabel(text: string): string {
   const cleaned = text
@@ -17,7 +32,33 @@ export function safeLabel(text: string): string {
   return clipped === '' ? '?' : clipped;
 }
 
-export function flowToMermaid(flow: Flow): string {
+function stepKey(step: FlowStep): string {
+  return [step.from, step.to, step.label]
+    .map((part) => part.replace(/\s+/g, ' ').trim().toLowerCase())
+    .join('\u0000');
+}
+
+export interface FlowComparison {
+  removed: ReadonlySet<number>;
+  added: ReadonlySet<number>;
+}
+
+export function compareFlow(flow: Flow): FlowComparison {
+  const beforeKeys = new Set(flow.before.map(stepKey));
+  const afterKeys = new Set(flow.after.map(stepKey));
+  const indexesNotIn = (steps: FlowStep[], other: ReadonlySet<string>) =>
+    new Set(steps.flatMap((step, index) => (other.has(stepKey(step)) ? [] : [index])));
+  return {
+    removed: flow.after.length === 0 ? new Set() : indexesNotIn(flow.before, afterKeys),
+    added: flow.before.length === 0 ? new Set() : indexesNotIn(flow.after, beforeKeys),
+  };
+}
+
+export function sequenceToMermaid(
+  steps: readonly FlowStep[],
+  highlighted: ReadonlySet<number> = new Set(),
+  highlight: StepHighlight = 'added',
+): string {
   const ids = new Map<string, string>();
   const participant = (name: string) => {
     let id = ids.get(name);
@@ -27,9 +68,12 @@ export function flowToMermaid(flow: Flow): string {
     }
     return id;
   };
-  const messages = flow.steps.map(
-    (step) => `  ${participant(step.from)}->>${participant(step.to)}: ${safeLabel(step.label)}`,
-  );
+  const messages = steps.flatMap((step, index) => {
+    const message = `${participant(step.from)}->>${participant(step.to)}: ${safeLabel(step.label)}`;
+    return highlighted.has(index)
+      ? [`  rect ${HIGHLIGHT[highlight]}`, `    ${message}`, '  end']
+      : [`  ${message}`];
+  });
   const participants = [...ids].map(([name, id]) => `  participant ${id} as ${safeLabel(name)}`);
   return ['sequenceDiagram', ...participants, ...messages].join('\n');
 }
@@ -46,21 +90,17 @@ export function architectureToMermaid(
   const nodeIds = architecture.nodes.map((node) => node.id);
   const idOf = (id: string) => `n${nodeIds.indexOf(id)}`;
   const nodes = architecture.nodes.map(
-    (node, index) => `  n${index}["${safeLabel(node.label)}"]${node.changed ? ':::changed' : ''}`,
+    (node, index) =>
+      `  n${index}["${safeLabel(node.label)}"]${node.status === 'unchanged' ? '' : `:::${node.status}`}`,
   );
   const edges = architecture.edges.map((edge) => {
     const label = edge.label ? `|"${safeLabel(edge.label)}"|` : '';
     return `  ${idOf(edge.from)} -->${label} ${idOf(edge.to)}`;
   });
-  return {
-    source: [
-      'flowchart LR',
-      ...nodes,
-      ...edges,
-      `  classDef changed ${CHANGED_STYLE[scheme]}`,
-    ].join('\n'),
-    nodeIds,
-  };
+  const classes = Object.entries(STATUS_STYLE[scheme]).map(
+    ([status, style]) => `  classDef ${status} ${style}`,
+  );
+  return { source: ['flowchart LR', ...nodes, ...edges, ...classes].join('\n'), nodeIds };
 }
 
 export function nodeIndexFromElementId(elementId: string): number | undefined {

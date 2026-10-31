@@ -7,9 +7,11 @@ export interface CodeLocation {
   verified?: boolean;
 }
 
-export interface ReadingStep {
-  path: string;
-  reason: string;
+export interface KeyChange {
+  title: string;
+  before: string;
+  after: string;
+  location?: CodeLocation;
 }
 
 export interface FlowStep {
@@ -21,13 +23,16 @@ export interface FlowStep {
 
 export interface Flow {
   title: string;
-  steps: FlowStep[];
+  before: FlowStep[];
+  after: FlowStep[];
 }
+
+export type ChangeStatus = 'added' | 'changed' | 'removed' | 'unchanged';
 
 export interface ArchitectureNode {
   id: string;
   label: string;
-  changed: boolean;
+  status: ChangeStatus;
   location?: CodeLocation;
 }
 
@@ -37,21 +42,24 @@ export interface ArchitectureEdge {
   label?: string;
 }
 
-export type RiskSeverity = 'high' | 'medium' | 'low';
-
-export interface Risk {
-  title: string;
+export interface Impact {
+  area: string;
   detail: string;
-  severity: RiskSeverity;
   location?: CodeLocation;
+}
+
+export interface ReadingStep {
+  path: string;
+  reason: string;
 }
 
 export interface ReviewMap {
   summary: string;
-  readingOrder: ReadingStep[];
+  changes: KeyChange[];
   flows: Flow[];
   architecture: { nodes: ArchitectureNode[]; edges: ArchitectureEdge[] };
-  risks: Risk[];
+  impacts: Impact[];
+  readingOrder: ReadingStep[];
 }
 
 export interface StoredReview {

@@ -1,13 +1,14 @@
 import type {
   ArchitectureEdge,
   ArchitectureNode,
+  ChangeStatus,
   CodeLocation,
   Flow,
   FlowStep,
+  Impact,
+  KeyChange,
   ReadingStep,
   ReviewMap,
-  Risk,
-  RiskSeverity,
 } from '@shared/review';
 import { AppError } from '../errors';
 
@@ -22,18 +23,25 @@ const location = {
 
 const optionalLocation = { anyOf: [location, { type: 'null' }] } as const;
 
+const step = {
+  type: 'object',
+  properties: { from: text, to: text, label: text, location: optionalLocation },
+  required: ['from', 'to', 'label', 'location'],
+  additionalProperties: false,
+} as const;
+
 // Strict enough for OpenAI structured outputs, which Codex uses: every property is required,
 // optional values are nullable, and no object accepts properties it does not list.
 export const REVIEW_SCHEMA = {
   type: 'object',
   properties: {
     summary: text,
-    readingOrder: {
+    changes: {
       type: 'array',
       items: {
         type: 'object',
-        properties: { path: text, reason: text },
-        required: ['path', 'reason'],
+        properties: { title: text, before: text, after: text, location: optionalLocation },
+        required: ['title', 'before', 'after', 'location'],
         additionalProperties: false,
       },
     },
@@ -43,17 +51,10 @@ export const REVIEW_SCHEMA = {
         type: 'object',
         properties: {
           title: text,
-          steps: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: { from: text, to: text, label: text, location: optionalLocation },
-              required: ['from', 'to', 'label', 'location'],
-              additionalProperties: false,
-            },
-          },
+          before: { type: 'array', items: step },
+          after: { type: 'array', items: step },
         },
-        required: ['title', 'steps'],
+        required: ['title', 'before', 'after'],
         additionalProperties: false,
       },
     },
@@ -67,10 +68,10 @@ export const REVIEW_SCHEMA = {
             properties: {
               id: text,
               label: text,
-              changed: { type: 'boolean' },
+              status: { type: 'string', enum: ['added', 'changed', 'removed', 'unchanged'] },
               location: optionalLocation,
             },
-            required: ['id', 'label', 'changed', 'location'],
+            required: ['id', 'label', 'status', 'location'],
             additionalProperties: false,
           },
         },
@@ -87,48 +88,55 @@ export const REVIEW_SCHEMA = {
       required: ['nodes', 'edges'],
       additionalProperties: false,
     },
-    risks: {
+    impacts: {
       type: 'array',
       items: {
         type: 'object',
-        properties: {
-          title: text,
-          detail: text,
-          severity: { type: 'string', enum: ['high', 'medium', 'low'] },
-          location: optionalLocation,
-        },
-        required: ['title', 'detail', 'severity', 'location'],
+        properties: { area: text, detail: text, location: optionalLocation },
+        required: ['area', 'detail', 'location'],
+        additionalProperties: false,
+      },
+    },
+    readingOrder: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { path: text, reason: text },
+        required: ['path', 'reason'],
         additionalProperties: false,
       },
     },
   },
-  required: ['summary', 'readingOrder', 'flows', 'architecture', 'risks'],
+  required: ['summary', 'changes', 'flows', 'architecture', 'impacts', 'readingOrder'],
   additionalProperties: false,
 } as const;
 
 const LIMITS = {
   text: 2_000,
   label: 200,
-  readingOrder: 300,
-  flows: 5,
-  steps: 40,
+  changes: 15,
+  flows: 4,
+  steps: 30,
   nodes: 40,
   edges: 80,
-  risks: 30,
+  impacts: 15,
+  readingOrder: 300,
 };
+
+const STATUSES: ReadonlySet<ChangeStatus> = new Set(['added', 'changed', 'removed', 'unchanged']);
 
 type Json = Record<string, unknown>;
 
 export function parseReviewMap(value: unknown): ReviewMap {
   if (!isObject(value) || typeof value.summary !== 'string') {
-    throw new AppError('ai-invalid-output', 'The AI review did not have the expected shape.');
+    throw new AppError('ai-invalid-output', 'The AI overview did not have the expected shape.');
   }
   const architecture = isObject(value.architecture) ? value.architecture : {};
   const nodes = list(architecture.nodes, LIMITS.nodes, toNode);
   const ids = new Set(nodes.map((node) => node.id));
   return {
     summary: clip(value.summary, LIMITS.text),
-    readingOrder: list(value.readingOrder, LIMITS.readingOrder, toReadingStep),
+    changes: list(value.changes, LIMITS.changes, toKeyChange),
     flows: list(value.flows, LIMITS.flows, toFlow),
     architecture: {
       nodes,
@@ -136,8 +144,26 @@ export function parseReviewMap(value: unknown): ReviewMap {
         (edge) => ids.has(edge.from) && ids.has(edge.to),
       ),
     },
-    risks: list(value.risks, LIMITS.risks, toRisk),
+    impacts: list(value.impacts, LIMITS.impacts, toImpact),
+    readingOrder: list(value.readingOrder, LIMITS.readingOrder, toReadingStep),
   };
+}
+
+function toKeyChange(item: Json): KeyChange | undefined {
+  if (!nonEmpty(item.title) || typeof item.before !== 'string' || typeof item.after !== 'string') {
+    return undefined;
+  }
+  if (item.before.trim() === '' && item.after.trim() === '') {
+    return undefined;
+  }
+  return withLocation(
+    {
+      title: clip(item.title, LIMITS.label),
+      before: clip(item.before, LIMITS.text),
+      after: clip(item.after, LIMITS.text),
+    },
+    item.location,
+  );
 }
 
 function toReadingStep(item: Json): ReadingStep | undefined {
@@ -151,8 +177,12 @@ function toFlow(item: Json): Flow | undefined {
   if (typeof item.title !== 'string') {
     return undefined;
   }
-  const steps = list(item.steps, LIMITS.steps, toStep);
-  return steps.length > 0 ? { title: clip(item.title, LIMITS.label), steps } : undefined;
+  // Steps before the change describe code that may no longer exist, so they keep no location.
+  const before = list(item.before, LIMITS.steps, toStep).map(({ location: _, ...rest }) => rest);
+  const after = list(item.after, LIMITS.steps, toStep);
+  return before.length > 0 || after.length > 0
+    ? { title: clip(item.title, LIMITS.label), before, after }
+    : undefined;
 }
 
 function toStep(item: Json): FlowStep | undefined {
@@ -170,14 +200,18 @@ function toStep(item: Json): FlowStep | undefined {
 }
 
 function toNode(item: Json): ArchitectureNode | undefined {
-  if (!nonEmpty(item.id) || typeof item.label !== 'string' || typeof item.changed !== 'boolean') {
+  if (
+    !nonEmpty(item.id) ||
+    typeof item.label !== 'string' ||
+    !STATUSES.has(item.status as ChangeStatus)
+  ) {
     return undefined;
   }
   return withLocation(
     {
       id: clip(item.id, LIMITS.label),
       label: clip(item.label, LIMITS.label),
-      changed: item.changed,
+      status: item.status as ChangeStatus,
     },
     item.location,
   );
@@ -194,20 +228,12 @@ function toEdge(item: Json): ArchitectureEdge | undefined {
   return edge;
 }
 
-function toRisk(item: Json): Risk | undefined {
-  if (
-    typeof item.title !== 'string' ||
-    typeof item.detail !== 'string' ||
-    !isSeverity(item.severity)
-  ) {
+function toImpact(item: Json): Impact | undefined {
+  if (!nonEmpty(item.area) || typeof item.detail !== 'string') {
     return undefined;
   }
   return withLocation(
-    {
-      title: clip(item.title, LIMITS.label),
-      detail: clip(item.detail, LIMITS.text),
-      severity: item.severity,
-    },
+    { area: clip(item.area, LIMITS.label), detail: clip(item.detail, LIMITS.text) },
     item.location,
   );
 }
@@ -253,10 +279,6 @@ function clip(value: string, length: number): string {
 
 function nonEmpty(value: unknown): value is string {
   return typeof value === 'string' && value.trim() !== '';
-}
-
-function isSeverity(value: unknown): value is RiskSeverity {
-  return value === 'high' || value === 'medium' || value === 'low';
 }
 
 function isObject(value: unknown): value is Json {

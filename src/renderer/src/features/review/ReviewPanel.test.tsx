@@ -33,11 +33,25 @@ const diff = {
 
 const review: ReviewMap = {
   summary: 'Greets users by name.',
-  readingOrder: [{ path: 'src/app.ts', reason: 'Where the greeting changes.' }],
+  changes: [
+    {
+      title: 'Empty names',
+      before: 'Every user saw "hello".',
+      after: 'Users see "hello <name>", even when the name is empty.',
+      location: { path: 'src/app.ts', line: 99, verified: false },
+    },
+    {
+      title: 'Caller elsewhere',
+      before: '',
+      after: 'Another module now passes the name.',
+      location: { path: 'src/other.ts', line: 3, verified: true },
+    },
+  ],
   flows: [
     {
       title: 'Greeting',
-      steps: [
+      before: [{ from: 'App', to: 'Greeter', label: 'greet()' }],
+      after: [
         {
           from: 'App',
           to: 'Greeter',
@@ -48,23 +62,11 @@ const review: ReviewMap = {
     },
   ],
   architecture: {
-    nodes: [{ id: 'app', label: 'App shell', changed: true }],
+    nodes: [{ id: 'app', label: 'App shell', status: 'changed' }],
     edges: [],
   },
-  risks: [
-    {
-      title: 'Empty names',
-      detail: 'An empty name prints "hello ".',
-      severity: 'medium',
-      location: { path: 'src/app.ts', line: 99, verified: false },
-    },
-    {
-      title: 'Caller elsewhere',
-      detail: 'A caller in another module was not updated.',
-      severity: 'high',
-      location: { path: 'src/other.ts', line: 3, verified: true },
-    },
-  ],
+  impacts: [{ area: 'Public greet API', detail: 'Callers must pass a name.' }],
+  readingOrder: [{ path: 'src/app.ts', reason: 'Where the greeting changes.' }],
 };
 
 const done: ReviewStatus = {
@@ -95,7 +97,9 @@ function setup(statuses: ReviewStatus[], overrides = {}) {
 describe('ReviewPanel', () => {
   it('asks for a pull request when none is open', () => {
     renderWithApi(<ReviewPanel onOpenLocation={vi.fn()} />);
-    expect(screen.getByText('Open a pull request to generate a review map.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Open a pull request to get an overview of its changes.'),
+    ).toBeInTheDocument();
   });
 
   it('explains what will happen before generating, then starts a review', async () => {
@@ -107,9 +111,9 @@ describe('ReviewPanel', () => {
     expect(
       await screen.findByText(/Claude Code reads this pull request .* read-only access/),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Generate review map/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Explain this change/ }));
     expect(api.startReview).toHaveBeenCalledWith(target);
-    expect(await screen.findByText(/Reviewing…/)).toBeInTheDocument();
+    expect(await screen.findByText(/Reading the change…/)).toBeInTheDocument();
   });
 
   it('names the AI tool chosen in settings and links to the setting', async () => {
@@ -138,10 +142,11 @@ describe('ReviewPanel', () => {
         model: 'gpt-5.1-codex',
         review: {
           summary: 'S',
-          readingOrder: [],
+          changes: [],
           flows: [],
           architecture: { nodes: [], edges: [] },
-          risks: [],
+          impacts: [],
+          readingOrder: [],
         },
       },
     ]);
@@ -160,7 +165,7 @@ describe('ReviewPanel', () => {
     ]);
 
     const latest = await screen.findByText('Reading src/app.ts');
-    expect(latest.closest('[role="status"]')).toHaveTextContent('Reviewing…');
+    expect(latest.closest('[role="status"]')).toHaveTextContent('Reading the change…');
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(api.cancelReview).toHaveBeenCalledWith(target);
   });
@@ -169,10 +174,25 @@ describe('ReviewPanel', () => {
     setup([done]);
 
     expect(await screen.findByText('Greets users by name.')).toBeInTheDocument();
-    const [flow, architecture] = screen.getAllByTestId('diagram');
-    expect(flow).toHaveTextContent('p0->>p1: greet(name)');
+    const [before, now, architecture] = screen.getAllByTestId('diagram');
+    expect(before).toHaveTextContent('rect rgba(219, 92, 92, 0.18) p0->>p1: greet()');
+    expect(now).toHaveTextContent('rect rgba(95, 184, 101, 0.2) p0->>p1: greet(name)');
     expect(architecture).toHaveTextContent('n0["App shell"]:::changed');
     expect(screen.getByText(/cost \$0\.42/)).toBeInTheDocument();
+  });
+
+  it('explains each change by how it worked before and how it works now', async () => {
+    setup([done]);
+    const change = (await screen.findByText('Empty names')).closest('li') as HTMLElement;
+    expect(within(change).getByText('Before').nextSibling).toHaveTextContent(
+      'Every user saw "hello".',
+    );
+    expect(within(change).getByText('Now')).toBeInTheDocument();
+
+    const added = screen.getByText('Caller elsewhere').closest('li') as HTMLElement;
+    expect(within(added).queryByText('Before')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'What else it affects' })).toBeInTheDocument();
+    expect(screen.getByText('Callers must pass a name.')).toBeInTheDocument();
   });
 
   it('opens code locations in changed files', async () => {
@@ -191,9 +211,9 @@ describe('ReviewPanel', () => {
 
   it('flags locations the AI made up', async () => {
     setup([done]);
-    const risk = (await screen.findByText('Empty names')).closest('li');
-    expect(risk).not.toBeNull();
-    expect(within(risk as HTMLElement).getByText('unverified')).toBeInTheDocument();
+    const change = (await screen.findByText('Empty names')).closest('li');
+    expect(change).not.toBeNull();
+    expect(within(change as HTMLElement).getByText('unverified')).toBeInTheDocument();
   });
 
   it('shows locations outside the pull request as text, not links', async () => {

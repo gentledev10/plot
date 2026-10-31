@@ -13,8 +13,9 @@ export function verifyLocations(review: ReviewMap, lineCount: LineCounter): Revi
   };
   return {
     ...review,
-    flows: review.flows.map((flow) => ({ ...flow, steps: flow.steps.map(check) })),
+    changes: review.changes.map(check),
+    flows: review.flows.map((flow) => ({ ...flow, after: flow.after.map(check) })),
     architecture: { ...review.architecture, nodes: review.architecture.nodes.map(check) },
-    risks: review.risks.map(check),
+    impacts: review.impacts.map(check),
   };
 }

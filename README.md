@@ -10,12 +10,12 @@ Many developers now open a full IDE only to read diffs, often of code an AI wrot
 
 - **Pull requests in one click.** See the pull requests waiting for your review, or paste any pull request URL.
 - **IntelliJ's diff, outside IntelliJ.** Side-by-side diffs with IntelliJ's colors, collapsed unchanged fragments, and the same keyboard shortcuts.
-- **A map before you read.** An AI review map gives a summary, a reading order, sequence and component diagrams, and the places worth a closer look. Every item links to the line it is about. Bring your own Claude Code or Codex CLI.
+- **Understand a change before you read it.** An AI overview explains what the pull request changes, compares how the code flowed before and after in sequence diagrams, draws the components around it, and lists what else it affects. Every item links to the line it is about. Bring your own Claude Code or Codex CLI.
 - **Fast on large repositories.** Viewer fetches only the two commits a pull request compares, not the whole repository.
 
-## AI review maps and your code
+## AI overviews and your code
 
-Review maps are made by an AI coding tool on your Mac, with your own account: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI review, which also shows whether each tool is installed and signed in. Viewer has no server and no API key of its own.
+Overviews are made by an AI coding tool on your Mac, with your own account: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. Viewer has no server and no API key of its own.
 
 The tool reads the pull request's diff and description, the list of file paths in the repository, and the directories the pull request touches. It only gets to read:
 
@@ -24,7 +24,7 @@ The tool reads the pull request's diff and description, the list of file paths i
 
 Instructions hidden in a pull request therefore cannot make the tool change files or send code elsewhere. Lines the AI cites are checked against the code, and anything it made up is marked as unverified.
 
-Reviews are saved on your Mac per commit, so reopening a pull request does not run the tool again.
+Overviews are saved on your Mac per commit, so reopening a pull request does not run the tool again.
 
 ## Keyboard shortcuts
 
@@ -48,7 +48,7 @@ Reviews are saved on your Mac per commit, so reopening a pull request does not r
 
 The defaults follow IntelliJ IDEA's macOS keymap. At the last difference of a file, press F7 again to open the next file, as in IntelliJ.
 
-Change any shortcut in Settings > Keymap. Actions such as switching to the unified view or generating a review map have no default shortcut, and you can give them one there.
+Change any shortcut in Settings > Keymap. Actions such as switching to the unified view or explaining a change have no default shortcut, and you can give them one there.
 
 ## Connecting GitHub
 
@@ -65,7 +65,7 @@ You can connect several accounts, including accounts on GitHub Enterprise Server
 - macOS
 - Git
 - A GitHub account on github.com or GitHub Enterprise Server
-- Claude Code or Codex CLI, signed in, for AI review maps. Everything else works without them.
+- Claude Code or Codex CLI, signed in, for AI overviews. Everything else works without them.
 
 ## Development
 

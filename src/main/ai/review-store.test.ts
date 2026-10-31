@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { StoredReview } from '@shared/review';
@@ -14,10 +14,11 @@ const stored: StoredReview = {
   costUsd: 0.3,
   review: {
     summary: 'Adds dark mode.',
-    readingOrder: [],
+    changes: [],
     flows: [],
     architecture: { nodes: [], edges: [] },
-    risks: [],
+    impacts: [],
+    readingOrder: [],
   },
 };
 
@@ -51,6 +52,16 @@ describe('createFileReviewStore', () => {
     const store = createFileReviewStore(root);
     await store.write(ref, stored);
     await expect(store.read(ref, 'c'.repeat(40))).resolves.toBeUndefined();
+  });
+
+  it('ignores reviews saved in an older format, so they are generated again', async () => {
+    const store = createFileReviewStore(root);
+    await store.write(ref, stored);
+    const file = join(root, 'github.com', 'octocat', 'hello-world', `42-${head}.json`);
+    const { format: _format, ...older } = JSON.parse(await readFile(file, 'utf8'));
+    await writeFile(file, JSON.stringify(older));
+
+    await expect(store.read(ref, head)).resolves.toBeUndefined();
   });
 
   it('ignores corrupted files', async () => {

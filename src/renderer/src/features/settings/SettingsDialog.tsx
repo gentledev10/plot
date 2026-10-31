@@ -11,7 +11,7 @@ export type SettingsSection = 'accounts' | 'ai' | 'keymap';
 
 const SECTIONS: readonly { id: SettingsSection; title: string; render(): ReactNode }[] = [
   { id: 'accounts', title: 'Accounts', render: () => <AccountsSettings /> },
-  { id: 'ai', title: 'AI review', render: () => <AiReviewSettings /> },
+  { id: 'ai', title: 'AI overview', render: () => <AiReviewSettings /> },
   { id: 'keymap', title: 'Keymap', render: () => <KeymapSettings /> },
 ];
 
