@@ -3,6 +3,7 @@
   "productName": "Viewer",
   "version": "0.1.0",
   "description": "A lightweight pull request diff viewer with IntelliJ-style navigation and AI review maps.",
+  "license": "MIT",
   "private": true,
   "main": "./out/main/index.js",
   "engines": {

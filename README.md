@@ -94,4 +94,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines, and [docs/ARCHI
 
 ## License
 
-Not decided yet.
+[MIT](LICENSE)
