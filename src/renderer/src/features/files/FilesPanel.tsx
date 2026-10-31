@@ -1,22 +1,22 @@
-import type { PullRequestRef } from '@shared/github';
-import { formatPullRequestRef } from '@shared/pull-request-ref';
 import { ChevronLeft } from 'lucide-react';
 import { useMemo } from 'react';
 import { StatusMessage } from '../../components/StatusMessage';
-import { usePullRequestDiff } from '../diff/queries';
+import { useTargetDiff } from '../diff/queries';
+import type { DiffTarget } from '../diff/target';
 import styles from './FilesPanel.module.css';
 import { FileTree } from './FileTree';
 import { buildFileTree, filesInTreeOrder } from './file-tree';
 
 interface FilesPanelProps {
-  target: PullRequestRef;
+  target: DiffTarget;
+  title: string;
   selectedPath?: string;
   onSelectFile(path: string): void;
   onBack(): void;
 }
 
-export function FilesPanel({ target, selectedPath, onSelectFile, onBack }: FilesPanelProps) {
-  const diff = usePullRequestDiff(target);
+export function FilesPanel({ target, title, selectedPath, onSelectFile, onBack }: FilesPanelProps) {
+  const diff = useTargetDiff(target);
   const tree = useMemo(() => (diff.data ? buildFileTree(diff.data.files) : []), [diff.data]);
   const current = selectedPath ?? filesInTreeOrder(tree)[0]?.path;
   const totals = useMemo(() => {
@@ -34,7 +34,7 @@ export function FilesPanel({ target, selectedPath, onSelectFile, onBack }: Files
           <ChevronLeft size={14} /> Pull requests
         </button>
       </header>
-      <p className={styles.target}>{formatPullRequestRef(target)}</p>
+      <p className={styles.target}>{title}</p>
       <div className={styles.content}>{renderContent()}</div>
       {diff.data && (
         <footer className={styles.footer}>

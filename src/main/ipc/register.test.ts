@@ -32,6 +32,13 @@ function setup(api: Partial<ViewerApi> = {}) {
     setThemeSource: vi.fn(),
     getPreferences: vi.fn(),
     setPreference: vi.fn(),
+    openLocalRepository: vi.fn(),
+    listLocalRepositories: vi.fn(),
+    removeLocalRepository: vi.fn(),
+    getLocalDiff: vi.fn(),
+    getLocalSignature: vi.fn(),
+    readLocalBlob: vi.fn(),
+    readLocalFile: vi.fn(),
     ...api,
   };
   registerIpcHandlers(ipc, fullApi, {

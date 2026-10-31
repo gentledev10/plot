@@ -41,7 +41,9 @@ describe('App', () => {
     const fake = api();
     renderWithApi(<App />, fake);
 
-    expect(screen.getByText('Select a pull request to start reviewing.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Select a pull request or a local repository to start reviewing.'),
+    ).toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
 
     expect(
@@ -67,7 +69,9 @@ describe('App', () => {
       'aria-current',
       'true',
     );
-    expect(screen.getByText('Select a pull request to start reviewing.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Select a pull request or a local repository to start reviewing.'),
+    ).toBeInTheDocument();
   });
 
   it('jumps to the line a review item points at', async () => {
@@ -254,6 +258,52 @@ describe('App', () => {
     fireEvent.keyDown(document.body, { key: 'o', code: 'KeyO', metaKey: true });
 
     expect(await screen.findByRole('textbox', { name: 'Pull request URL' })).toHaveFocus();
+  });
+
+  it('shows the changes in a local repository, including uncommitted work', async () => {
+    const repository = { id: '0123456789abcdef', name: 'api', path: '/work/api' };
+    const file = {
+      path: 'src/server.ts',
+      status: 'modified' as const,
+      kind: 'file' as const,
+      oldBlob: 'e'.repeat(40),
+      newBlob: null,
+      additions: 1,
+      deletions: 1,
+    };
+    const getLocalDiff = vi.fn().mockResolvedValue({
+      branch: 'feature',
+      base: { name: 'origin/main', commit: 'f'.repeat(40) },
+      files: [file],
+    });
+    const getLocalSignature = vi.fn().mockResolvedValue('first');
+    const { queryClient } = renderWithApi(<App />, {
+      ...api(),
+      listLocalRepositories: vi.fn().mockResolvedValue([repository]),
+      getLocalDiff,
+      getLocalSignature,
+      readLocalBlob: vi.fn().mockResolvedValue({ kind: 'text', text: 'listen(80)' }),
+      readLocalFile: vi.fn().mockResolvedValue({ kind: 'text', text: 'listen(8080)' }),
+    });
+
+    await userEvent.click(await screen.findByRole('button', { name: /^api/ }));
+
+    expect(await screen.findByRole('heading', { name: 'api', level: 1 })).toBeInTheDocument();
+    expect(screen.getByText(/Compared with origin\/main at fffffff/)).toBeInTheDocument();
+    expect(await screen.findByRole('treeitem', { name: /server\.ts/ })).toBeInTheDocument();
+    expect(await screen.findByTestId('original')).toHaveTextContent('listen(80)');
+    expect(screen.getByTestId('modified')).toHaveTextContent('listen(8080)');
+    expect(screen.getByText(/AI overviews work on pull requests for now/)).toBeInTheDocument();
+
+    getLocalSignature.mockResolvedValue('second');
+    await act(() => queryClient.refetchQueries({ queryKey: ['local-signature'] }));
+    await vi.waitFor(() => expect(getLocalDiff).toHaveBeenCalledTimes(2));
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Uncommitted only' }));
+    expect(getLocalDiff).toHaveBeenLastCalledWith({
+      repositoryId: repository.id,
+      compare: 'uncommitted',
+    });
   });
 
   it('opens a pull request pasted as a URL', async () => {

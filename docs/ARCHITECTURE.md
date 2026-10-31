@@ -85,6 +85,14 @@ Cloning large repositories would make opening a pull request slow, so `getPullRe
 
 The cache runs git in an isolated environment (`isolatedGitEnvironment`): the user's global and system config, hooks, and URL rewrites do not apply. The token reaches git as an `http.extraheader` set through `GIT_CONFIG_*` environment variables, so it never appears in command arguments or in the repository config. Fetches into the same repository run one at a time, because concurrent shallow fetches conflict on git's lock files.
 
+### Local repositories
+
+People can also open a git repository on their Mac. The folder comes from the native folder picker, and the main process records it in `userData/local-repositories.json` (`local/local-repositories.ts`). The renderer only ever refers to a repository by an opaque id, so it cannot point git at an arbitrary path.
+
+`local/local-git.ts` compares the working tree with a base. "Branch changes" uses the merge base with `origin/HEAD`, or with `main` or `master` when there is no remote, so it shows what a pull request would show if the branch were pushed now, plus uncommitted work and untracked files. "Uncommitted only" compares with `HEAD`. The base side is read from git objects, and the current side from disk; files are only read inside the repository, symbolic links are shown as their target instead of being followed, and parent folders that link outside the repository are refused.
+
+The repository belongs to the user, so their git config applies, unlike in the pull request cache. Variables that point git at another repository are dropped, `GIT_OPTIONAL_LOCKS=0` keeps git from taking locks that the user's own tools may need, and `core.fsmonitor` is turned off so no file-system monitor command runs. Git has no change notification, so the open view polls a cheap signature of the working tree (`git status` plus the size and modification time of changed files) every two seconds, and loads the diff again only when it changes.
+
 ### AI overviews
 
 `createReviewService` turns a pull request into an overview that helps someone understand the change quickly, rather than judge it. In code it is a `ReviewMap`: a summary, the main changes described as before and now, the runtime flows the change alters with their steps before and after it, the components around the change marked as added, changed, removed, or unchanged, what else it affects, and a reading order. Items point to a file and line. It runs an AI coding tool the user already has, Claude Code or Codex CLI, chosen in Settings > AI overview, so Viewer needs no API key and adds no new place that code is sent to.

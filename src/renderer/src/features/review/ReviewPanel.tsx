@@ -26,6 +26,7 @@ interface ReviewPanelProps {
   onConfigureAi?(): void;
   maximized?: boolean;
   onToggleMaximize?(): void;
+  notice?: string;
 }
 
 interface Maximizing {
@@ -39,6 +40,7 @@ export function ReviewPanel({
   onConfigureAi,
   maximized = false,
   onToggleMaximize,
+  notice = 'Open a pull request to get an overview of its changes.',
 }: ReviewPanelProps) {
   const maximizing = { maximized, onToggleMaximize };
   return (
@@ -53,7 +55,7 @@ export function ReviewPanel({
       ) : (
         <>
           <PanelHeader {...maximizing} />
-          <StatusMessage>Open a pull request to get an overview of its changes.</StatusMessage>
+          <StatusMessage>{notice}</StatusMessage>
         </>
       )}
     </aside>

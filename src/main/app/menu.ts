@@ -36,6 +36,14 @@ export function applicationMenu({
         { role: 'quit' },
       ],
     },
+    {
+      label: 'File',
+      submenu: [
+        { label: 'Open Local Repository…', click: () => send('open-local-repository') },
+        { type: 'separator' },
+        { role: 'close' },
+      ],
+    },
     { role: 'editMenu' },
     {
       label: 'View',

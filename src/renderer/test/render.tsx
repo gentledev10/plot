@@ -32,6 +32,13 @@ export function fakeApi(overrides: Partial<ViewerApi> = {}): ViewerApi {
     setThemeSource: vi.fn().mockResolvedValue(undefined),
     getPreferences: vi.fn().mockResolvedValue({}),
     setPreference: vi.fn().mockResolvedValue(undefined),
+    openLocalRepository: notStubbed('openLocalRepository'),
+    listLocalRepositories: vi.fn().mockResolvedValue([]),
+    removeLocalRepository: notStubbed('removeLocalRepository'),
+    getLocalDiff: notStubbed('getLocalDiff'),
+    getLocalSignature: vi.fn().mockResolvedValue('signature'),
+    readLocalBlob: notStubbed('readLocalBlob'),
+    readLocalFile: notStubbed('readLocalFile'),
     ...overrides,
   };
 }

@@ -1,4 +1,4 @@
-export const COMMAND_GROUPS = ['Diff', 'Editor', 'View', 'Pull requests', 'AI overview'] as const;
+export const COMMAND_GROUPS = ['Diff', 'Editor', 'View', 'Navigation', 'AI overview'] as const;
 
 export type CommandGroup = (typeof COMMAND_GROUPS)[number];
 
@@ -73,17 +73,18 @@ export const COMMANDS = [
   {
     id: 'pullRequest.open',
     title: 'Open a pull request by URL',
-    group: 'Pull requests',
+    group: 'Navigation',
     keys: ['Meta+O'],
   },
   {
     id: 'pullRequest.back',
     title: 'Back to the pull request list',
-    group: 'Pull requests',
+    group: 'Navigation',
     keys: ['Meta+['],
   },
-  { id: 'pullRequest.refresh', title: 'Refresh', group: 'Pull requests', keys: ['Meta+R'] },
-  { id: 'pullRequest.openOnGitHub', title: 'Open on GitHub', group: 'Pull requests', keys: [] },
+  { id: 'pullRequest.refresh', title: 'Refresh', group: 'Navigation', keys: ['Meta+R'] },
+  { id: 'pullRequest.openOnGitHub', title: 'Open on GitHub', group: 'Navigation', keys: [] },
+  { id: 'local.open', title: 'Open a local repository', group: 'Navigation', keys: [] },
   { id: 'review.generate', title: 'Explain this change', group: 'AI overview', keys: [] },
 ] as const satisfies readonly CommandDefinition[];
 

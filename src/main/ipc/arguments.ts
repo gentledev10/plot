@@ -5,6 +5,7 @@ import { isObjectId } from '@shared/diff';
 import type { PullRequestRef } from '@shared/github';
 import { isHost } from '@shared/hosts';
 import type { IpcMethod, ViewerApi } from '@shared/ipc';
+import { isLocalCompare, isLocalRepositoryId, type LocalTarget } from '@shared/local';
 import { isPullRequestRef } from '@shared/pull-request-ref';
 import { AppError } from '../errors';
 
@@ -37,7 +38,43 @@ export const argumentParsers: ArgumentParsers = {
   setThemeSource: ([source]) => [themeSource(source)],
   getPreferences: () => [],
   setPreference: ([key, value]) => [preferenceKey(key), preferenceValue(value)],
+  openLocalRepository: () => [],
+  listLocalRepositories: () => [],
+  removeLocalRepository: ([id]) => [localRepositoryId(id)],
+  getLocalDiff: ([target]) => [localTarget(target)],
+  getLocalSignature: ([target]) => [localTarget(target)],
+  readLocalBlob: ([id, blob]) => [localRepositoryId(id), objectId(blob)],
+  readLocalFile: ([id, path]) => [localRepositoryId(id), relativePath(path)],
 };
+
+function localRepositoryId(value: unknown): string {
+  if (!isLocalRepositoryId(value)) {
+    throw new AppError('invalid-argument', 'Expected a local repository id.');
+  }
+  return value;
+}
+
+function localTarget(value: unknown): LocalTarget {
+  const { repositoryId, compare } = (value ?? {}) as Record<string, unknown>;
+  if (!isLocalCompare(compare)) {
+    throw new AppError('invalid-argument', 'Expected branch or uncommitted changes.');
+  }
+  return { repositoryId: localRepositoryId(repositoryId), compare };
+}
+
+function relativePath(value: unknown): string {
+  if (
+    typeof value !== 'string' ||
+    value === '' ||
+    value.length > 4096 ||
+    value.includes('\0') ||
+    value.startsWith('/') ||
+    value.split('/').includes('..')
+  ) {
+    throw new AppError('invalid-argument', 'Expected a path inside the repository.');
+  }
+  return value;
+}
 
 const PREFERENCE_KEY = /^[a-z][a-zA-Z0-9.-]{0,63}$/;
 const MAX_PREFERENCE_BYTES = 64 * 1024;

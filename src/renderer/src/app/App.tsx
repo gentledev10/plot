@@ -1,17 +1,19 @@
 import type { PullRequestRef } from '@shared/github';
+import type { LocalRepository } from '@shared/local';
 import { formatPullRequestRef } from '@shared/pull-request-ref';
 import type { CodeLocation } from '@shared/review';
 import { FolderTree, GitPullRequest, Settings, Sparkles } from 'lucide-react';
 import { type CSSProperties, useRef, useState } from 'react';
 import { StatusMessage } from '../components/StatusMessage';
+import type { LocationRequest } from '../features/diff/DiffWorkspace';
+import { type DiffTarget, targetKey } from '../features/diff/target';
 import { FilesPanel } from '../features/files/FilesPanel';
 import { InboxPanel } from '../features/inbox/InboxPanel';
 import { useCommand, useShortcutLabel } from '../features/keymap/KeymapProvider';
 import { formatStroke } from '../features/keymap/keystroke';
-import {
-  type LocationRequest,
-  PullRequestWorkspace,
-} from '../features/pull-request/PullRequestWorkspace';
+import { LocalWorkspace } from '../features/local/LocalWorkspace';
+import { useLocalRepositories, useLocalRepositoryActions } from '../features/local/queries';
+import { PullRequestWorkspace } from '../features/pull-request/PullRequestWorkspace';
 import { ReviewPanel } from '../features/review/ReviewPanel';
 import { SettingsDialog, type SettingsSection } from '../features/settings/SettingsDialog';
 import { usePreference } from '../lib/preferences';
@@ -33,8 +35,10 @@ import { ToolWindowBar, ToolWindowButton } from './ToolWindowBar';
 
 export function App() {
   const platform = usePlatform();
-  const [open, setOpen] = useState<PullRequestRef>();
-  const [lastOpened, setLastOpened] = useState<PullRequestRef>();
+  const [open, setOpen] = useState<DiffTarget>();
+  const [lastOpened, setLastOpened] = useState<DiffTarget>();
+  const localRepositories = useLocalRepositories();
+  const { open: chooseLocalRepository } = useLocalRepositoryActions();
   const [selectedPath, setSelectedPath] = useState<string>();
   const [reveal, setReveal] = useState<LocationRequest>();
   const [layout, setLayout] = usePreference('layout.panels', DEFAULT_LAYOUT, parseLayout);
@@ -48,14 +52,40 @@ export function App() {
   const sidebarShortcut = useShortcutLabel('view.toggleSidebar');
   const reviewShortcut = useShortcutLabel('view.toggleReview');
 
-  function openPullRequest(ref: PullRequestRef) {
-    setOpen(ref);
-    setLastOpened(ref);
+  function show(target: DiffTarget) {
+    setOpen(target);
+    setLastOpened(target);
     setSelectedPath(undefined);
     setReveal(undefined);
   }
 
-  function closePullRequest() {
+  function openPullRequest(ref: PullRequestRef) {
+    show({ kind: 'pull-request', ref });
+  }
+
+  function openLocalRepository(repository: LocalRepository) {
+    show({ kind: 'local', repositoryId: repository.id, compare: 'branch' });
+  }
+
+  function chooseAndOpenLocalRepository() {
+    chooseLocalRepository.mutate(undefined, {
+      onSuccess: (repository) => {
+        if (repository) {
+          openLocalRepository(repository);
+        }
+      },
+    });
+  }
+
+  function titleOf(target: DiffTarget): string {
+    if (target.kind === 'pull-request') {
+      return formatPullRequestRef(target.ref);
+    }
+    const repository = localRepositories.data?.find((item) => item.id === target.repositoryId);
+    return repository?.name ?? 'Local repository';
+  }
+
+  function backToList() {
     setMaximized(false);
     setOpen(undefined);
     setSelectedPath(undefined);
@@ -101,7 +131,7 @@ export function App() {
   }
 
   function startOpeningPullRequest() {
-    closePullRequest();
+    backToList();
     if (!layout.sidebar) {
       setLayout({ ...layout, sidebar: true });
     }
@@ -113,7 +143,9 @@ export function App() {
   useCommand('view.maximizeReview', () => setMaximized(!maximized));
   useCommand('view.toggleAllPanels', toggleAll);
   useCommand('pullRequest.open', startOpeningPullRequest);
-  useCommand('pullRequest.back', closePullRequest, open !== undefined);
+  useCommand('pullRequest.back', backToList, open !== undefined);
+  useCommand('local.open', chooseAndOpenLocalRepository);
+  useMenuCommand('open-local-repository', chooseAndOpenLocalRepository);
   useMenuCommand('open-settings', () => setSettings('accounts'));
   useMenuCommand('open-keymap', () => setSettings('keymap'));
 
@@ -161,14 +193,17 @@ export function App() {
         {open ? (
           <FilesPanel
             target={open}
+            title={titleOf(open)}
             selectedPath={selectedPath}
             onSelectFile={setSelectedPath}
-            onBack={closePullRequest}
+            onBack={backToList}
           />
         ) : (
           <InboxPanel
-            selected={lastOpened}
+            selected={lastOpened?.kind === 'pull-request' ? lastOpened.ref : undefined}
+            selectedLocalId={lastOpened?.kind === 'local' ? lastOpened.repositoryId : undefined}
             onSelect={openPullRequest}
+            onOpenLocal={openLocalRepository}
             focusOpenField={focusOpenField}
             onOpenFieldFocused={() => setFocusOpenField(false)}
             onManageAccounts={() => setSettings('accounts')}
@@ -176,15 +211,27 @@ export function App() {
         )}
       </div>
       <main className={styles.workspace} hidden={maximized}>
-        {open ? (
+        {open?.kind === 'pull-request' && (
           <PullRequestWorkspace
-            key={formatPullRequestRef(open)}
-            target={open}
+            key={targetKey(open)}
+            target={open.ref}
             selectedPath={selectedPath}
             reveal={reveal}
             onSelectPath={setSelectedPath}
           />
-        ) : (
+        )}
+        {open?.kind === 'local' && (
+          <LocalWorkspace
+            key={targetKey(open)}
+            repositoryId={open.repositoryId}
+            compare={open.compare}
+            onCompareChange={(compare) => show({ ...open, compare })}
+            selectedPath={selectedPath}
+            reveal={reveal}
+            onSelectPath={setSelectedPath}
+          />
+        )}
+        {!open && (
           <div className={styles.placeholder}>
             <StatusMessage
               action={
@@ -193,7 +240,7 @@ export function App() {
                   : { label: 'Show pull requests', run: () => toggle('sidebar') }
               }
             >
-              Select a pull request to start reviewing.
+              Select a pull request or a local repository to start reviewing.
             </StatusMessage>
           </div>
         )}
@@ -201,7 +248,12 @@ export function App() {
       <div className={styles.review} hidden={!reviewShown}>
         {!maximized && resizeHandle('review', 'Resize the AI panel', 'left')}
         <ReviewPanel
-          target={open}
+          target={open?.kind === 'pull-request' ? open.ref : undefined}
+          notice={
+            open?.kind === 'local'
+              ? 'AI overviews work on pull requests for now. Push the branch and open its pull request to get one.'
+              : undefined
+          }
           onOpenLocation={openLocation}
           onConfigureAi={() => setSettings('ai')}
           maximized={maximized}

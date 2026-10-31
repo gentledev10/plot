@@ -27,6 +27,12 @@ describe('applicationMenu', () => {
     expect(send).toHaveBeenCalledWith('open-settings');
   });
 
+  it('opens a local repository from the File menu', () => {
+    const { click, send } = build();
+    click('Open Local Repository…');
+    expect(send).toHaveBeenCalledWith('open-local-repository');
+  });
+
   it('lists the keyboard shortcuts under Help', () => {
     const { click, send } = build();
     click('Keyboard Shortcuts');

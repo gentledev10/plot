@@ -1,17 +1,17 @@
 import type { BlobContent, ChangedFile } from '@shared/diff';
-import type { PullRequestRef } from '@shared/github';
 import { lazy, type Ref, Suspense } from 'react';
 import { StatusMessage } from '../../components/StatusMessage';
 import { formatBytes } from '../../lib/format';
 import type { ChangePosition, DiffSettings, DiffViewerHandle, LineRequest } from './DiffViewer';
-import { useBlob } from './queries';
+import { useFileContent } from './queries';
+import type { DiffTarget } from './target';
 
 const DiffViewer = lazy(() =>
   import('./DiffViewer').then((module) => ({ default: module.DiffViewer })),
 );
 
 interface FileDiffProps {
-  target: PullRequestRef;
+  target: DiffTarget;
   file: ChangedFile;
   settings: DiffSettings;
   initialChange?: 'first' | 'last';
@@ -32,8 +32,8 @@ export function FileDiff({
   viewerRef,
 }: FileDiffProps) {
   const isSubmodule = file.kind === 'submodule';
-  const original = useBlob(target, isSubmodule ? null : file.oldBlob);
-  const modified = useBlob(target, isSubmodule ? null : file.newBlob);
+  const original = useFileContent(target, file, 'original');
+  const modified = useFileContent(target, file, 'modified');
 
   if (isSubmodule) {
     return (
@@ -72,7 +72,10 @@ export function FileDiff({
   if (contents.some((content) => content.kind === 'too-large')) {
     return (
       <StatusMessage title="File too large to show">
-        {sizeChange(original.data, modified.data)} Open it on GitHub to see the changes.
+        {sizeChange(original.data, modified.data)}{' '}
+        {target.kind === 'pull-request'
+          ? 'Open it on GitHub to see the changes.'
+          : 'Open it in your editor to see the changes.'}
       </StatusMessage>
     );
   }

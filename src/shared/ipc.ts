@@ -4,6 +4,7 @@ import type { ThemeSource } from './appearance';
 import type { BlobContent, PullRequestDiff } from './diff';
 import type { ErrorPayload } from './errors';
 import type { Inbox, PullRequestDetail, PullRequestRef } from './github';
+import type { LocalDiff, LocalRepository, LocalTarget } from './local';
 import type { ReviewStatus } from './review';
 
 export interface ViewerApi {
@@ -28,6 +29,13 @@ export interface ViewerApi {
   setThemeSource(source: ThemeSource): Promise<void>;
   getPreferences(): Promise<Record<string, unknown>>;
   setPreference(key: string, value: unknown): Promise<void>;
+  openLocalRepository(): Promise<LocalRepository | null>;
+  listLocalRepositories(): Promise<LocalRepository[]>;
+  removeLocalRepository(id: string): Promise<void>;
+  getLocalDiff(target: LocalTarget): Promise<LocalDiff>;
+  getLocalSignature(target: LocalTarget): Promise<string>;
+  readLocalBlob(repositoryId: string, blob: string): Promise<BlobContent>;
+  readLocalFile(repositoryId: string, path: string): Promise<BlobContent>;
 }
 
 export type IpcMethod = keyof ViewerApi;
@@ -54,6 +62,13 @@ const METHODS: Record<IpcMethod, true> = {
   setThemeSource: true,
   getPreferences: true,
   setPreference: true,
+  openLocalRepository: true,
+  listLocalRepositories: true,
+  removeLocalRepository: true,
+  getLocalDiff: true,
+  getLocalSignature: true,
+  readLocalBlob: true,
+  readLocalFile: true,
 };
 
 export const IPC_METHODS = Object.keys(METHODS) as readonly IpcMethod[];
@@ -64,7 +79,11 @@ export function ipcChannel(method: IpcMethod): string {
 
 export type IpcResponse<T> = { ok: true; value: T } | { ok: false; error: ErrorPayload };
 
-const MENU_COMMANDS = { 'open-settings': true, 'open-keymap': true } as const;
+const MENU_COMMANDS = {
+  'open-settings': true,
+  'open-keymap': true,
+  'open-local-repository': true,
+} as const;
 
 export type MenuCommand = keyof typeof MENU_COMMANDS;
 

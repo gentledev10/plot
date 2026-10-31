@@ -68,6 +68,25 @@ describe('argumentParsers', () => {
     );
   });
 
+  it('accepts local repositories only by id, and paths only inside them', () => {
+    const id = '0123456789abcdef';
+    expect(
+      argumentParsers.getLocalDiff([{ repositoryId: id, compare: 'branch', path: '/' }]),
+    ).toEqual([{ repositoryId: id, compare: 'branch' }]);
+    expect(argumentParsers.readLocalFile([id, 'src/app.ts'])).toEqual([id, 'src/app.ts']);
+
+    const invalid = expect.objectContaining({ code: 'invalid-argument' });
+    expect(() =>
+      argumentParsers.getLocalDiff([{ repositoryId: '/Users/me', compare: 'branch' }]),
+    ).toThrow(invalid);
+    expect(() => argumentParsers.getLocalDiff([{ repositoryId: id, compare: 'all' }])).toThrow(
+      invalid,
+    );
+    expect(() => argumentParsers.readLocalFile([id, '../secret'])).toThrow(invalid);
+    expect(() => argumentParsers.readLocalFile([id, '/etc/passwd'])).toThrow(invalid);
+    expect(() => argumentParsers.readLocalBlob([id, 'HEAD:src/app.ts'])).toThrow(invalid);
+  });
+
   it('rejects a missing pull request reference', () => {
     expect(() => argumentParsers.getPullRequest([])).toThrow(
       expect.objectContaining({ code: 'invalid-argument' }),

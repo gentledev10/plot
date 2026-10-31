@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { AiProviderId } from '@shared/ai';
 import { MENU_COMMAND_CHANNEL, type MenuCommand, type ViewerApi } from '@shared/ipc';
-import { app, BrowserWindow, ipcMain, Menu, nativeTheme, net, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, shell } from 'electron';
 import { createAccountStore } from './accounts/account-store';
 import type { ReviewAgent } from './ai/agent';
 import { createAiSettingsStore } from './ai/ai-settings-store';
@@ -29,11 +29,14 @@ import { GITHUB_OAUTH_CLIENT_ID } from './github/oauth-app';
 import { cachedTokens, createGhTokenProvider, type TokenProvider } from './github/token';
 import { argumentParsers } from './ipc/arguments';
 import { registerIpcHandlers } from './ipc/register';
+import { createLocalGit } from './local/local-git';
+import { createLocalRepositoryStore } from './local/local-repositories';
 import { createPreferencesStore } from './preferences/preferences-store';
 import { createAccountService } from './services/account-service';
 import { createAiService } from './services/ai-service';
 import { createDiffService } from './services/diff-service';
 import { createGitHubService } from './services/github-service';
+import { createLocalService } from './services/local-service';
 import { createReviewService } from './services/review-service';
 import { runCommand, runCommandForBuffer } from './system/process';
 import { mergePaths, resolveLoginShellPath } from './system/shell-env';
@@ -118,7 +121,25 @@ function createApi(): ViewerApi {
     },
     getPreferences: () => preferences.all(),
     setPreference: (key, value) => preferences.set(key, value),
+    ...createLocalService({
+      repositories: createLocalRepositoryStore(join(userData, 'local-repositories.json')),
+      git: createLocalGit({ run: runCommand, runForBuffer: runCommandForBuffer, env: process.env }),
+      chooseFolder: chooseRepositoryFolder,
+    }),
   };
+}
+
+async function chooseRepositoryFolder(): Promise<string | undefined> {
+  const options: Electron.OpenDialogOptions = {
+    title: 'Open a Local Repository',
+    buttonLabel: 'Open',
+    properties: ['openDirectory'],
+  };
+  const window = BrowserWindow.getFocusedWindow();
+  const result = window
+    ? await dialog.showOpenDialog(window, options)
+    : await dialog.showOpenDialog(options);
+  return result.canceled ? undefined : result.filePaths[0];
 }
 
 function appearanceFile(): string {

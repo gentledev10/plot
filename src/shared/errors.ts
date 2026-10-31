@@ -13,6 +13,7 @@ export type ErrorCode =
   | 'github-rate-limited'
   | 'github-request-failed'
   | 'network'
+  | 'not-a-repository'
   | 'git-not-installed'
   | 'git-failed'
   | 'ai-not-installed'

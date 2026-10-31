@@ -32,9 +32,17 @@ const diff = {
 
 describe('FilesPanel', () => {
   it('lists the changed files and totals', async () => {
-    renderWithApi(<FilesPanel target={target} onSelectFile={vi.fn()} onBack={vi.fn()} />, {
-      getPullRequestDiff: vi.fn().mockResolvedValue(diff),
-    });
+    renderWithApi(
+      <FilesPanel
+        target={{ kind: 'pull-request', ref: target }}
+        title="octocat/hello-world#42"
+        onSelectFile={vi.fn()}
+        onBack={vi.fn()}
+      />,
+      {
+        getPullRequestDiff: vi.fn().mockResolvedValue(diff),
+      },
+    );
 
     expect(await screen.findByRole('tree', { name: 'Changed files' })).toBeInTheDocument();
     expect(screen.getByText('octocat/hello-world#42')).toBeInTheDocument();
@@ -44,9 +52,17 @@ describe('FilesPanel', () => {
   });
 
   it('highlights the first file until another one is picked', async () => {
-    renderWithApi(<FilesPanel target={target} onSelectFile={vi.fn()} onBack={vi.fn()} />, {
-      getPullRequestDiff: vi.fn().mockResolvedValue(diff),
-    });
+    renderWithApi(
+      <FilesPanel
+        target={{ kind: 'pull-request', ref: target }}
+        title="octocat/hello-world#42"
+        onSelectFile={vi.fn()}
+        onBack={vi.fn()}
+      />,
+      {
+        getPullRequestDiff: vi.fn().mockResolvedValue(diff),
+      },
+    );
     expect(await screen.findByRole('treeitem', { name: /app\.ts/ })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -55,18 +71,34 @@ describe('FilesPanel', () => {
 
   it('opens the file that is clicked', async () => {
     const onSelectFile = vi.fn();
-    renderWithApi(<FilesPanel target={target} onSelectFile={onSelectFile} onBack={vi.fn()} />, {
-      getPullRequestDiff: vi.fn().mockResolvedValue(diff),
-    });
+    renderWithApi(
+      <FilesPanel
+        target={{ kind: 'pull-request', ref: target }}
+        title="octocat/hello-world#42"
+        onSelectFile={onSelectFile}
+        onBack={vi.fn()}
+      />,
+      {
+        getPullRequestDiff: vi.fn().mockResolvedValue(diff),
+      },
+    );
     await userEvent.click(await screen.findByRole('treeitem', { name: /README\.md/ }));
     expect(onSelectFile).toHaveBeenCalledWith('README.md');
   });
 
   it('goes back to the pull request list', async () => {
     const onBack = vi.fn();
-    renderWithApi(<FilesPanel target={target} onSelectFile={vi.fn()} onBack={onBack} />, {
-      getPullRequestDiff: vi.fn().mockResolvedValue(diff),
-    });
+    renderWithApi(
+      <FilesPanel
+        target={{ kind: 'pull-request', ref: target }}
+        title="octocat/hello-world#42"
+        onSelectFile={vi.fn()}
+        onBack={onBack}
+      />,
+      {
+        getPullRequestDiff: vi.fn().mockResolvedValue(diff),
+      },
+    );
     await userEvent.click(screen.getByRole('button', { name: /Pull requests/ }));
     expect(onBack).toHaveBeenCalledOnce();
   });
@@ -76,9 +108,17 @@ describe('FilesPanel', () => {
       .fn()
       .mockRejectedValueOnce(new ViewerError('git-not-installed', 'Git is not installed.'))
       .mockResolvedValue(diff);
-    renderWithApi(<FilesPanel target={target} onSelectFile={vi.fn()} onBack={vi.fn()} />, {
-      getPullRequestDiff,
-    });
+    renderWithApi(
+      <FilesPanel
+        target={{ kind: 'pull-request', ref: target }}
+        title="octocat/hello-world#42"
+        onSelectFile={vi.fn()}
+        onBack={vi.fn()}
+      />,
+      {
+        getPullRequestDiff,
+      },
+    );
 
     expect(screen.getByText('Fetching changes…')).toBeInTheDocument();
     expect(await screen.findByText('Git is not installed.')).toBeInTheDocument();
