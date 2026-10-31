@@ -8,6 +8,7 @@ import { isolatedGitEnvironment } from './environment';
 import { classifyBlob, parseNumstat, parseRawDiff, toChangedFiles } from './parse';
 
 export interface RepositoryRef {
+  host: string;
   owner: string;
   repo: string;
 }
@@ -32,7 +33,7 @@ export interface RepositoryCacheOptions {
   run: CommandRunner;
   runForBuffer: BufferCommandRunner;
   env: NodeJS.ProcessEnv;
-  authHeader(): Promise<string | undefined>;
+  authHeader(repository: RepositoryRef): Promise<string | undefined>;
   remoteUrl?(repository: RepositoryRef): string;
 }
 
@@ -44,25 +45,30 @@ export function createRepositoryCache({
   runForBuffer,
   env,
   authHeader,
-  remoteUrl = ({ owner, repo }) => `https://github.com/${owner}/${repo}.git`,
+  remoteUrl = ({ host, owner, repo }) => `https://${host}/${owner}/${repo}.git`,
 }: RepositoryCacheOptions): RepositoryCache {
   const fetched = new Set<string>();
   const queues = new Map<string, Promise<unknown>>();
 
-  function directory({ owner, repo }: RepositoryRef): string {
-    return join(rootDir, owner.toLowerCase(), `${repo.toLowerCase()}.git`);
+  function directory({ host, owner, repo }: RepositoryRef): string {
+    return join(rootDir, host, owner.toLowerCase(), `${repo.toLowerCase()}.git`);
   }
 
-  async function git(dir: string, args: readonly string[], timeoutMs?: number): Promise<string> {
-    return gitIn(['--git-dir', dir], args, timeoutMs);
+  async function git(
+    repository: RepositoryRef,
+    args: readonly string[],
+    timeoutMs?: number,
+  ): Promise<string> {
+    return gitIn(repository, ['--git-dir', directory(repository)], args, timeoutMs);
   }
 
   async function gitIn(
+    repository: RepositoryRef,
     location: readonly string[],
     args: readonly string[],
     timeoutMs?: number,
   ): Promise<string> {
-    const options = { env: isolatedGitEnvironment(env, await authHeader()), timeoutMs };
+    const options = { env: isolatedGitEnvironment(env, await authHeader(repository)), timeoutMs };
     try {
       return (await run('git', [...location, ...args], options)).stdout;
     } catch (error) {
@@ -70,10 +76,11 @@ export function createRepositoryCache({
     }
   }
 
-  async function gitBuffer(dir: string, args: readonly string[]): Promise<Buffer> {
-    const options = { env: isolatedGitEnvironment(env, await authHeader()) };
+  async function gitBuffer(repository: RepositoryRef, args: readonly string[]): Promise<Buffer> {
+    const options = { env: isolatedGitEnvironment(env, await authHeader(repository)) };
     try {
-      return (await runForBuffer('git', ['--git-dir', dir, ...args], options)).stdout;
+      return (await runForBuffer('git', ['--git-dir', directory(repository), ...args], options))
+        .stdout;
     } catch (error) {
       throw toGitError(args, error);
     }
@@ -95,10 +102,10 @@ export function createRepositoryCache({
       return dir;
     }
     await mkdir(dir, { recursive: true });
-    await git(dir, ['init', '--bare', '--quiet']);
-    await git(dir, ['config', 'remote.origin.url', remoteUrl(repository)]);
-    await git(dir, ['config', 'remote.origin.promisor', 'true']);
-    await git(dir, ['config', 'remote.origin.partialclonefilter', 'blob:none']);
+    await git(repository, ['init', '--bare', '--quiet']);
+    await git(repository, ['config', 'remote.origin.url', remoteUrl(repository)]);
+    await git(repository, ['config', 'remote.origin.promisor', 'true']);
+    await git(repository, ['config', 'remote.origin.partialclonefilter', 'blob:none']);
     return dir;
   }
 
@@ -112,7 +119,7 @@ export function createRepositoryCache({
         }
         await ensureRepository(repository);
         await git(
-          dir,
+          repository,
           [
             'fetch',
             '--quiet',
@@ -132,15 +139,14 @@ export function createRepositoryCache({
     },
 
     async diff(repository, from, to) {
-      const dir = directory(repository);
       const options = ['diff', '--no-color', '--no-ext-diff', '--no-textconv', '-M', '-z'];
-      const numstat = await git(dir, [...options, '--numstat', from, to], FETCH_TIMEOUT_MS);
-      const raw = await git(dir, [...options, '--raw', '--no-abbrev', from, to]);
+      const numstat = await git(repository, [...options, '--numstat', from, to], FETCH_TIMEOUT_MS);
+      const raw = await git(repository, [...options, '--raw', '--no-abbrev', from, to]);
       return toChangedFiles(parseRawDiff(raw), parseNumstat(numstat));
     },
 
     unifiedDiff(repository, from, to) {
-      return git(directory(repository), [
+      return git(repository, [
         'diff',
         '--no-color',
         '--no-ext-diff',
@@ -152,22 +158,33 @@ export function createRepositoryCache({
     },
 
     async listFiles(repository, commit) {
-      const output = await git(directory(repository), [
-        'ls-tree',
-        '-r',
-        '-z',
-        '--name-only',
-        commit,
-      ]);
+      const output = await git(repository, ['ls-tree', '-r', '-z', '--name-only', commit]);
       return output.split('\0').filter(Boolean);
     },
 
     checkoutDirectories(repository, commit, directories, target) {
       const dir = directory(repository);
       return serialized(dir, async () => {
-        await git(dir, ['worktree', 'add', '--no-checkout', '--detach', '--quiet', target, commit]);
-        await gitIn(['-C', target], ['sparse-checkout', 'set', '--cone', '--', ...directories]);
-        await gitIn(['-C', target], ['reset', '--hard', '--quiet', commit], FETCH_TIMEOUT_MS);
+        await git(repository, [
+          'worktree',
+          'add',
+          '--no-checkout',
+          '--detach',
+          '--quiet',
+          target,
+          commit,
+        ]);
+        await gitIn(
+          repository,
+          ['-C', target],
+          ['sparse-checkout', 'set', '--cone', '--', ...directories],
+        );
+        await gitIn(
+          repository,
+          ['-C', target],
+          ['reset', '--hard', '--quiet', commit],
+          FETCH_TIMEOUT_MS,
+        );
       });
     },
 
@@ -177,18 +194,17 @@ export function createRepositoryCache({
         if (!existsSync(join(dir, 'HEAD'))) {
           return;
         }
-        await git(dir, ['worktree', 'remove', '--force', target]).catch(() => undefined);
-        await git(dir, ['worktree', 'prune']);
+        await git(repository, ['worktree', 'remove', '--force', target]).catch(() => undefined);
+        await git(repository, ['worktree', 'prune']);
       });
     },
 
     async readBlob(repository, blob, maxBytes) {
-      const dir = directory(repository);
-      const size = Number((await git(dir, ['cat-file', '-s', blob])).trim());
+      const size = Number((await git(repository, ['cat-file', '-s', blob])).trim());
       if (size > maxBytes) {
         return { kind: 'too-large', size };
       }
-      return classifyBlob(await gitBuffer(dir, ['cat-file', 'blob', blob]));
+      return classifyBlob(await gitBuffer(repository, ['cat-file', 'blob', blob]));
     },
   };
 }

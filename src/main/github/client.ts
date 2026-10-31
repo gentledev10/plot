@@ -4,6 +4,7 @@ import type {
   PullRequestRef,
   PullRequestSummary,
 } from '@shared/github';
+import { apiBaseUrl } from '@shared/hosts';
 import { AppError } from '../errors';
 import {
   toGitHubUser,
@@ -26,6 +27,7 @@ export interface GitHubClientOptions {
   fetch: Fetch;
   tokens: TokenProvider;
   userAgent: string;
+  host: string;
   apiUrl?: string;
 }
 
@@ -33,7 +35,8 @@ export function createGitHubClient({
   fetch,
   tokens,
   userAgent,
-  apiUrl = 'https://api.github.com',
+  host,
+  apiUrl = apiBaseUrl(host),
 }: GitHubClientOptions): GitHubClient {
   async function request(path: string, isRetry = false): Promise<unknown> {
     const token = await tokens.getToken();
@@ -48,7 +51,7 @@ export function createGitHubClient({
         },
       });
     } catch (error) {
-      throw new AppError('network', 'Could not reach GitHub. Check your connection.', {
+      throw new AppError('network', `Could not reach ${host}. Check your connection.`, {
         cause: error,
       });
     }
@@ -78,7 +81,7 @@ export function createGitHubClient({
       if (!Array.isArray(result.items)) {
         throw new AppError('github-request-failed', 'GitHub returned an unexpected search result.');
       }
-      return result.items.map(toPullRequestSummaryFromSearch);
+      return result.items.map((item) => toPullRequestSummaryFromSearch(item, host));
     },
 
     async getPullRequest(ref) {
@@ -105,13 +108,13 @@ async function toAppError(response: Response): Promise<AppError> {
       'github-sso-required',
       url
         ? `Your organization requires single sign-on for this token. Authorize it at ${url}`
-        : 'Your organization requires single sign-on. Run `gh auth refresh` and authorize the organization.',
+        : 'Your organization requires single sign-on. Authorize this sign-in for the organization on GitHub, then try again.',
     );
   }
   if (response.status === 401) {
     return new AppError(
       'github-unauthorized',
-      'GitHub rejected the token from the GitHub CLI. Run `gh auth login` again.',
+      'GitHub no longer accepts the sign-in for this account. Sign in again in Settings > Accounts.',
     );
   }
   if (isRateLimited(response)) {

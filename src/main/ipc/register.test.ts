@@ -11,7 +11,14 @@ function setup(api: Partial<ViewerApi> = {}) {
   const ipc: IpcMainLike = { handle: (channel, listener) => listeners.set(channel, listener) };
   const onUnexpectedError = vi.fn();
   const fullApi: ViewerApi = {
-    getSession: vi.fn().mockResolvedValue({ status: 'signed-out' }),
+    listAccounts: vi.fn().mockResolvedValue({ accounts: [], browserSignIn: false }),
+    switchAccount: vi.fn(),
+    removeAccount: vi.fn(),
+    signInWithToken: vi.fn(),
+    signInWithGitHubCli: vi.fn(),
+    startBrowserSignIn: vi.fn(),
+    finishBrowserSignIn: vi.fn(),
+    cancelBrowserSignIn: vi.fn(),
     listInbox: vi.fn().mockResolvedValue({ reviewRequested: [], authored: [] }),
     getPullRequest: vi.fn(),
     getPullRequestDiff: vi.fn(),
@@ -38,7 +45,7 @@ function setup(api: Partial<ViewerApi> = {}) {
   return { listeners, invoke, fromApp, api: fullApi, onUnexpectedError };
 }
 
-const ref = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const ref = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
 
 describe('registerIpcHandlers', () => {
   it('registers a channel for every API method', () => {
@@ -48,9 +55,9 @@ describe('registerIpcHandlers', () => {
 
   it('wraps results in an ok response', async () => {
     const { invoke, fromApp } = setup();
-    await expect(invoke('viewer:getSession', fromApp)).resolves.toEqual({
+    await expect(invoke('viewer:listAccounts', fromApp)).resolves.toEqual({
       ok: true,
-      value: { status: 'signed-out' },
+      value: { accounts: [], browserSignIn: false },
     });
   });
 
@@ -75,13 +82,13 @@ describe('registerIpcHandlers', () => {
     const { invoke, api } = setup();
 
     await expect(
-      invoke('viewer:getSession', { senderFrame: { url: 'https://evil.example/' } }),
+      invoke('viewer:listAccounts', { senderFrame: { url: 'https://evil.example/' } }),
     ).resolves.toMatchObject({ ok: false, error: { code: 'forbidden' } });
-    await expect(invoke('viewer:getSession', { senderFrame: null })).resolves.toMatchObject({
+    await expect(invoke('viewer:listAccounts', { senderFrame: null })).resolves.toMatchObject({
       ok: false,
       error: { code: 'forbidden' },
     });
-    expect(api.getSession).not.toHaveBeenCalled();
+    expect(api.listAccounts).not.toHaveBeenCalled();
   });
 
   it('returns app errors as they are', async () => {

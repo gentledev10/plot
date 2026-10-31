@@ -1,17 +1,17 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { aPullRequestSummary, aUser } from '../../../test/builders';
+import { anAccount, anAccountList, aPullRequestSummary } from '../../../test/builders';
 import { renderWithApi } from '../../../test/render';
 import { ViewerError } from '../../lib/api';
 import { InboxPanel } from './InboxPanel';
 
-const signedIn = vi.fn().mockResolvedValue({ status: 'signed-in', user: aUser('octocat') });
+const signedIn = vi.fn().mockResolvedValue(anAccountList([anAccount('octocat')]));
 
 describe('InboxPanel', () => {
   it('lists review requests and authored pull requests', async () => {
     renderWithApi(<InboxPanel onSelect={vi.fn()} />, {
-      getSession: signedIn,
+      listAccounts: signedIn,
       listInbox: vi.fn().mockResolvedValue({
         reviewRequested: [aPullRequestSummary(1, { title: 'Fix login' })],
         authored: [aPullRequestSummary(2, { title: 'Add cache', isDraft: true })],
@@ -31,7 +31,7 @@ describe('InboxPanel', () => {
   it('selects a pull request when it is clicked', async () => {
     const onSelect = vi.fn();
     renderWithApi(<InboxPanel onSelect={onSelect} />, {
-      getSession: signedIn,
+      listAccounts: signedIn,
       listInbox: vi.fn().mockResolvedValue({
         reviewRequested: [aPullRequestSummary(7, { title: 'Fix login' })],
         authored: [],
@@ -39,17 +39,22 @@ describe('InboxPanel', () => {
     });
 
     await userEvent.click(await screen.findByRole('button', { name: /Fix login/ }));
-    expect(onSelect).toHaveBeenCalledWith({ owner: 'octocat', repo: 'hello-world', number: 7 });
+    expect(onSelect).toHaveBeenCalledWith({
+      host: 'github.com',
+      owner: 'octocat',
+      repo: 'hello-world',
+      number: 7,
+    });
   });
 
   it('marks the selected pull request', async () => {
     renderWithApi(
       <InboxPanel
-        selected={{ owner: 'Octocat', repo: 'Hello-World', number: 7 }}
+        selected={{ host: 'github.com', owner: 'Octocat', repo: 'Hello-World', number: 7 }}
         onSelect={vi.fn()}
       />,
       {
-        getSession: signedIn,
+        listAccounts: signedIn,
         listInbox: vi.fn().mockResolvedValue({
           reviewRequested: [aPullRequestSummary(7, { title: 'Fix login' })],
           authored: [aPullRequestSummary(8, { title: 'Other' })],
@@ -66,7 +71,7 @@ describe('InboxPanel', () => {
 
   it('says so when both lists are empty', async () => {
     renderWithApi(<InboxPanel onSelect={vi.fn()} />, {
-      getSession: signedIn,
+      listAccounts: signedIn,
       listInbox: vi.fn().mockResolvedValue({ reviewRequested: [], authored: [] }),
     });
 
@@ -74,37 +79,54 @@ describe('InboxPanel', () => {
     expect(screen.getByText('You have no open pull requests.')).toBeInTheDocument();
   });
 
-  it('explains how to install gh when it is missing', async () => {
+  it('offers the ways to connect GitHub before any account is connected', async () => {
     const listInbox = vi.fn();
     renderWithApi(<InboxPanel onSelect={vi.fn()} />, {
-      getSession: vi.fn().mockResolvedValue({ status: 'gh-not-installed' }),
+      listAccounts: vi.fn().mockResolvedValue(anAccountList([])),
       listInbox,
     });
 
-    expect(await screen.findByText('Install the GitHub CLI')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'cli.github.com' })).toHaveAttribute(
-      'href',
-      'https://cli.github.com',
-    );
+    expect(await screen.findByRole('heading', { name: 'Connect GitHub' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Sign in with your browser/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Use the GitHub CLI/ })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Pull request URL' })).not.toBeInTheDocument();
     expect(listInbox).not.toHaveBeenCalled();
   });
 
-  it('asks to sign in with gh and checks again on retry', async () => {
-    const getSession = vi
-      .fn()
-      .mockResolvedValueOnce({ status: 'signed-out' })
-      .mockResolvedValue({ status: 'signed-in', user: aUser() });
-    renderWithApi(<InboxPanel onSelect={vi.fn()} />, {
-      getSession,
-      listInbox: vi.fn().mockResolvedValue({
-        reviewRequested: [aPullRequestSummary(1, { title: 'Fix login' })],
-        authored: [],
-      }),
+  it('shows the current account and opens account settings from it', async () => {
+    const onManageAccounts = vi.fn();
+    renderWithApi(<InboxPanel onSelect={vi.fn()} onManageAccounts={onManageAccounts} />, {
+      listAccounts: vi
+        .fn()
+        .mockResolvedValue(anAccountList([anAccount('mona', { host: 'github.example.com' })])),
+      listInbox: vi.fn().mockResolvedValue({ reviewRequested: [], authored: [] }),
     });
 
-    expect(await screen.findByText('Sign in to GitHub')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText('Fix login')).toBeInTheDocument();
+    const account = await screen.findByRole('button', { name: /mona/ });
+    expect(account).toHaveTextContent('github.example.com');
+    await userEvent.click(account);
+    expect(onManageAccounts).toHaveBeenCalledOnce();
+  });
+
+  it('opens shorthand references on the current account host', async () => {
+    const onSelect = vi.fn();
+    renderWithApi(<InboxPanel onSelect={onSelect} />, {
+      listAccounts: vi
+        .fn()
+        .mockResolvedValue(anAccountList([anAccount('mona', { host: 'github.example.com' })])),
+      listInbox: vi.fn().mockResolvedValue({ reviewRequested: [], authored: [] }),
+    });
+
+    await userEvent.type(
+      await screen.findByRole('textbox', { name: 'Pull request URL' }),
+      'platform/api#7{Enter}',
+    );
+    expect(onSelect).toHaveBeenCalledWith({
+      host: 'github.example.com',
+      owner: 'platform',
+      repo: 'api',
+      number: 7,
+    });
   });
 
   it('shows inbox errors and recovers on retry', async () => {
@@ -112,16 +134,16 @@ describe('InboxPanel', () => {
       .fn()
       .mockRejectedValueOnce(new ViewerError('network', 'Could not reach GitHub.'))
       .mockResolvedValue({ reviewRequested: [aPullRequestSummary(3)], authored: [] });
-    renderWithApi(<InboxPanel onSelect={vi.fn()} />, { getSession: signedIn, listInbox });
+    renderWithApi(<InboxPanel onSelect={vi.fn()} />, { listAccounts: signedIn, listInbox });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach GitHub.');
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('Pull request 3')).toBeInTheDocument();
   });
 
-  it('refreshes both the session and the inbox from the header button', async () => {
+  it('refreshes both the accounts and the inbox from the header button', async () => {
     const listInbox = vi.fn().mockResolvedValue({ reviewRequested: [], authored: [] });
-    renderWithApi(<InboxPanel onSelect={vi.fn()} />, { getSession: signedIn, listInbox });
+    renderWithApi(<InboxPanel onSelect={vi.fn()} />, { listAccounts: signedIn, listInbox });
 
     await screen.findByText('Nothing is waiting for your review.');
     await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));

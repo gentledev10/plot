@@ -1,0 +1,103 @@
+.accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 560px;
+}
+
+.intro {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 8px 8px 12px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--color-border-strong);
+}
+
+.who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.login {
+  font-weight: 600;
+}
+
+.details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.current {
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--color-bg-selected);
+  font-size: var(--font-size-small);
+}
+
+.confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-small);
+}
+
+.secondary,
+.danger,
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-input);
+}
+
+.danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.addButton {
+  align-self: flex-start;
+  padding: 4px 12px;
+}
+
+.add {
+  padding: 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+}
+
+.addTitle {
+  margin: 0 0 10px;
+  font-size: var(--font-size);
+  font-weight: 600;
+}
+
+.error {
+  margin: 0;
+  color: var(--color-danger);
+}

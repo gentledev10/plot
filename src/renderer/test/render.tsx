@@ -11,7 +11,14 @@ function notStubbed(method: string) {
 
 export function fakeApi(overrides: Partial<ViewerApi> = {}): ViewerApi {
   return {
-    getSession: notStubbed('getSession'),
+    listAccounts: notStubbed('listAccounts'),
+    switchAccount: notStubbed('switchAccount'),
+    removeAccount: notStubbed('removeAccount'),
+    signInWithToken: notStubbed('signInWithToken'),
+    signInWithGitHubCli: notStubbed('signInWithGitHubCli'),
+    startBrowserSignIn: notStubbed('startBrowserSignIn'),
+    finishBrowserSignIn: notStubbed('finishBrowserSignIn'),
+    cancelBrowserSignIn: vi.fn().mockResolvedValue(undefined),
     listInbox: notStubbed('listInbox'),
     getPullRequest: notStubbed('getPullRequest'),
     getPullRequestDiff: notStubbed('getPullRequestDiff'),

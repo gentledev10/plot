@@ -13,7 +13,7 @@ vi.mock('./MermaidDiagram', () => ({
   ),
 }));
 
-const target = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const target = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
 
 const diff = {
   mergeBase: 'c'.repeat(40),

@@ -19,6 +19,18 @@ describe('createGhTokenProvider', () => {
     );
   });
 
+  it('asks for a specific account when there are several', async () => {
+    const run = runnerReturning('ghp_work');
+    const tokens = createGhTokenProvider(run, { host: 'github.example.com', user: 'mona' });
+
+    await expect(tokens.getToken()).resolves.toBe('ghp_work');
+    expect(run).toHaveBeenCalledWith(
+      'gh',
+      ['auth', 'token', '--hostname', 'github.example.com', '--user', 'mona'],
+      expect.anything(),
+    );
+  });
+
   it('asks gh only once, even for concurrent callers', async () => {
     const run = runnerReturning('gho_secret');
     const tokens = createGhTokenProvider(run);

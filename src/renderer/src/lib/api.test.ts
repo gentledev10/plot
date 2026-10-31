@@ -6,7 +6,16 @@ function bridge(overrides: Partial<ViewerBridge> = {}): ViewerBridge {
   return {
     platform: 'darwin',
     onMenuCommand: () => () => {},
-    getSession: vi.fn().mockResolvedValue({ ok: true, value: { status: 'signed-out' } }),
+    listAccounts: vi
+      .fn()
+      .mockResolvedValue({ ok: true, value: { accounts: [], browserSignIn: false } }),
+    switchAccount: vi.fn(),
+    removeAccount: vi.fn(),
+    signInWithToken: vi.fn(),
+    signInWithGitHubCli: vi.fn(),
+    startBrowserSignIn: vi.fn(),
+    finishBrowserSignIn: vi.fn(),
+    cancelBrowserSignIn: vi.fn(),
     listInbox: vi.fn(),
     getPullRequest: vi.fn(),
     getPullRequestDiff: vi.fn(),
@@ -21,13 +30,13 @@ function bridge(overrides: Partial<ViewerBridge> = {}): ViewerBridge {
 describe('createApi', () => {
   it('unwraps successful responses', async () => {
     const api = createApi(bridge());
-    await expect(api.getSession()).resolves.toEqual({ status: 'signed-out' });
+    await expect(api.listAccounts()).resolves.toEqual({ accounts: [], browserSignIn: false });
   });
 
   it('forwards arguments to the bridge', async () => {
     const getPullRequest = vi.fn().mockResolvedValue({ ok: true, value: { title: 'x' } });
     const api = createApi(bridge({ getPullRequest }));
-    const ref = { owner: 'octocat', repo: 'hello-world', number: 1 };
+    const ref = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 1 };
 
     await api.getPullRequest(ref);
     expect(getPullRequest).toHaveBeenCalledWith(ref);

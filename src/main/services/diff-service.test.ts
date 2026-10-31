@@ -3,9 +3,10 @@ import type { PullRequestDetail } from '@shared/github';
 import { describe, expect, it, vi } from 'vitest';
 import type { RepositoryCache } from '../git/repository-cache';
 import type { GitHubClient } from '../github/client';
+import { fakeConnections } from '../github/fake-connections';
 import { createDiffService, MAX_BLOB_BYTES } from './diff-service';
 
-const ref = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const ref = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
 const BASE = 'a'.repeat(40);
 const HEAD = 'b'.repeat(40);
 const MERGE_BASE = 'c'.repeat(40);
@@ -37,7 +38,11 @@ function setup() {
     checkoutDirectories: vi.fn(),
     removeCheckout: vi.fn(),
   };
-  return { service: createDiffService({ github, repositories }), github, repositories };
+  return {
+    service: createDiffService({ connections: fakeConnections(github), repositories }),
+    github,
+    repositories,
+  };
 }
 
 describe('getPullRequestDiff', () => {

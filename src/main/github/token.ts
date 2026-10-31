@@ -1,3 +1,4 @@
+import { GITHUB_HOST } from '@shared/hosts';
 import { AppError } from '../errors';
 import { CommandError, type CommandRunner } from '../system/process';
 
@@ -6,14 +7,36 @@ export interface TokenProvider {
   invalidate(): void;
 }
 
-export function createGhTokenProvider(run: CommandRunner, host = 'github.com'): TokenProvider {
+export function cachedTokens(read: () => Promise<string>): TokenProvider {
   let pending: Promise<string> | undefined;
-
-  async function readToken(): Promise<string> {
-    try {
-      const { stdout } = await run('gh', ['auth', 'token', '--hostname', host], {
-        timeoutMs: 10_000,
+  return {
+    getToken() {
+      pending ??= read().catch((error: unknown) => {
+        pending = undefined;
+        throw error;
       });
+      return pending;
+    },
+    invalidate() {
+      pending = undefined;
+    },
+  };
+}
+
+interface GhTokenOptions {
+  host?: string;
+  user?: string;
+}
+
+export function createGhTokenProvider(
+  run: CommandRunner,
+  { host = GITHUB_HOST, user }: GhTokenOptions = {},
+): TokenProvider {
+  const account = user ? `${host} as ${user}` : host;
+  return cachedTokens(async () => {
+    const args = ['auth', 'token', '--hostname', host, ...(user ? ['--user', user] : [])];
+    try {
+      const { stdout } = await run('gh', args, { timeoutMs: 10_000 });
       const token = stdout.trim();
       if (token !== '') {
         return token;
@@ -26,29 +49,16 @@ export function createGhTokenProvider(run: CommandRunner, host = 'github.com'): 
           { cause: error },
         );
       }
-      throw notSignedIn(host, error);
+      throw notSignedIn(account, error);
     }
-    throw notSignedIn(host);
-  }
-
-  return {
-    getToken() {
-      pending ??= readToken().catch((error: unknown) => {
-        pending = undefined;
-        throw error;
-      });
-      return pending;
-    },
-    invalidate() {
-      pending = undefined;
-    },
-  };
+    throw notSignedIn(account);
+  });
 }
 
-function notSignedIn(host: string, cause?: unknown): AppError {
+function notSignedIn(account: string, cause?: unknown): AppError {
   return new AppError(
     'gh-not-authenticated',
-    `The GitHub CLI is not signed in to ${host}. Run \`gh auth login\` in a terminal.`,
+    `The GitHub CLI is not signed in to ${account}. Run \`gh auth login\` in a terminal.`,
     { cause },
   );
 }

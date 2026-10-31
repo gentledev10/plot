@@ -1,19 +1,23 @@
 import type { PullRequestRef } from '@shared/github';
-import { RefreshCw } from 'lucide-react';
+import { GITHUB_HOST } from '@shared/hosts';
+import { ChevronsUpDown, RefreshCw } from 'lucide-react';
 import { Avatar } from '../../components/Avatar';
 import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
+import { ConnectGitHub } from '../accounts/ConnectGitHub';
+import { useAccounts } from '../accounts/queries';
 import { useCommand } from '../keymap/KeymapProvider';
 import styles from './InboxPanel.module.css';
 import { OpenPullRequestForm } from './OpenPullRequestForm';
 import { PullRequestList } from './PullRequestList';
-import { useInbox, useSession } from './queries';
+import { useInbox } from './queries';
 
 interface InboxPanelProps {
   selected?: PullRequestRef;
   onSelect(ref: PullRequestRef): void;
   focusOpenField?: boolean;
   onOpenFieldFocused?(): void;
+  onManageAccounts?(): void;
 }
 
 export function InboxPanel({
@@ -21,14 +25,15 @@ export function InboxPanel({
   onSelect,
   focusOpenField,
   onOpenFieldFocused,
+  onManageAccounts,
 }: InboxPanelProps) {
-  const session = useSession();
-  const user = session.data?.status === 'signed-in' ? session.data.user : undefined;
-  const inbox = useInbox(user !== undefined);
+  const accounts = useAccounts();
+  const current = accounts.data?.accounts.find((account) => account.id === accounts.data.currentId);
+  const inbox = useInbox(current?.id);
 
   function refresh() {
-    void session.refetch();
-    if (user) {
+    void accounts.refetch();
+    if (current) {
       void inbox.refetch();
     }
   }
@@ -39,56 +44,64 @@ export function InboxPanel({
     <aside className={styles.panel} aria-label="Pull requests">
       <header className={styles.header}>
         <h2 className={styles.title}>Pull requests</h2>
-        <IconButton label="Refresh" onClick={refresh} busy={session.isFetching || inbox.isFetching}>
+        <IconButton
+          label="Refresh"
+          onClick={refresh}
+          busy={accounts.isFetching || inbox.isFetching}
+        >
           <RefreshCw size={14} />
         </IconButton>
       </header>
-      <OpenPullRequestForm
-        onOpen={onSelect}
-        focus={focusOpenField}
-        onFocused={onOpenFieldFocused}
-      />
+      {current && (
+        <OpenPullRequestForm
+          defaultHost={current.host}
+          onOpen={onSelect}
+          focus={focusOpenField}
+          onFocused={onOpenFieldFocused}
+        />
+      )}
       <div className={styles.content}>{renderContent()}</div>
-      {user && (
+      {current && (
         <footer className={styles.footer}>
-          <Avatar user={user} size={18} />
-          <span>{user.login}</span>
+          <button
+            type="button"
+            className={styles.account}
+            title="Switch or add accounts"
+            onClick={onManageAccounts}
+          >
+            <Avatar user={current} size={18} />
+            <span className={styles.accountName}>{current.login}</span>
+            {current.host !== GITHUB_HOST && (
+              <span className={styles.accountHost}>{current.host}</span>
+            )}
+            <ChevronsUpDown size={12} />
+          </button>
         </footer>
       )}
     </aside>
   );
 
   function renderContent() {
-    if (session.isPending) {
-      return <StatusMessage>Connecting to GitHub…</StatusMessage>;
+    if (accounts.isPending) {
+      return <StatusMessage>Loading your accounts…</StatusMessage>;
     }
-    if (session.isError) {
+    if (accounts.isError) {
       return (
-        <StatusMessage title="Could not check your GitHub sign-in" tone="error" onRetry={refresh}>
-          {session.error.message}
+        <StatusMessage title="Could not load your accounts" tone="error" onRetry={refresh}>
+          {accounts.error.message}
         </StatusMessage>
       );
     }
-    if (session.data.status === 'gh-not-installed') {
+    if (!current) {
       return (
-        <StatusMessage title="Install the GitHub CLI" onRetry={refresh}>
-          <p>
-            Viewer signs in through the GitHub CLI. Install it from{' '}
-            <a href="https://cli.github.com" target="_blank" rel="noreferrer">
-              cli.github.com
-            </a>
-            , run <code>gh auth login</code>, then try again.
+        <div className={styles.onboarding}>
+          <h3 className={styles.onboardingTitle}>Connect GitHub</h3>
+          <p className={styles.onboardingText}>
+            Viewer lists the pull requests waiting for your review and opens any pull request you
+            can read.
           </p>
-        </StatusMessage>
-      );
-    }
-    if (session.data.status === 'signed-out') {
-      return (
-        <StatusMessage title="Sign in to GitHub" onRetry={refresh}>
-          <p>
-            Run <code>gh auth login</code> in a terminal, then try again.
-          </p>
-        </StatusMessage>
+          <ConnectGitHub />
+        </div>
       );
     }
     if (inbox.isPending) {

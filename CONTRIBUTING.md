@@ -4,7 +4,7 @@ Thanks for your interest in Viewer. This guide covers how to set up the project 
 
 ## Setup
 
-You need macOS, Node.js 22 or later, and the GitHub CLI (`gh`) signed in with `gh auth login`.
+You need macOS and Node.js 22 or later.
 
 ```sh
 git clone https://github.com/gentledev10/viewer.git
@@ -12,6 +12,8 @@ cd viewer
 npm install
 npm run dev
 ```
+
+The app starts without an account. Connect one with a personal access token or the GitHub CLI. Browser sign-in also needs a GitHub OAuth app: [create one](https://github.com/settings/applications/new) with any callback URL, enable Device Flow, and put its client ID in `.env.local` as `MAIN_VITE_GITHUB_CLIENT_ID=<client id>`. The client ID is not a secret, but keep your own out of commits.
 
 ## Before you open a pull request
 

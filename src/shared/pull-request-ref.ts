@@ -1,16 +1,18 @@
 import type { PullRequestRef } from './github';
+import { GITHUB_HOST, isHost, normalizeHost } from './hosts';
 
 const OWNER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
 const REPO = /^[A-Za-z0-9._-]{1,100}$/;
-const PULL_URL = /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:[/?#].*)?$/;
+const PULL_URL = /^https:\/\/([^/\s]+)\/([^/\s]+)\/([^/\s]+)\/pull\/(\d+)(?:[/?#].*)?$/;
 const SHORTHAND = /^([^/\s]+)\/([^/\s#]+)#(\d+)$/;
 
 export function isPullRequestRef(value: unknown): value is PullRequestRef {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
-  const { owner, repo, number } = value as Record<string, unknown>;
+  const { host, owner, repo, number } = value as Record<string, unknown>;
   return (
+    isHost(host) &&
     typeof owner === 'string' &&
     OWNER.test(owner) &&
     typeof repo === 'string' &&
@@ -23,31 +25,50 @@ export function isPullRequestRef(value: unknown): value is PullRequestRef {
   );
 }
 
-export function parsePullRequestRef(input: string): PullRequestRef | undefined {
+export function parsePullRequestRef(
+  input: string,
+  defaultHost = GITHUB_HOST,
+): PullRequestRef | undefined {
   const text = input.trim();
-  const match = PULL_URL.exec(text) ?? SHORTHAND.exec(text);
-  if (!match) {
-    return undefined;
+  const url = PULL_URL.exec(text);
+  if (url) {
+    const [, host = '', owner, repo, number] = url;
+    return toRef(normalizeHost(host), owner, repo, number);
   }
-  const [, owner, repo, number] = match;
-  const ref = { owner, repo: repo?.replace(/\.git$/, ''), number: Number(number) };
+  const shorthand = SHORTHAND.exec(text);
+  if (shorthand) {
+    const [, owner, repo, number] = shorthand;
+    return toRef(defaultHost, owner, repo, number);
+  }
+  return undefined;
+}
+
+function toRef(
+  host: string | undefined,
+  owner: string | undefined,
+  repo: string | undefined,
+  number: string | undefined,
+): PullRequestRef | undefined {
+  const ref = { host, owner, repo: repo?.replace(/\.git$/, ''), number: Number(number) };
   return isPullRequestRef(ref) ? ref : undefined;
 }
 
-export function formatPullRequestRef({ owner, repo, number }: PullRequestRef): string {
-  return `${owner}/${repo}#${number}`;
+export function formatPullRequestRef({ host, owner, repo, number }: PullRequestRef): string {
+  const name = `${owner}/${repo}#${number}`;
+  return host === GITHUB_HOST ? name : `${host}/${name}`;
 }
 
-export function pullRequestUrl({ owner, repo, number }: PullRequestRef): string {
-  return `https://github.com/${owner}/${repo}/pull/${number}`;
+export function pullRequestKey({ host, owner, repo, number }: PullRequestRef): string {
+  return `${host}/${owner}/${repo}#${number}`.toLowerCase();
 }
 
-export function isSamePullRequest(a: PullRequestRef | undefined, b: PullRequestRef | undefined) {
-  return (
-    a !== undefined &&
-    b !== undefined &&
-    a.owner.toLowerCase() === b.owner.toLowerCase() &&
-    a.repo.toLowerCase() === b.repo.toLowerCase() &&
-    a.number === b.number
-  );
+export function pullRequestUrl({ host, owner, repo, number }: PullRequestRef): string {
+  return `https://${host}/${owner}/${repo}/pull/${number}`;
+}
+
+export function isSamePullRequest(
+  a: PullRequestRef | undefined,
+  b: PullRequestRef | undefined,
+): boolean {
+  return a !== undefined && b !== undefined && pullRequestKey(a) === pullRequestKey(b);
 }

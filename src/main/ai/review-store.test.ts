@@ -5,7 +5,7 @@ import type { StoredReview } from '@shared/review';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createFileReviewStore } from './review-store';
 
-const ref = { owner: 'OctoCat', repo: 'Hello-World', number: 42 };
+const ref = { host: 'github.com', owner: 'OctoCat', repo: 'Hello-World', number: 42 };
 const head = 'b'.repeat(40);
 
 const stored: StoredReview = {
@@ -41,7 +41,7 @@ describe('createFileReviewStore', () => {
   it('keeps one file per pull request and head, ignoring name case', async () => {
     const store = createFileReviewStore(root);
     await store.write(ref, stored);
-    await expect(readdir(join(root, 'octocat', 'hello-world'))).resolves.toEqual([
+    await expect(readdir(join(root, 'github.com', 'octocat', 'hello-world'))).resolves.toEqual([
       `42-${head}.json`,
     ]);
     await expect(store.read({ ...ref, owner: 'octocat' }, head)).resolves.toEqual(stored);
@@ -56,7 +56,7 @@ describe('createFileReviewStore', () => {
   it('ignores corrupted files', async () => {
     const store = createFileReviewStore(root);
     await store.write(ref, stored);
-    await writeFile(join(root, 'octocat', 'hello-world', `42-${head}.json`), '{oops');
+    await writeFile(join(root, 'github.com', 'octocat', 'hello-world', `42-${head}.json`), '{oops');
     await expect(store.read(ref, head)).resolves.toBeUndefined();
   });
 });

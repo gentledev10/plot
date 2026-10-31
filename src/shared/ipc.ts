@@ -1,10 +1,18 @@
+import type { Account, AccountList, BrowserSignIn, TokenSignIn } from './accounts';
 import type { BlobContent, PullRequestDiff } from './diff';
 import type { ErrorPayload } from './errors';
-import type { Inbox, PullRequestDetail, PullRequestRef, Session } from './github';
+import type { Inbox, PullRequestDetail, PullRequestRef } from './github';
 import type { ReviewStatus } from './review';
 
 export interface ViewerApi {
-  getSession(): Promise<Session>;
+  listAccounts(): Promise<AccountList>;
+  switchAccount(id: string): Promise<void>;
+  removeAccount(id: string): Promise<void>;
+  signInWithToken(input: TokenSignIn): Promise<Account>;
+  signInWithGitHubCli(host: string): Promise<Account>;
+  startBrowserSignIn(): Promise<BrowserSignIn>;
+  finishBrowserSignIn(id: string): Promise<Account>;
+  cancelBrowserSignIn(id: string): Promise<void>;
   listInbox(): Promise<Inbox>;
   getPullRequest(ref: PullRequestRef): Promise<PullRequestDetail>;
   getPullRequestDiff(ref: PullRequestRef): Promise<PullRequestDiff>;
@@ -17,7 +25,14 @@ export interface ViewerApi {
 export type IpcMethod = keyof ViewerApi;
 
 const METHODS: Record<IpcMethod, true> = {
-  getSession: true,
+  listAccounts: true,
+  switchAccount: true,
+  removeAccount: true,
+  signInWithToken: true,
+  signInWithGitHubCli: true,
+  startBrowserSignIn: true,
+  finishBrowserSignIn: true,
+  cancelBrowserSignIn: true,
   listInbox: true,
   getPullRequest: true,
   getPullRequestDiff: true,

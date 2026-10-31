@@ -13,6 +13,7 @@ export function createFileReviewStore(rootDir: string): ReviewStore {
   function fileFor(ref: PullRequestRef, head: string): string {
     return join(
       rootDir,
+      ref.host,
       ref.owner.toLowerCase(),
       ref.repo.toLowerCase(),
       `${ref.number}-${head}.json`,

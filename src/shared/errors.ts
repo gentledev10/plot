@@ -1,6 +1,10 @@
 export type ErrorCode =
   | 'invalid-argument'
   | 'forbidden'
+  | 'github-no-account'
+  | 'sign-in-failed'
+  | 'sign-in-cancelled'
+  | 'secure-storage-unavailable'
   | 'gh-not-installed'
   | 'gh-not-authenticated'
   | 'github-unauthorized'

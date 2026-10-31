@@ -82,7 +82,7 @@ export function App() {
   useCommand('view.toggleAllPanels', toggleAll);
   useCommand('pullRequest.open', startOpeningPullRequest);
   useCommand('pullRequest.back', closePullRequest, open !== undefined);
-  useMenuCommand('open-settings', () => setSettings('keymap'));
+  useMenuCommand('open-settings', () => setSettings('accounts'));
   useMenuCommand('open-keymap', () => setSettings('keymap'));
 
   return (
@@ -100,7 +100,7 @@ export function App() {
             <ToolWindowButton
               label="Settings"
               shortcut={formatStroke('Meta+,', platform)}
-              onClick={() => setSettings('keymap')}
+              onClick={() => setSettings('accounts')}
             >
               <Settings size={16} />
             </ToolWindowButton>
@@ -130,6 +130,7 @@ export function App() {
             onSelect={openPullRequest}
             focusOpenField={focusOpenField}
             onOpenFieldFocused={() => setFocusOpenField(false)}
+            onManageAccounts={() => setSettings('accounts')}
           />
         )}
       </div>

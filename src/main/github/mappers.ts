@@ -14,11 +14,11 @@ export function toGitHubUser(value: unknown): GitHubUser {
   return { login: string(user.login, 'user.login'), avatarUrl: string(user.avatar_url, 'avatar') };
 }
 
-export function toPullRequestSummaryFromSearch(value: unknown): PullRequestSummary {
+export function toPullRequestSummaryFromSearch(value: unknown, host: string): PullRequestSummary {
   const item = object(value, 'search item');
   const { owner, repo } = repositoryFromApiUrl(string(item.repository_url, 'repository_url'));
   return {
-    ref: { owner, repo, number: number(item.number, 'number') },
+    ref: { host, owner, repo, number: number(item.number, 'number') },
     title: string(item.title, 'title'),
     author: toGitHubUser(item.user),
     isDraft: item.draft === true,

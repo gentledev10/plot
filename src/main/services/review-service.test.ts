@@ -11,9 +11,10 @@ import type { ReviewStore } from '../ai/review-store';
 import { AppError } from '../errors';
 import type { RepositoryCache } from '../git/repository-cache';
 import type { GitHubClient } from '../github/client';
+import { fakeConnections } from '../github/fake-connections';
 import { createReviewService, directoriesOf } from './review-service';
 
-const ref = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const ref = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
 const HEAD = 'b'.repeat(40);
 const MERGE_BASE = 'c'.repeat(40);
 
@@ -92,7 +93,7 @@ function setup(run: (input: AgentRunInput) => Promise<{ output: unknown; costUsd
 
   const agent: ReviewAgent = { run: vi.fn(run) };
   const service = createReviewService({
-    github,
+    connections: fakeConnections(github),
     repositories,
     agent,
     store,

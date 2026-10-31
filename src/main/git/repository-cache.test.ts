@@ -12,7 +12,7 @@ import { isolatedGitEnvironment } from './environment';
 import { createFixtureRepository, type FixtureRepository } from './fixture-repository';
 import { createRepositoryCache, type RepositoryCacheOptions } from './repository-cache';
 
-const repository = { owner: 'octocat', repo: 'hello-world' };
+const repository = { host: 'github.com', owner: 'octocat', repo: 'hello-world' };
 
 let fixture: FixtureRepository;
 
@@ -82,7 +82,7 @@ describe('createRepositoryCache', () => {
     await cache.fetchCommits(repository, [fixture.mergeBase, fixture.head]);
     await cache.diff(repository, fixture.mergeBase, fixture.head);
 
-    const gitDir = join(rootDir, 'octocat', 'hello-world.git');
+    const gitDir = join(rootDir, 'github.com', 'octocat', 'hello-world.git');
     const git = async (...args: string[]) =>
       (
         await runCommand('git', ['--git-dir', gitDir, ...args], {
@@ -182,13 +182,28 @@ describe('createRepositoryCache', () => {
     });
   });
 
+  it('asks for credentials of the host the repository lives on', async () => {
+    const authHeader = vi.fn(async () => undefined);
+    const { cache } = setup({ authHeader });
+    const enterprise = { ...repository, host: 'github.example.com' };
+
+    await cache.fetchCommits(enterprise, [fixture.head]);
+
+    expect(authHeader).toHaveBeenCalledWith(enterprise);
+    expect(authHeader).not.toHaveBeenCalledWith(expect.objectContaining({ host: 'github.com' }));
+  });
+
   it('keeps each repository in its own directory, matching names without case', async () => {
     const rootDir = join(fixture.root, 'cache-layout');
     const { cache, run } = setup({ rootDir });
-    await cache.fetchCommits({ owner: 'OctoCat', repo: 'Hello-World' }, [fixture.head]);
+    await cache.fetchCommits({ host: 'github.com', owner: 'OctoCat', repo: 'Hello-World' }, [
+      fixture.head,
+    ]);
 
     const gitDirs = run.mock.calls.map(([, args]) => args[1]);
-    expect(new Set(gitDirs)).toEqual(new Set([join(rootDir, 'octocat', 'hello-world.git')]));
+    expect(new Set(gitDirs)).toEqual(
+      new Set([join(rootDir, 'github.com', 'octocat', 'hello-world.git')]),
+    );
   });
 });
 
@@ -229,7 +244,7 @@ describe('review workspace helpers', () => {
   it('ignores removal requests for repositories it never created', async () => {
     const { cache } = setup();
     await expect(
-      cache.removeCheckout({ owner: 'nobody', repo: 'nothing' }, '/tmp/none'),
+      cache.removeCheckout({ host: 'github.com', owner: 'nobody', repo: 'nothing' }, '/tmp/none'),
     ).resolves.toBeUndefined();
   });
 });

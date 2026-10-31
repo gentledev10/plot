@@ -51,7 +51,8 @@ To add a method, add it to `ViewerApi` and `METHODS` in `src/shared/ipc.ts`, the
 | `src/main/app`      | Electron glue: window creation, the `app://` protocol, navigation and permission guards           |
 | `src/main/ipc`      | The IPC adapter: sender checks, argument parsing, and error mapping                               |
 | `src/main/services` | Use cases such as "load the inbox", built from adapters                                           |
-| `src/main/github`   | GitHub adapter: the token from the GitHub CLI, the REST client, and response mappers              |
+| `src/main/accounts` | Connected accounts and their encrypted tokens                                                     |
+| `src/main/github`   | GitHub adapter: connections per host, sign-in flows, the REST client, and response mappers        |
 | `src/main/git`      | Repository cache: fetches the commits a pull request needs and parses `git diff` output           |
 | `src/main/ai`       | AI review: the Claude Code runner, the prompt, the output schema, and stored reviews              |
 | `src/main/system`   | Running commands, and reading `PATH` from the login shell                                         |
@@ -60,9 +61,13 @@ Adapters receive what they depend on as arguments, for example `createGitHubClie
 
 Commands run through `runCommand`, which uses `execFile` without a shell. Arguments are passed as a list and are never parsed by a shell.
 
-### Signing in
+### Accounts and signing in
 
-Viewer does not have its own GitHub login. It asks the GitHub CLI for a token with `gh auth token`, keeps it in memory, and asks again if GitHub rejects it. This reuses the account and organization access people already set up for `gh`.
+Viewer talks to GitHub only after someone chooses how to sign in. Each connected account is kept in `userData/accounts.json` by `accounts/account-store.ts`: its host, login, and sign-in method. Tokens from browser sign-in and personal access tokens are encrypted with Electron's `safeStorage`, whose key lives in the macOS keychain, and are decrypted only in the main process. Accounts that use the GitHub CLI keep no token: Viewer runs `gh auth token --hostname <host> --user <login>` when it needs one, so signing out of `gh` signs Viewer out too.
+
+Browser sign-in uses GitHub's device flow (`github/device-flow.ts`). Viewer shows a one-time code, the person approves it on github.com, and Viewer polls until GitHub hands over a token. The flow needs the client ID of a GitHub OAuth app (`github/oauth-app.ts`); builds without one hide the option. GitHub has no read-only scope for private repositories, so the app asks for `repo`, and Viewer only reads with it.
+
+Requests go through `GitHubConnections` (`github/connections.ts`). The inbox uses the current account. A pull request uses an account on its own host: the current account if it is there, otherwise the first one connected for that host. Pull request references carry their host, and so does everything cached for them, such as `userData/repositories/<host>/<owner>/<repo>.git`, so a token is only ever sent to the server it came from. REST calls go to `api.github.com` for github.com, `api.<host>` for GitHub Enterprise Cloud with data residency (`*.ghe.com`), and `https://<host>/api/v3` for GitHub Enterprise Server.
 
 Apps opened from Finder get a minimal `PATH` that does not include Homebrew. The packaged app reads `PATH` from the user's login shell at startup so it can find `gh` and `git`.
 

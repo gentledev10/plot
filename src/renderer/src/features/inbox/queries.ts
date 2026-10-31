@@ -2,21 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../../app/providers';
 
 export const inboxKeys = {
-  session: ['session'] as const,
-  inbox: ['inbox'] as const,
+  inbox: (accountId: string | undefined) => ['inbox', accountId] as const,
 };
 
-export function useSession() {
-  const api = useApi();
-  return useQuery({ queryKey: inboxKeys.session, queryFn: () => api.getSession() });
-}
-
-export function useInbox(enabled: boolean) {
+export function useInbox(accountId: string | undefined) {
   const api = useApi();
   return useQuery({
-    queryKey: inboxKeys.inbox,
+    queryKey: inboxKeys.inbox(accountId),
     queryFn: () => api.listInbox(),
-    enabled,
+    enabled: accountId !== undefined,
     refetchInterval: 5 * 60_000,
   });
 }

@@ -6,7 +6,7 @@ import { renderWithApi } from '../../../test/render';
 import { ViewerError } from '../../lib/api';
 import { PullRequestHeader } from './PullRequestHeader';
 
-const target = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const target = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
 
 describe('PullRequestHeader', () => {
   it('shows the title, branches, and size of the change', async () => {

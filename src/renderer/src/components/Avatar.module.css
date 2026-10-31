@@ -3,3 +3,12 @@
   flex: none;
   background: var(--color-bg-hover);
 }
+
+.initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  line-height: 1;
+}

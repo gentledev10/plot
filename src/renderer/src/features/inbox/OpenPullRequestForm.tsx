@@ -4,12 +4,18 @@ import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
 import styles from './InboxPanel.module.css';
 
 interface OpenPullRequestFormProps {
+  defaultHost?: string;
   onOpen(ref: PullRequestRef): void;
   focus?: boolean;
   onFocused?(): void;
 }
 
-export function OpenPullRequestForm({ onOpen, focus, onFocused }: OpenPullRequestFormProps) {
+export function OpenPullRequestForm({
+  defaultHost,
+  onOpen,
+  focus,
+  onFocused,
+}: OpenPullRequestFormProps) {
   const [value, setValue] = useState('');
   const [invalid, setInvalid] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -24,7 +30,7 @@ export function OpenPullRequestForm({ onOpen, focus, onFocused }: OpenPullReques
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const ref = parsePullRequestRef(value);
+    const ref = parsePullRequestRef(value, defaultHost);
     if (!ref) {
       setInvalid(true);
       return;

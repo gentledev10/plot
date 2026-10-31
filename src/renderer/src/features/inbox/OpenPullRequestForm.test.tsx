@@ -15,14 +15,24 @@ describe('OpenPullRequestForm', () => {
 
     await userEvent.type(input, 'https://github.com/octocat/hello-world/pull/42/files{Enter}');
 
-    expect(onOpen).toHaveBeenCalledWith({ owner: 'octocat', repo: 'hello-world', number: 42 });
+    expect(onOpen).toHaveBeenCalledWith({
+      host: 'github.com',
+      owner: 'octocat',
+      repo: 'hello-world',
+      number: 42,
+    });
     expect(input).toHaveValue('');
   });
 
   it('accepts the owner/repo#number shorthand', async () => {
     const { onOpen, input } = setup();
     await userEvent.type(input, 'octocat/hello-world#7{Enter}');
-    expect(onOpen).toHaveBeenCalledWith({ owner: 'octocat', repo: 'hello-world', number: 7 });
+    expect(onOpen).toHaveBeenCalledWith({
+      host: 'github.com',
+      owner: 'octocat',
+      repo: 'hello-world',
+      number: 7,
+    });
   });
 
   it('explains the expected format for anything else and keeps the text', async () => {

@@ -43,11 +43,21 @@ The defaults follow IntelliJ IDEA's macOS keymap. At the last difference of a fi
 
 Change any shortcut in Settings > Keymap. Actions such as switching to the unified view or generating a review map have no default shortcut, and you can give them one there.
 
+## Connecting GitHub
+
+Viewer connects to nothing until you choose how to sign in:
+
+- **Browser.** Approve Viewer on github.com with a one-time code. Works with single sign-on.
+- **Personal access token.** A classic token with the `repo` scope, or a fine-grained token with read access to contents and pull requests.
+- **GitHub CLI.** Uses the account you signed in to with `gh auth login`. Viewer asks `gh` for the token when it needs one and stores no copy.
+
+You can connect several accounts, including accounts on GitHub Enterprise Server, and switch between them in Settings > Accounts. Pull requests on an Enterprise server open with the account connected for that server. Tokens are encrypted with your macOS keychain and only sent to the server they belong to.
+
 ## Requirements
 
 - macOS
-- [GitHub CLI](https://cli.github.com), signed in with `gh auth login`. Viewer uses its login, so there is nothing else to set up.
 - Git
+- A GitHub account on github.com or GitHub Enterprise Server
 - [Claude Code](https://claude.com/claude-code), signed in, for AI review maps. Everything else works without it.
 
 ## Development

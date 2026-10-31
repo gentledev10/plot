@@ -6,7 +6,7 @@ import { renderWithApi } from '../../../test/render';
 import { ViewerError } from '../../lib/api';
 import { FilesPanel } from './FilesPanel';
 
-const target = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const target = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
 
 function changed(path: string, additions: number | null, deletions: number | null): ChangedFile {
   return {

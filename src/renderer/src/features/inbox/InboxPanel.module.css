@@ -148,10 +148,57 @@
 }
 
 .footer {
+  padding: 4px 6px;
+  border-top: 1px solid var(--color-border);
+}
+
+.account {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--color-border);
+  width: 100%;
+  padding: 4px 6px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  text-align: left;
+}
+
+.account:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text);
+}
+
+.accountName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountHost {
+  flex: 1;
+  overflow: hidden;
+  font-size: var(--font-size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account svg:last-child {
+  margin-left: auto;
+}
+
+.onboarding {
+  padding: 4px 12px 16px;
+}
+
+.onboardingTitle {
+  margin: 4px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.onboardingText {
+  margin: 0 0 14px;
   color: var(--color-text-muted);
 }

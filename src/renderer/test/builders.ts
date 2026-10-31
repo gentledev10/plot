@@ -1,3 +1,4 @@
+import type { Account, AccountList } from '@shared/accounts';
 import type { GitHubUser, PullRequestDetail, PullRequestSummary } from '@shared/github';
 
 export function aUser(login = 'octocat'): GitHubUser {
@@ -9,7 +10,7 @@ export function aPullRequestSummary(
   overrides: Partial<PullRequestSummary> = {},
 ): PullRequestSummary {
   return {
-    ref: { owner: 'octocat', repo: 'hello-world', number },
+    ref: { host: 'github.com', owner: 'octocat', repo: 'hello-world', number },
     title: `Pull request ${number}`,
     author: aUser(),
     isDraft: false,
@@ -32,4 +33,20 @@ export function aPullRequestDetail(overrides: Partial<PullRequestDetail> = {}): 
     changedFiles: 6,
     ...overrides,
   };
+}
+
+export function anAccount(login = 'octocat', overrides: Partial<Account> = {}): Account {
+  const host = overrides.host ?? 'github.com';
+  return {
+    id: `${host}/${login.toLowerCase()}`,
+    host,
+    login,
+    avatarUrl: aUser(login).avatarUrl,
+    method: 'browser',
+    ...overrides,
+  };
+}
+
+export function anAccountList(accounts: Account[] = [anAccount()]): AccountList {
+  return { accounts, currentId: accounts[0]?.id, browserSignIn: true };
 }

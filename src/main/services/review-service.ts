@@ -5,7 +5,7 @@ import type { ChangedFile } from '@shared/diff';
 import type { ErrorPayload } from '@shared/errors';
 import type { PullRequestRef } from '@shared/github';
 import type { ViewerApi } from '@shared/ipc';
-import { formatPullRequestRef } from '@shared/pull-request-ref';
+import { pullRequestKey } from '@shared/pull-request-ref';
 import type { ReviewAgent } from '../ai/claude-code';
 import { verifyLocations } from '../ai/review-locations';
 import { buildReviewPrompt, CONTEXT_FILES } from '../ai/review-prompt';
@@ -13,12 +13,12 @@ import { parseReviewMap, REVIEW_SCHEMA } from '../ai/review-schema';
 import type { ReviewStore } from '../ai/review-store';
 import { AppError, toErrorPayload } from '../errors';
 import type { RepositoryCache } from '../git/repository-cache';
-import type { GitHubClient } from '../github/client';
+import type { GitHubConnections } from '../github/connections';
 
 export type ReviewService = Pick<ViewerApi, 'getReviewStatus' | 'startReview' | 'cancelReview'>;
 
 interface ReviewServiceOptions {
-  github: GitHubClient;
+  connections: GitHubConnections;
   repositories: RepositoryCache;
   agent: ReviewAgent;
   store: ReviewStore;
@@ -35,7 +35,7 @@ type Job =
 const MAX_ACTIVITY = 50;
 
 export function createReviewService({
-  github,
+  connections,
   repositories,
   agent,
   store,
@@ -60,6 +60,7 @@ export function createReviewService({
     };
     const workspace = join(
       workspaceRoot,
+      ref.host,
       ref.owner.toLowerCase(),
       ref.repo.toLowerCase(),
       String(ref.number),
@@ -69,8 +70,9 @@ export function createReviewService({
 
     try {
       note('Loading the pull request');
-      const pull = await github.getPullRequest(ref);
-      const mergeBase = await github.getMergeBase(ref, pull.base.sha, pull.head.sha);
+      const { client } = await connections.forHost(ref.host);
+      const pull = await client.getPullRequest(ref);
+      const mergeBase = await client.getMergeBase(ref, pull.base.sha, pull.head.sha);
       await repositories.fetchCommits(ref, [mergeBase, pull.head.sha]);
       const files = await repositories.diff(ref, mergeBase, pull.head.sha);
       checkpoint();
@@ -137,7 +139,8 @@ export function createReviewService({
       if (job?.state === 'failed') {
         return { state: 'failed', error: job.error };
       }
-      const pull = await github.getPullRequest(ref);
+      const { client } = await connections.forHost(ref.host);
+      const pull = await client.getPullRequest(ref);
       const stored = await store.read(ref, pull.head.sha);
       return stored ? { state: 'done', ...stored } : { state: 'idle' };
     },
@@ -162,7 +165,7 @@ export function createReviewService({
 }
 
 function keyOf(ref: PullRequestRef): string {
-  return formatPullRequestRef(ref).toLowerCase();
+  return pullRequestKey(ref);
 }
 
 export function directoriesOf(files: readonly ChangedFile[]): string[] {

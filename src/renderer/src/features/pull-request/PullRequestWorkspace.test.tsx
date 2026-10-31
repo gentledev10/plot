@@ -11,7 +11,7 @@ import { PullRequestWorkspace } from './PullRequestWorkspace';
 
 vi.mock('../diff/DiffViewer', () => import('../../../test/fake-diff-viewer'));
 
-const target = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const target = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
 
 function changed(path: string, overrides: Partial<ChangedFile> = {}): ChangedFile {
   const id = path.replace(/\W/g, '').padEnd(40, '0').slice(0, 40).toLowerCase();

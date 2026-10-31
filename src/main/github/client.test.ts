@@ -28,12 +28,13 @@ function setup(...responses: Array<Response | Error>) {
     fetch,
     tokens,
     userAgent: 'Viewer/test',
+    host: 'github.com',
     apiUrl: 'https://api.test',
   });
   return { client, fetch, tokens };
 }
 
-const ref = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const ref = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
 
 describe('createGitHubClient', () => {
   it('sends the token and GitHub API headers', async () => {

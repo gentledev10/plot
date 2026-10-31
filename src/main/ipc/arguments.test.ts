@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { argumentParsers } from './arguments';
 
-const ref = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const ref = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
 const blob = 'a'.repeat(40);
 
 describe('argumentParsers', () => {
   it('takes no arguments for parameterless methods, whatever the renderer sends', () => {
-    expect(argumentParsers.getSession(['ignored'])).toEqual([]);
+    expect(argumentParsers.listAccounts(['ignored'])).toEqual([]);
     expect(argumentParsers.listInbox([])).toEqual([]);
   });
 
@@ -31,6 +31,27 @@ describe('argumentParsers', () => {
     expect(() => argumentParsers.readBlob([ref, value])).toThrow(
       expect.objectContaining({ code: 'invalid-argument' }),
     );
+  });
+
+  it('checks account ids, hosts, and tokens', () => {
+    expect(argumentParsers.switchAccount(['github.com/mona'])).toEqual(['github.com/mona']);
+    expect(argumentParsers.signInWithGitHubCli(['github.example.com'])).toEqual([
+      'github.example.com',
+    ]);
+    expect(
+      argumentParsers.signInWithToken([{ host: 'github.com', token: 'ghp_abc', extra: 1 }]),
+    ).toEqual([{ host: 'github.com', token: 'ghp_abc' }]);
+
+    const invalid = expect.objectContaining({ code: 'invalid-argument' });
+    expect(() => argumentParsers.removeAccount(['../mona'])).toThrow(invalid);
+    expect(() => argumentParsers.signInWithGitHubCli(['github.com; rm -rf /'])).toThrow(invalid);
+    expect(() =>
+      argumentParsers.signInWithToken([{ host: 'github.com', token: 'ghp abc' }]),
+    ).toThrow(invalid);
+    expect(() => argumentParsers.signInWithToken([{ host: 'github.com', token: '' }])).toThrow(
+      invalid,
+    );
+    expect(() => argumentParsers.finishBrowserSignIn(['not-a-uuid'])).toThrow(invalid);
   });
 
   it('rejects a missing pull request reference', () => {

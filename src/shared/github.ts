@@ -4,6 +4,7 @@ export interface GitHubUser {
 }
 
 export interface PullRequestRef {
+  host: string;
   owner: string;
   repo: string;
   number: number;
@@ -35,8 +36,3 @@ export interface Inbox {
   reviewRequested: PullRequestSummary[];
   authored: PullRequestSummary[];
 }
-
-export type Session =
-  | { status: 'signed-in'; user: GitHubUser }
-  | { status: 'signed-out' }
-  | { status: 'gh-not-installed' };

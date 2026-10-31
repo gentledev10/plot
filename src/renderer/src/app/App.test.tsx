@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { aPullRequestDetail, aPullRequestSummary, aUser } from '../../test/builders';
+import { anAccountList, aPullRequestDetail, aPullRequestSummary } from '../../test/builders';
 import { renderWithApi } from '../../test/render';
 import { App } from './App';
 
@@ -25,7 +25,7 @@ const diff = {
 
 function api() {
   return {
-    getSession: vi.fn().mockResolvedValue({ status: 'signed-in', user: aUser() }),
+    listAccounts: vi.fn().mockResolvedValue(anAccountList()),
     listInbox: vi.fn().mockResolvedValue({
       reviewRequested: [aPullRequestSummary(42, { title: 'Fix login redirect' })],
       authored: [],
@@ -50,6 +50,7 @@ describe('App', () => {
     expect(await screen.findByRole('treeitem', { name: /login\.ts/ })).toBeInTheDocument();
     expect(await screen.findByTestId('diff-viewer')).toHaveAttribute('data-path', 'src/login.ts');
     expect(fake.getPullRequestDiff).toHaveBeenCalledWith({
+      host: 'github.com',
       owner: 'octocat',
       repo: 'hello-world',
       number: 42,
@@ -147,6 +148,7 @@ describe('App', () => {
 
     act(() => menu.send('open-settings'));
     const dialog = await screen.findByRole('dialog', { name: 'Settings' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keymap' }));
     await userEvent.click(
       within(dialog).getByRole('button', { name: 'Remove ⌘1 from Show or hide the sidebar' }),
     );
@@ -193,15 +195,20 @@ describe('App', () => {
   });
 
   it('opens a pull request pasted as a URL', async () => {
-    const fake = { ...api(), getSession: vi.fn().mockResolvedValue({ status: 'signed-out' }) };
+    const fake = api();
     renderWithApi(<App />, fake);
 
     await userEvent.type(
-      screen.getByRole('textbox', { name: 'Pull request URL' }),
+      await screen.findByRole('textbox', { name: 'Pull request URL' }),
       'https://github.com/acme/api/pull/9{Enter}',
     );
 
     expect(await screen.findByRole('heading', { name: 'Fix login redirect' })).toBeInTheDocument();
-    expect(fake.getPullRequest).toHaveBeenCalledWith({ owner: 'acme', repo: 'api', number: 9 });
+    expect(fake.getPullRequest).toHaveBeenCalledWith({
+      host: 'github.com',
+      owner: 'acme',
+      repo: 'api',
+      number: 9,
+    });
   });
 });

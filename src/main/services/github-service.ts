@@ -1,7 +1,5 @@
-import type { Session } from '@shared/github';
 import type { ViewerApi } from '@shared/ipc';
-import { AppError } from '../errors';
-import type { GitHubClient } from '../github/client';
+import type { GitHubConnections } from '../github/connections';
 
 export const INBOX_QUERIES = {
   reviewRequested: 'is:pr is:open archived:false review-requested:@me',
@@ -10,28 +8,12 @@ export const INBOX_QUERIES = {
 
 const INBOX_LIMIT = 50;
 
-export type GitHubService = Pick<ViewerApi, 'getSession' | 'listInbox' | 'getPullRequest'>;
+export type GitHubService = Pick<ViewerApi, 'listInbox' | 'getPullRequest'>;
 
-export function createGitHubService(client: GitHubClient): GitHubService {
+export function createGitHubService(connections: GitHubConnections): GitHubService {
   return {
-    async getSession(): Promise<Session> {
-      try {
-        return { status: 'signed-in', user: await client.getViewer() };
-      } catch (error) {
-        if (error instanceof AppError && error.code === 'gh-not-installed') {
-          return { status: 'gh-not-installed' };
-        }
-        if (
-          error instanceof AppError &&
-          (error.code === 'gh-not-authenticated' || error.code === 'github-unauthorized')
-        ) {
-          return { status: 'signed-out' };
-        }
-        throw error;
-      }
-    },
-
     async listInbox() {
+      const { client } = await connections.current();
       const [reviewRequested, authored] = await Promise.all([
         client.searchPullRequests(INBOX_QUERIES.reviewRequested, INBOX_LIMIT),
         client.searchPullRequests(INBOX_QUERIES.authored, INBOX_LIMIT),
@@ -39,7 +21,8 @@ export function createGitHubService(client: GitHubClient): GitHubService {
       return { reviewRequested, authored };
     },
 
-    getPullRequest(ref) {
+    async getPullRequest(ref) {
+      const { client } = await connections.forHost(ref.host);
       return client.getPullRequest(ref);
     },
   };

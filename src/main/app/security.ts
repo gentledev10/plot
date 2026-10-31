@@ -40,8 +40,8 @@ export function serveRenderer(rendererDir: string): void {
 }
 
 export function denyPermissionRequests(): void {
-  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
-    callback(false),
+  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) =>
+    callback(permission === 'clipboard-sanitized-write'),
   );
 }
 

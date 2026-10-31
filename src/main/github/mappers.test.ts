@@ -7,11 +7,11 @@ import {
   toPullRequestSummaryFromSearch,
 } from './mappers';
 
-const ref = { owner: 'octocat', repo: 'hello-world', number: 42 };
+const ref = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
 
 describe('toPullRequestSummaryFromSearch', () => {
   it('maps a search result to a summary', () => {
-    expect(toPullRequestSummaryFromSearch(searchItem())).toEqual({
+    expect(toPullRequestSummaryFromSearch(searchItem(), 'github.com')).toEqual({
       ref,
       title: 'Add dark mode',
       author: {
@@ -26,15 +26,19 @@ describe('toPullRequestSummaryFromSearch', () => {
 
   it('treats a missing draft flag as not draft', () => {
     const { draft: _omitted, ...item } = searchItem();
-    expect(toPullRequestSummaryFromSearch(item).isDraft).toBe(false);
-    expect(toPullRequestSummaryFromSearch(searchItem({ draft: true })).isDraft).toBe(true);
+    expect(toPullRequestSummaryFromSearch(item, 'github.com').isDraft).toBe(false);
+    expect(toPullRequestSummaryFromSearch(searchItem({ draft: true }), 'github.com').isDraft).toBe(
+      true,
+    );
   });
 
   it('fails with a clear error when GitHub changes the shape', () => {
-    expect(() => toPullRequestSummaryFromSearch(searchItem({ number: '42' }))).toThrow(
-      'GitHub returned an unexpected number.',
+    expect(() =>
+      toPullRequestSummaryFromSearch(searchItem({ number: '42' }), 'github.com'),
+    ).toThrow('GitHub returned an unexpected number.');
+    expect(() => toPullRequestSummaryFromSearch(searchItem({ user: null }), 'github.com')).toThrow(
+      /user/,
     );
-    expect(() => toPullRequestSummaryFromSearch(searchItem({ user: null }))).toThrow(/user/);
   });
 });
 
