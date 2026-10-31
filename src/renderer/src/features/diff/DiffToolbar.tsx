@@ -1,6 +1,7 @@
 import type { ChangedFile, FileStatus } from '@shared/diff';
 import { ArrowDown, ArrowUp, Columns2, FoldVertical, Pilcrow, Rows2 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useShortcutLabel, withShortcut } from '../keymap/KeymapProvider';
 import type { Direction } from './changes';
 import styles from './DiffToolbar.module.css';
 import type { ChangePosition, DiffSettings } from './DiffViewer';
@@ -33,6 +34,8 @@ export function DiffToolbar({
   onSettingsChange,
   onNavigate,
 }: DiffToolbarProps) {
+  const nextShortcut = useShortcutLabel('diff.nextDifference');
+  const previousShortcut = useShortcutLabel('diff.previousDifference');
   const slash = file.path.lastIndexOf('/');
   const directory = file.path.slice(0, slash + 1);
   const name = file.path.slice(slash + 1);
@@ -54,12 +57,15 @@ export function DiffToolbar({
           {changeCounter(position, total)}
         </span>
         <ToolbarButton
-          label="Previous difference (Shift+F7)"
+          label={withShortcut('Previous difference', previousShortcut)}
           onClick={() => onNavigate('previous')}
         >
           <ArrowUp size={14} />
         </ToolbarButton>
-        <ToolbarButton label="Next difference (F7)" onClick={() => onNavigate('next')}>
+        <ToolbarButton
+          label={withShortcut('Next difference', nextShortcut)}
+          onClick={() => onNavigate('next')}
+        >
           <ArrowDown size={14} />
         </ToolbarButton>
         <span className={styles.separator} />

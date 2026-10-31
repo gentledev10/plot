@@ -35,7 +35,22 @@ export function ipcChannel(method: IpcMethod): string {
 
 export type IpcResponse<T> = { ok: true; value: T } | { ok: false; error: ErrorPayload };
 
-export type ViewerBridge = { readonly platform: string } & {
+const MENU_COMMANDS = { 'open-settings': true, 'open-keymap': true } as const;
+
+export type MenuCommand = keyof typeof MENU_COMMANDS;
+
+export const MENU_COMMAND_CHANNEL = 'viewer:menu-command';
+
+export function isMenuCommand(value: unknown): value is MenuCommand {
+  return typeof value === 'string' && Object.hasOwn(MENU_COMMANDS, value);
+}
+
+export type MenuCommandListener = (command: MenuCommand) => void;
+
+export type ViewerBridge = {
+  readonly platform: string;
+  onMenuCommand(listener: MenuCommandListener): () => void;
+} & {
   [K in IpcMethod]: (
     ...args: Parameters<ViewerApi[K]>
   ) => Promise<IpcResponse<Awaited<ReturnType<ViewerApi[K]>>>>;

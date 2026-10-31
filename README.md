@@ -23,18 +23,25 @@ Reviews are saved on your Mac per commit, so reopening a pull request does not r
 
 ## Keyboard shortcuts
 
-| Action                         | Shortcut                       |
+| Action                         | Default shortcut               |
 | ------------------------------ | ------------------------------ |
-| Next / previous difference     | F7 / Shift+F7                  |
-| Next / previous file           | Ctrl+Shift+→ / Ctrl+Shift+←    |
+| Next / previous difference     | F7 / ⇧F7                       |
+| Next / previous file           | ⌃⇧→ / ⌃⇧←                      |
+| Go to line                     | ⌘L                             |
+| Extend / shrink selection      | ⌥↑ / ⌥↓                        |
+| Find in file                   | ⌘F                             |
 | Move in the changed files tree | ↑ ↓, ← → to collapse or expand |
 | Show or hide the sidebar       | ⌘1                             |
 | Show or hide the AI review     | ⌘2                             |
-| Hide or restore all panels     | ⌘⇧F12                          |
-| Find in file                   | ⌘F                             |
-| Expand selection               | ⌥↑                             |
+| Hide or restore all panels     | ⇧⌘F12                          |
+| Open a pull request by URL     | ⌘O                             |
+| Back to the pull request list  | ⌘[                             |
+| Refresh                        | ⌘R                             |
+| Settings                       | ⌘,                             |
 
-At the last difference of a file, press F7 again to open the next file, as in IntelliJ.
+The defaults follow IntelliJ IDEA's macOS keymap. At the last difference of a file, press F7 again to open the next file, as in IntelliJ.
+
+Change any shortcut in Settings > Keymap. Actions such as switching to the unified view or generating a review map have no default shortcut, and you can give them one there.
 
 ## Requirements
 

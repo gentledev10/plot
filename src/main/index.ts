@@ -1,9 +1,10 @@
 import { join } from 'node:path';
-import type { ViewerApi } from '@shared/ipc';
-import { app, BrowserWindow, ipcMain, net } from 'electron';
+import { MENU_COMMAND_CHANNEL, type MenuCommand, type ViewerApi } from '@shared/ipc';
+import { app, BrowserWindow, ipcMain, Menu, net, shell } from 'electron';
 import { createClaudeCodeAgent } from './ai/claude-code';
 import { languageName } from './ai/language';
 import { createFileReviewStore } from './ai/review-store';
+import { applicationMenu } from './app/menu';
 import { isWithinOrigin } from './app/navigation';
 import {
   APP_ORIGIN,
@@ -65,6 +66,15 @@ function createApi(): ViewerApi {
   };
 }
 
+function sendMenuCommand(command: MenuCommand): void {
+  const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+  if (window) {
+    window.webContents.send(MENU_COMMAND_CHANNEL, command);
+  } else {
+    openWindow();
+  }
+}
+
 function openWindow(): void {
   createMainWindow({
     preloadPath: join(__dirname, '../preload/index.js'),
@@ -78,6 +88,16 @@ app.whenReady().then(async () => {
     await adoptLoginShellPath();
   }
   denyPermissionRequests();
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      applicationMenu({
+        appName: app.name,
+        isDevelopment: !app.isPackaged,
+        send: sendMenuCommand,
+        openExternal: (url) => void shell.openExternal(url),
+      }),
+    ),
+  );
   serveRenderer(join(__dirname, '../renderer'));
   registerIpcHandlers(ipcMain, createApi(), {
     parsers: argumentParsers,

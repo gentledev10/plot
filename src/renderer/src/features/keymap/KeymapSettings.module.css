@@ -1,0 +1,138 @@
+.intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--color-text-muted);
+}
+
+.intro p {
+  margin: 0;
+}
+
+.secondary {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-input);
+}
+
+.secondary:disabled {
+  opacity: 0.5;
+}
+
+.group {
+  margin-top: 18px;
+}
+
+.groupTitle {
+  margin: 0 0 6px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  padding: 4px 8px 4px 12px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--color-border-strong);
+}
+
+.command {
+  flex: 1;
+  min-width: 0;
+}
+
+.keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.none {
+  color: var(--color-text-muted);
+}
+
+.key {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 2px 1px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background: var(--color-bg-panel);
+}
+
+.key kbd {
+  font-family: var(--font-ui);
+  font-size: var(--font-size);
+}
+
+.removeKey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.removeKey:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text);
+}
+
+.recorder {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.field {
+  min-width: 120px;
+  padding: 2px 10px;
+  border: 1px solid var(--color-focus);
+  border-radius: 4px;
+  background: var(--color-bg-input);
+  color: var(--color-text-muted);
+}
+
+.problem {
+  color: var(--color-danger);
+  font-size: var(--font-size-small);
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font-size: var(--font-size-small);
+}
+
+.link:hover {
+  text-decoration: underline;
+}

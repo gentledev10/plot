@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { aPullRequestDetail, aPullRequestSummary, aUser } from '../../test/builders';
@@ -39,7 +39,7 @@ function api() {
 describe('App', () => {
   it('opens a pull request from the inbox and shows its changed files', async () => {
     const fake = api();
-    renderWithApi(<App platform="darwin" />, fake);
+    renderWithApi(<App />, fake);
 
     expect(screen.getByText('Select a pull request to start reviewing.')).toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
@@ -57,7 +57,7 @@ describe('App', () => {
   });
 
   it('returns to the inbox and keeps the last pull request highlighted', async () => {
-    renderWithApi(<App platform="darwin" />, api());
+    renderWithApi(<App />, api());
 
     await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
     await userEvent.click(await screen.findByRole('button', { name: /Pull requests/ }));
@@ -92,7 +92,7 @@ describe('App', () => {
         },
       }),
     };
-    renderWithApi(<App platform="darwin" />, fake);
+    renderWithApi(<App />, fake);
 
     await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'src/login.ts:7' }));
@@ -101,7 +101,7 @@ describe('App', () => {
   });
 
   it('hides and shows the sidebar from the tool window bar', async () => {
-    renderWithApi(<App platform="darwin" />, api());
+    renderWithApi(<App />, api());
     const toggle = screen.getByRole('button', { name: 'Pull requests', pressed: true });
 
     await userEvent.click(toggle);
@@ -113,22 +113,22 @@ describe('App', () => {
   });
 
   it('remembers which panels were hidden', async () => {
-    const { unmount } = renderWithApi(<App platform="darwin" />, api());
+    const { unmount } = renderWithApi(<App />, api());
     await userEvent.click(screen.getByRole('button', { name: 'AI review', pressed: true }));
     unmount();
 
-    renderWithApi(<App platform="darwin" />, api());
+    renderWithApi(<App />, api());
 
     expect(screen.getByRole('button', { name: 'AI review', pressed: false })).toBeInTheDocument();
     expect(screen.queryByRole('complementary', { name: 'AI review' })).not.toBeInTheDocument();
   });
 
   it('toggles panels from the keyboard', async () => {
-    renderWithApi(<App platform="darwin" />, api());
+    renderWithApi(<App />, api());
     const sidebar = () => screen.queryByRole('complementary', { name: 'Pull requests' });
     const review = () => screen.queryByRole('complementary', { name: 'AI review' });
 
-    fireEvent.keyDown(document.body, { key: '2', metaKey: true });
+    fireEvent.keyDown(document.body, { key: '2', code: 'Digit2', metaKey: true });
     expect(review()).not.toBeInTheDocument();
 
     fireEvent.keyDown(document.body, { key: 'F12', metaKey: true, shiftKey: true });
@@ -138,13 +138,63 @@ describe('App', () => {
     expect(sidebar()).toBeInTheDocument();
     expect(review()).not.toBeInTheDocument();
 
-    fireEvent.keyDown(document.body, { key: '1', metaKey: true });
+    fireEvent.keyDown(document.body, { key: '1', code: 'Digit1', metaKey: true });
     expect(sidebar()).not.toBeInTheDocument();
+  });
+
+  it('opens settings from the app menu and applies a changed shortcut right away', async () => {
+    const { menu } = renderWithApi(<App />, api());
+
+    act(() => menu.send('open-settings'));
+    const dialog = await screen.findByRole('dialog', { name: 'Settings' });
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Remove ⌘1 from Show or hide the sidebar' }),
+    );
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Add a shortcut for Show or hide the sidebar' }),
+    );
+    fireEvent.keyDown(
+      within(dialog).getByRole('button', {
+        name: 'Press the new shortcut for Show or hide the sidebar',
+      }),
+      { key: 'b', code: 'KeyB', ctrlKey: true, altKey: true },
+    );
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close settings' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: 'b', code: 'KeyB', ctrlKey: true, altKey: true });
+    expect(screen.queryByRole('complementary', { name: 'Pull requests' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pull requests' })).toHaveAttribute(
+      'title',
+      'Pull requests (⌃⌥B)',
+    );
+  });
+
+  it('keeps shortcuts quiet while settings are open', async () => {
+    renderWithApi(<App />, api());
+    await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
+
+    fireEvent.keyDown(document.body, { key: '1', code: 'Digit1', metaKey: true });
+
+    expect(screen.getByRole('button', { name: 'Pull requests', hidden: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('goes back to the list and focuses the URL field to open another pull request', async () => {
+    renderWithApi(<App />, api());
+    await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
+    await screen.findByRole('treeitem', { name: /login\.ts/ });
+
+    fireEvent.keyDown(document.body, { key: 'o', code: 'KeyO', metaKey: true });
+
+    expect(await screen.findByRole('textbox', { name: 'Pull request URL' })).toHaveFocus();
   });
 
   it('opens a pull request pasted as a URL', async () => {
     const fake = { ...api(), getSession: vi.fn().mockResolvedValue({ status: 'signed-out' }) };
-    renderWithApi(<App platform="darwin" />, fake);
+    renderWithApi(<App />, fake);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: 'Pull request URL' }),

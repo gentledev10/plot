@@ -86,6 +86,40 @@ describe('PullRequestWorkspace', () => {
     expect(screen.queryByText(/Press F7 again/)).not.toBeInTheDocument();
   });
 
+  it('follows the keymap the user set up', async () => {
+    localStorage.setItem(
+      'viewer.keymap',
+      JSON.stringify({ 'diff.nextDifference': ['Alt+Meta+ArrowDown'] }),
+    );
+    setFakeChangeCount('a.ts', 2);
+    setFakeChangeCount('b.ts', 1);
+    setup(diffOf(changed('a.ts'), changed('b.ts')));
+    await screen.findByTestId('diff-viewer');
+
+    press('F7');
+    expect(counter()).toHaveTextContent('1 of 2');
+
+    press('ArrowDown', { altKey: true, metaKey: true });
+    press('ArrowDown', { altKey: true, metaKey: true });
+    expect(counter()).toHaveTextContent('2 of 2');
+    expect(screen.getByRole('status')).toHaveTextContent('Press ⌥⌘↓ again to open b.ts');
+    expect(screen.getByRole('button', { name: 'Next difference (⌥⌘↓)' })).toBeInTheDocument();
+  });
+
+  it('switches diff options from the keyboard once they have a shortcut', async () => {
+    localStorage.setItem(
+      'viewer.keymap',
+      JSON.stringify({ 'diff.toggleSideBySide': ['Alt+Meta+U'] }),
+    );
+    setup(diffOf(changed('a.ts')));
+    await screen.findByTestId('diff-viewer');
+    expect(screen.getByRole('button', { name: 'Switch to unified view' })).toBeInTheDocument();
+
+    press('u', { code: 'KeyU', altKey: true, metaKey: true });
+
+    expect(screen.getByRole('button', { name: 'Switch to side-by-side view' })).toBeInTheDocument();
+  });
+
   it('goes back to the last difference of the previous file with Shift+F7', async () => {
     setFakeChangeCount('a.ts', 2);
     setFakeChangeCount('b.ts', 1);
@@ -97,7 +131,7 @@ describe('PullRequestWorkspace', () => {
     await waitFor(() => expect(shownPath()).toBe('b.ts'));
 
     press('F7', { shiftKey: true });
-    expect(screen.getByRole('status')).toHaveTextContent('Press Shift+F7 again to open a.ts');
+    expect(screen.getByRole('status')).toHaveTextContent('Press ⇧F7 again to open a.ts');
     press('F7', { shiftKey: true });
     await waitFor(() => expect(shownPath()).toBe('a.ts'));
     expect(counter()).toHaveTextContent('2 of 2');
@@ -130,7 +164,7 @@ describe('PullRequestWorkspace', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Next difference (F7)' }));
     expect(counter()).toHaveTextContent('2 of 2');
-    await userEvent.click(screen.getByRole('button', { name: 'Previous difference (Shift+F7)' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Previous difference (⇧F7)' }));
     expect(counter()).toHaveTextContent('1 of 2');
   });
 

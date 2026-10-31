@@ -1,4 +1,4 @@
-import type { ViewerApi } from '@shared/ipc';
+import type { MenuCommandListener, ViewerApi } from '@shared/ipc';
 import { QueryClient } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
@@ -23,15 +23,41 @@ export function fakeApi(overrides: Partial<ViewerApi> = {}): ViewerApi {
   };
 }
 
-export function renderWithApi(ui: ReactElement, api: Partial<ViewerApi> = {}) {
+export function fakeMenu() {
+  const listeners = new Set<MenuCommandListener>();
+  return {
+    subscribe(listener: MenuCommandListener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    send(command: Parameters<MenuCommandListener>[0]) {
+      for (const listener of listeners) {
+        listener(command);
+      }
+    },
+  };
+}
+
+export function renderWithApi(
+  ui: ReactElement,
+  api: Partial<ViewerApi> = {},
+  { menu = fakeMenu() }: { menu?: ReturnType<typeof fakeMenu> } = {},
+) {
   const fullApi = fakeApi(api);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Number.POSITIVE_INFINITY } },
   });
   return {
     api: fullApi,
+    menu,
+    queryClient,
     ...render(
-      <AppProviders api={fullApi} queryClient={queryClient}>
+      <AppProviders
+        api={fullApi}
+        queryClient={queryClient}
+        platform="darwin"
+        subscribeToMenu={menu.subscribe}
+      >
         {ui}
       </AppProviders>,
     ),

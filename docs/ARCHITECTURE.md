@@ -116,7 +116,15 @@ The diff is drawn by Monaco's diff editor. `features/diff/monaco.ts` loads only 
 
 IntelliJ colors a block by what happened to it: blue for edited lines, green for inserted lines, and gray for deleted lines. Monaco only knows which side a line is on, so in the side-by-side view its own diff colors are turned off (`themes.ts`), and `changeDecorations` in `changes.ts` classifies each block and paints it. The unified view keeps Monaco's colors, because deleted lines there are not real editor lines that could be decorated.
 
-Navigation follows IntelliJ's keymap. F7 and Shift+F7 move between differences; at the last difference of a file, a second press opens the next file (`decideNavigation` in `features/pull-request/navigation.ts`). Ctrl+Shift+Right and Ctrl+Shift+Left switch files directly. Shortcuts are handled at the window level in the capture phase, so they also work while the editor has focus.
+Navigation follows IntelliJ's keymap. F7 and Shift+F7 move between differences; at the last difference of a file, a second press opens the next file (`decideNavigation` in `features/pull-request/navigation.ts`). Ctrl+Shift+Right and Ctrl+Shift+Left switch files directly.
+
+### Keyboard shortcuts
+
+Every shortcut is a command in `features/keymap/commands.ts`, with an id, a title, and default keys. Components say what a command does with `useCommand(id, handler)`. `KeymapProvider` owns a single `keydown` listener in the capture phase, so shortcuts also work while the editor has focus, and runs the handler mounted last for the keys pressed. Keys with no handler at that moment, such as F7 while no pull request is open, reach the page as usual.
+
+Shortcuts are stored as strings such as `Ctrl+Shift+ArrowRight`. Letters, digits, and punctuation are read from the physical key (`KeyboardEvent.code`), so shortcuts keep working while an input method such as Korean is active. Only the commands someone changed are saved, so later changes to the defaults still reach everyone else. `strokeProblem` rejects shortcuts that macOS, the app menu, or the editor's find already use, and keys without ⌘, ⌃, or ⌥ that would get in the way of typing.
+
+The application menu (`src/main/app/menu.ts`) owns the standard macOS shortcuts. Items that need the page, such as Settings, are sent to the renderer as menu commands over `MENU_COMMAND_CHANNEL`, a one-way channel separate from `ViewerApi`.
 
 Monaco needs a real browser, so component tests replace `DiffViewer` with `src/renderer/test/fake-diff-viewer.tsx`, which honors the same contract: `goToChange`, `onChangesComputed`, and `onReveal`. Everything that decides what to show lives outside `DiffViewer` and is tested directly.
 

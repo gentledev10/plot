@@ -5,6 +5,7 @@ import { createApi, isRetryable, ViewerError } from './api';
 function bridge(overrides: Partial<ViewerBridge> = {}): ViewerBridge {
   return {
     platform: 'darwin',
+    onMenuCommand: () => () => {},
     getSession: vi.fn().mockResolvedValue({ ok: true, value: { status: 'signed-out' } }),
     listInbox: vi.fn(),
     getPullRequest: vi.fn(),

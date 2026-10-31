@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { Avatar } from '../../components/Avatar';
 import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
+import { useCommand } from '../keymap/KeymapProvider';
 import styles from './InboxPanel.module.css';
 import { OpenPullRequestForm } from './OpenPullRequestForm';
 import { PullRequestList } from './PullRequestList';
@@ -11,9 +12,16 @@ import { useInbox, useSession } from './queries';
 interface InboxPanelProps {
   selected?: PullRequestRef;
   onSelect(ref: PullRequestRef): void;
+  focusOpenField?: boolean;
+  onOpenFieldFocused?(): void;
 }
 
-export function InboxPanel({ selected, onSelect }: InboxPanelProps) {
+export function InboxPanel({
+  selected,
+  onSelect,
+  focusOpenField,
+  onOpenFieldFocused,
+}: InboxPanelProps) {
   const session = useSession();
   const user = session.data?.status === 'signed-in' ? session.data.user : undefined;
   const inbox = useInbox(user !== undefined);
@@ -25,6 +33,8 @@ export function InboxPanel({ selected, onSelect }: InboxPanelProps) {
     }
   }
 
+  useCommand('pullRequest.refresh', refresh);
+
   return (
     <aside className={styles.panel} aria-label="Pull requests">
       <header className={styles.header}>
@@ -33,7 +43,11 @@ export function InboxPanel({ selected, onSelect }: InboxPanelProps) {
           <RefreshCw size={14} />
         </IconButton>
       </header>
-      <OpenPullRequestForm onOpen={onSelect} />
+      <OpenPullRequestForm
+        onOpen={onSelect}
+        focus={focusOpenField}
+        onFocused={onOpenFieldFocused}
+      />
       <div className={styles.content}>{renderContent()}</div>
       {user && (
         <footer className={styles.footer}>

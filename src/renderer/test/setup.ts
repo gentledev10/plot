@@ -16,6 +16,15 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
+// jsdom does not implement modal dialogs.
+HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) {
+  this.setAttribute('open', '');
+};
+HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
+  this.removeAttribute('open');
+  this.dispatchEvent(new Event('close'));
+};
+
 afterEach(() => {
   cleanup();
   localStorage.clear();

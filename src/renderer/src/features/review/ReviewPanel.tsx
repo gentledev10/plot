@@ -7,6 +7,7 @@ import { StatusMessage } from '../../components/StatusMessage';
 import { useColorScheme } from '../../lib/color-scheme';
 import { formatRelativeTime } from '../../lib/format';
 import { usePullRequestDiff } from '../diff/queries';
+import { useCommand } from '../keymap/KeymapProvider';
 import { MermaidDiagram } from './MermaidDiagram';
 import { architectureToMermaid, flowToMermaid, nodeIndexFromElementId } from './mermaid-source';
 import { useReviewActions, useReviewStatus } from './queries';
@@ -60,6 +61,11 @@ function PullRequestReview({ target, onOpenLocation }: PullRequestReviewProps) {
   );
   const generate = () => start.mutate();
   const done = status.data?.state === 'done' ? status.data : undefined;
+  useCommand(
+    'review.generate',
+    generate,
+    status.data !== undefined && status.data.state !== 'running' && !start.isPending,
+  );
 
   return (
     <>

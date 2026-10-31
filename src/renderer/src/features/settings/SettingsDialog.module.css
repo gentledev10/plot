@@ -1,0 +1,82 @@
+.dialog {
+  width: min(880px, calc(100vw - 80px));
+  height: min(640px, calc(100vh - 80px));
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  background: var(--color-bg-editor);
+  color: var(--color-text);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 35%);
+  -webkit-app-region: no-drag;
+}
+
+.dialog[open] {
+  display: flex;
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 35%);
+}
+
+.nav {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 200px;
+  padding: 16px 8px;
+  border-right: 1px solid var(--color-border-strong);
+  background: var(--color-bg-panel);
+}
+
+.title {
+  margin: 0 10px 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.navItem {
+  padding: 5px 10px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  text-align: left;
+}
+
+.navItem:hover {
+  background: var(--color-bg-hover);
+}
+
+.navItem[aria-current="page"] {
+  background: var(--color-bg-selected);
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 12px 8px 24px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  padding: 0 24px 24px;
+  overflow-y: auto;
+}

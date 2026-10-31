@@ -1,9 +1,19 @@
-import type { ViewerApi } from '@shared/ipc';
+import type { MenuCommand, MenuCommandListener, ViewerApi } from '@shared/ipc';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createContext, type ReactNode, useContext } from 'react';
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
+import { KeymapProvider } from '../features/keymap/KeymapProvider';
 import { isRetryable } from '../lib/api';
 
+type SubscribeToMenu = (listener: MenuCommandListener) => () => void;
+
+interface Shell {
+  platform: string;
+  subscribeToMenu: SubscribeToMenu;
+}
+
 const ApiContext = createContext<ViewerApi | null>(null);
+
+const ShellContext = createContext<Shell>({ platform: 'darwin', subscribeToMenu: () => () => {} });
 
 export function useApi(): ViewerApi {
   const api = useContext(ApiContext);
@@ -11,6 +21,26 @@ export function useApi(): ViewerApi {
     throw new Error('useApi must be used inside <AppProviders>');
   }
   return api;
+}
+
+export function usePlatform(): string {
+  return useContext(ShellContext).platform;
+}
+
+export function useMenuCommand(command: MenuCommand, handler: () => void): void {
+  const { subscribeToMenu } = useContext(ShellContext);
+  const latest = useRef(handler);
+  latest.current = handler;
+
+  useEffect(
+    () =>
+      subscribeToMenu((received) => {
+        if (received === command) {
+          latest.current();
+        }
+      }),
+    [subscribeToMenu, command],
+  );
 }
 
 export function createQueryClient(): QueryClient {
@@ -27,13 +57,28 @@ export function createQueryClient(): QueryClient {
 interface AppProvidersProps {
   api: ViewerApi;
   queryClient: QueryClient;
+  platform?: string;
+  subscribeToMenu?: SubscribeToMenu;
   children: ReactNode;
 }
 
-export function AppProviders({ api, queryClient, children }: AppProvidersProps) {
+const NO_MENU: SubscribeToMenu = () => () => {};
+
+export function AppProviders({
+  api,
+  queryClient,
+  platform = 'darwin',
+  subscribeToMenu = NO_MENU,
+  children,
+}: AppProvidersProps) {
+  const shell = useMemo(() => ({ platform, subscribeToMenu }), [platform, subscribeToMenu]);
   return (
     <QueryClientProvider client={queryClient}>
-      <ApiContext.Provider value={api}>{children}</ApiContext.Provider>
+      <ApiContext.Provider value={api}>
+        <ShellContext.Provider value={shell}>
+          <KeymapProvider platform={platform}>{children}</KeymapProvider>
+        </ShellContext.Provider>
+      </ApiContext.Provider>
     </QueryClientProvider>
   );
 }

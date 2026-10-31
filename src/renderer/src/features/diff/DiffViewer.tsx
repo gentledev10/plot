@@ -1,5 +1,6 @@
 import { type Ref, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { useColorScheme } from '../../lib/color-scheme';
+import { useCommand } from '../keymap/KeymapProvider';
 import {
   anchorLine,
   type ChangeDecoration,
@@ -197,6 +198,21 @@ export function DiffViewer({
     monaco.editor.setTheme(themeName(scheme, settings.sideBySide));
     decorate();
   }, [scheme, settings.sideBySide, decorate]);
+
+  function runEditorAction(actionId: string) {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+    const original = editor.getOriginalEditor();
+    const target = original.hasTextFocus() ? original : editor.getModifiedEditor();
+    target.focus();
+    void target.getAction(actionId)?.run();
+  }
+
+  useCommand('editor.goToLine', () => runEditorAction('editor.action.gotoLine'));
+  useCommand('editor.extendSelection', () => runEditorAction('editor.action.smartSelect.expand'));
+  useCommand('editor.shrinkSelection', () => runEditorAction('editor.action.smartSelect.shrink'));
 
   useImperativeHandle(
     ref,

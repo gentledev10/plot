@@ -11,6 +11,7 @@ import {
 import { useState } from 'react';
 import { Avatar } from '../../components/Avatar';
 import { StatusMessage } from '../../components/StatusMessage';
+import { useCommand } from '../keymap/KeymapProvider';
 import styles from './PullRequestHeader.module.css';
 import { usePullRequest } from './queries';
 
@@ -42,6 +43,7 @@ function Header({ pull }: { pull: PullRequestDetail }) {
   const [showDescription, setShowDescription] = useState(false);
   const { ref } = pull;
   const hasDescription = pull.body.trim() !== '';
+  useCommand('pullRequest.openOnGitHub', () => window.open(pull.url, '_blank', 'noreferrer'));
 
   return (
     <header className={styles.header}>

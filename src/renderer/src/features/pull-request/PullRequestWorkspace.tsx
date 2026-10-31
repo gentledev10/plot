@@ -1,17 +1,19 @@
 import type { PullRequestRef } from '@shared/github';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMemo, useRef, useState } from 'react';
 import { StatusMessage } from '../../components/StatusMessage';
 import { usePreference } from '../../lib/preferences';
-import { useShortcuts } from '../../lib/shortcuts';
 import type { Direction } from '../diff/changes';
 import { DiffToolbar } from '../diff/DiffToolbar';
 import type { ChangePosition, DiffSettings, DiffViewerHandle } from '../diff/DiffViewer';
 import { FileDiff } from '../diff/FileDiff';
 import { usePullRequestDiff } from '../diff/queries';
 import { buildFileTree, filesInTreeOrder } from '../files/file-tree';
+import { useCommand, useShortcutLabel } from '../keymap/KeymapProvider';
 import { adjacentFile, decideNavigation } from './navigation';
 import { PullRequestHeader } from './PullRequestHeader';
 import styles from './PullRequestWorkspace.module.css';
+import { pullRequestKeys } from './queries';
 
 export interface LocationRequest {
   path: string;
@@ -56,6 +58,9 @@ export function PullRequestWorkspace({
   const [jump, setJump] = useState<{ path: string; at: 'first' | 'last' }>();
   const [fileState, setFileState] = useState<FileState>({});
   const viewer = useRef<DiffViewerHandle>(null);
+  const queryClient = useQueryClient();
+  const nextShortcut = useShortcutLabel('diff.nextDifference');
+  const previousShortcut = useShortcutLabel('diff.previousDifference');
   const state = fileState.path === current?.path ? fileState : { path: current?.path };
   if (jump && jump.path !== current?.path) {
     setJump(undefined);
@@ -91,12 +96,14 @@ export function PullRequestWorkspace({
       case 'moved':
         update({ position: outcome.position, armed: undefined, hint: undefined });
         break;
-      case 'armed':
+      case 'armed': {
+        const shortcut = direction === 'next' ? nextShortcut : previousShortcut;
         update({
           armed: direction,
-          hint: `Press ${direction === 'next' ? 'F7' : 'Shift+F7'} again to open ${outcome.file.path}`,
+          hint: `${shortcut ? `Press ${shortcut}` : 'Go'} again to open ${outcome.file.path}`,
         });
         break;
+      }
       case 'open-file':
         openFile(outcome.file.path, outcome.at);
         break;
@@ -117,12 +124,20 @@ export function PullRequestWorkspace({
     }
   }
 
-  useShortcuts([
-    { key: 'F7', run: () => navigate('next') },
-    { key: 'F7', shift: true, run: () => navigate('previous') },
-    { key: 'ArrowRight', ctrl: true, shift: true, run: () => switchFile('next') },
-    { key: 'ArrowLeft', ctrl: true, shift: true, run: () => switchFile('previous') },
-  ]);
+  function toggleSetting(key: keyof DiffSettings) {
+    setSettings({ ...settings, [key]: !settings[key] });
+  }
+
+  useCommand('diff.nextDifference', () => navigate('next'));
+  useCommand('diff.previousDifference', () => navigate('previous'));
+  useCommand('diff.nextFile', () => switchFile('next'));
+  useCommand('diff.previousFile', () => switchFile('previous'));
+  useCommand('diff.toggleSideBySide', () => toggleSetting('sideBySide'));
+  useCommand('diff.toggleCollapseUnchanged', () => toggleSetting('collapseUnchanged'));
+  useCommand('diff.toggleIgnoreWhitespace', () => toggleSetting('ignoreWhitespace'));
+  useCommand('pullRequest.refresh', () => {
+    void queryClient.invalidateQueries({ queryKey: pullRequestKeys.detail(target) });
+  });
 
   return (
     <section className={styles.workspace}>

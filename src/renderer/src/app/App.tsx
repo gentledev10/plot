@@ -1,18 +1,20 @@
 import type { PullRequestRef } from '@shared/github';
 import { formatPullRequestRef } from '@shared/pull-request-ref';
 import type { CodeLocation } from '@shared/review';
-import { FolderTree, GitPullRequest, Sparkles } from 'lucide-react';
+import { FolderTree, GitPullRequest, Settings, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { StatusMessage } from '../components/StatusMessage';
 import { FilesPanel } from '../features/files/FilesPanel';
 import { InboxPanel } from '../features/inbox/InboxPanel';
+import { useCommand, useShortcutLabel } from '../features/keymap/KeymapProvider';
+import { formatStroke } from '../features/keymap/keystroke';
 import {
   type LocationRequest,
   PullRequestWorkspace,
 } from '../features/pull-request/PullRequestWorkspace';
 import { ReviewPanel } from '../features/review/ReviewPanel';
+import { SettingsDialog, type SettingsSection } from '../features/settings/SettingsDialog';
 import { usePreference } from '../lib/preferences';
-import { useShortcuts } from '../lib/shortcuts';
 import styles from './App.module.css';
 import {
   DEFAULT_LAYOUT,
@@ -22,19 +24,21 @@ import {
   toggleAllPanels,
   togglePanel,
 } from './panels';
+import { useMenuCommand, usePlatform } from './providers';
 import { ToolWindowBar, ToolWindowButton } from './ToolWindowBar';
 
-interface AppProps {
-  platform: string;
-}
-
-export function App({ platform }: AppProps) {
+export function App() {
+  const platform = usePlatform();
   const [open, setOpen] = useState<PullRequestRef>();
   const [lastOpened, setLastOpened] = useState<PullRequestRef>();
   const [selectedPath, setSelectedPath] = useState<string>();
   const [reveal, setReveal] = useState<LocationRequest>();
   const [layout, setLayout] = usePreference('layout.panels', DEFAULT_LAYOUT, parseLayout);
   const [restore, setRestore] = useState<PanelLayout>();
+  const [settings, setSettings] = useState<SettingsSection>();
+  const [focusOpenField, setFocusOpenField] = useState(false);
+  const sidebarShortcut = useShortcutLabel('view.toggleSidebar');
+  const reviewShortcut = useShortcutLabel('view.toggleReview');
 
   function openPullRequest(ref: PullRequestRef) {
     setOpen(ref);
@@ -65,11 +69,21 @@ export function App({ platform }: AppProps) {
     setRestore(next.restore);
   }
 
-  useShortcuts([
-    { key: '1', meta: true, run: () => toggle('sidebar') },
-    { key: '2', meta: true, run: () => toggle('review') },
-    { key: 'F12', meta: true, shift: true, run: toggleAll },
-  ]);
+  function startOpeningPullRequest() {
+    closePullRequest();
+    if (!layout.sidebar) {
+      setLayout({ ...layout, sidebar: true });
+    }
+    setFocusOpenField(true);
+  }
+
+  useCommand('view.toggleSidebar', () => toggle('sidebar'));
+  useCommand('view.toggleReview', () => toggle('review'));
+  useCommand('view.toggleAllPanels', toggleAll);
+  useCommand('pullRequest.open', startOpeningPullRequest);
+  useCommand('pullRequest.back', closePullRequest, open !== undefined);
+  useMenuCommand('open-settings', () => setSettings('keymap'));
+  useMenuCommand('open-keymap', () => setSettings('keymap'));
 
   return (
     <div
@@ -79,10 +93,22 @@ export function App({ platform }: AppProps) {
       data-review={layout.review ? 'visible' : 'hidden'}
     >
       <div className={styles.leftBar}>
-        <ToolWindowBar side="left" label="Left tool windows">
+        <ToolWindowBar
+          side="left"
+          label="Left tool windows"
+          footer={
+            <ToolWindowButton
+              label="Settings"
+              shortcut={formatStroke('Meta+,', platform)}
+              onClick={() => setSettings('keymap')}
+            >
+              <Settings size={16} />
+            </ToolWindowButton>
+          }
+        >
           <ToolWindowButton
             label={open ? 'Changed files' : 'Pull requests'}
-            shortcut="⌘1"
+            shortcut={sidebarShortcut}
             pressed={layout.sidebar}
             onClick={() => toggle('sidebar')}
           >
@@ -99,7 +125,12 @@ export function App({ platform }: AppProps) {
             onBack={closePullRequest}
           />
         ) : (
-          <InboxPanel selected={lastOpened} onSelect={openPullRequest} />
+          <InboxPanel
+            selected={lastOpened}
+            onSelect={openPullRequest}
+            focusOpenField={focusOpenField}
+            onOpenFieldFocused={() => setFocusOpenField(false)}
+          />
         )}
       </div>
       <main className={styles.workspace}>
@@ -132,7 +163,7 @@ export function App({ platform }: AppProps) {
         <ToolWindowBar side="right" label="Right tool windows">
           <ToolWindowButton
             label="AI review"
-            shortcut="⌘2"
+            shortcut={reviewShortcut}
             pressed={layout.review}
             onClick={() => toggle('review')}
           >
@@ -140,6 +171,13 @@ export function App({ platform }: AppProps) {
           </ToolWindowButton>
         </ToolWindowBar>
       </div>
+      {settings && (
+        <SettingsDialog
+          section={settings}
+          onSectionChange={setSettings}
+          onClose={() => setSettings(undefined)}
+        />
+      )}
     </div>
   );
 }

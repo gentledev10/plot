@@ -15,8 +15,13 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <AppProviders api={createApi(window.viewer)} queryClient={createQueryClient()}>
-      <App platform={window.viewer.platform} />
+    <AppProviders
+      api={createApi(window.viewer)}
+      queryClient={createQueryClient()}
+      platform={window.viewer.platform}
+      subscribeToMenu={window.viewer.onMenuCommand}
+    >
+      <App />
     </AppProviders>
   </StrictMode>,
 );
