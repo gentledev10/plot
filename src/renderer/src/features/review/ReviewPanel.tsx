@@ -1,7 +1,7 @@
 import { AI_PROVIDERS, type AiProviderId } from '@shared/ai';
 import type { PullRequestRef } from '@shared/github';
 import type { CodeLocation, ReviewMap, ReviewStatus } from '@shared/review';
-import { CircleAlert, LoaderCircle, RotateCw, Sparkles } from 'lucide-react';
+import { CircleAlert, LoaderCircle, Maximize2, Minimize2, RotateCw, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
@@ -9,7 +9,7 @@ import { useColorScheme } from '../../lib/color-scheme';
 import { formatAge } from '../../lib/format';
 import { useAiSettings } from '../ai/queries';
 import { usePullRequestDiff } from '../diff/queries';
-import { useCommand } from '../keymap/KeymapProvider';
+import { useCommand, useShortcutLabel, withShortcut } from '../keymap/KeymapProvider';
 import { MermaidDiagram } from './MermaidDiagram';
 import { architectureToMermaid, flowToMermaid, nodeIndexFromElementId } from './mermaid-source';
 import { useReviewActions, useReviewStatus } from './queries';
@@ -19,20 +19,35 @@ interface ReviewPanelProps {
   target?: PullRequestRef;
   onOpenLocation(location: CodeLocation): void;
   onConfigureAi?(): void;
+  maximized?: boolean;
+  onToggleMaximize?(): void;
 }
 
-export function ReviewPanel({ target, onOpenLocation, onConfigureAi }: ReviewPanelProps) {
+interface Maximizing {
+  maximized?: boolean;
+  onToggleMaximize?(): void;
+}
+
+export function ReviewPanel({
+  target,
+  onOpenLocation,
+  onConfigureAi,
+  maximized = false,
+  onToggleMaximize,
+}: ReviewPanelProps) {
+  const maximizing = { maximized, onToggleMaximize };
   return (
-    <aside className={styles.panel} aria-label="AI review">
+    <aside className={styles.panel} aria-label="AI review" data-maximized={maximized}>
       {target ? (
         <PullRequestReview
           target={target}
           onOpenLocation={onOpenLocation}
           onConfigureAi={onConfigureAi}
+          {...maximizing}
         />
       ) : (
         <>
-          <PanelHeader />
+          <PanelHeader {...maximizing} />
           <StatusMessage>Open a pull request to generate a review map.</StatusMessage>
         </>
       )}
@@ -40,26 +55,46 @@ export function ReviewPanel({ target, onOpenLocation, onConfigureAi }: ReviewPan
   );
 }
 
-function PanelHeader({ onRegenerate }: { onRegenerate?(): void }) {
+function PanelHeader({
+  onRegenerate,
+  maximized,
+  onToggleMaximize,
+}: Maximizing & { onRegenerate?(): void }) {
+  const shortcut = useShortcutLabel('view.maximizeReview');
   return (
     <header className={styles.header}>
       <h2 className={styles.title}>AI review</h2>
-      {onRegenerate && (
-        <IconButton label="Generate again" onClick={onRegenerate}>
-          <RotateCw size={14} />
-        </IconButton>
-      )}
+      <span className={styles.headerActions}>
+        {onRegenerate && (
+          <IconButton label="Generate again" onClick={onRegenerate}>
+            <RotateCw size={14} />
+          </IconButton>
+        )}
+        {onToggleMaximize && (
+          <IconButton
+            label={withShortcut(maximized ? 'Restore' : 'Maximize', shortcut)}
+            onClick={onToggleMaximize}
+          >
+            {maximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </IconButton>
+        )}
+      </span>
     </header>
   );
 }
 
-interface PullRequestReviewProps {
+interface PullRequestReviewProps extends Maximizing {
   target: PullRequestRef;
   onOpenLocation(location: CodeLocation): void;
   onConfigureAi?(): void;
 }
 
-function PullRequestReview({ target, onOpenLocation, onConfigureAi }: PullRequestReviewProps) {
+function PullRequestReview({
+  target,
+  onOpenLocation,
+  onConfigureAi,
+  ...maximizing
+}: PullRequestReviewProps) {
   const status = useReviewStatus(target);
   const ai = useAiSettings();
   const { start, cancel } = useReviewActions(target);
@@ -78,7 +113,7 @@ function PullRequestReview({ target, onOpenLocation, onConfigureAi }: PullReques
 
   return (
     <>
-      <PanelHeader onRegenerate={done ? generate : undefined} />
+      <PanelHeader onRegenerate={done ? generate : undefined} {...maximizing} />
       <div className={styles.content}>{renderBody()}</div>
     </>
   );

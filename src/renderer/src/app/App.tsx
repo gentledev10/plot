@@ -40,6 +40,8 @@ export function App() {
   const [layout, setLayout] = usePreference('layout.panels', DEFAULT_LAYOUT, parseLayout);
   const [restore, setRestore] = useState<PanelLayout>();
   const [sizes, setSizes] = usePreference('layout.sizes', DEFAULT_SIZES, parseSizes);
+  const [maximized, setMaximized] = useState(false);
+  const reviewShown = layout.review || maximized;
   const shell = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<SettingsSection>();
   const [focusOpenField, setFocusOpenField] = useState(false);
@@ -54,22 +56,26 @@ export function App() {
   }
 
   function closePullRequest() {
+    setMaximized(false);
     setOpen(undefined);
     setSelectedPath(undefined);
     setReveal(undefined);
   }
 
   function openLocation(location: CodeLocation) {
+    setMaximized(false);
     setSelectedPath(location.path);
     setReveal({ path: location.path, line: location.line, key: Date.now() });
   }
 
   function toggle(panel: PanelId) {
+    setMaximized(false);
     setLayout(togglePanel(layout, panel));
     setRestore(undefined);
   }
 
   function toggleAll() {
+    setMaximized(false);
     const next = toggleAllPanels(layout, restore);
     setLayout(next.layout);
     setRestore(next.restore);
@@ -104,6 +110,7 @@ export function App() {
 
   useCommand('view.toggleSidebar', () => toggle('sidebar'));
   useCommand('view.toggleReview', () => toggle('review'));
+  useCommand('view.maximizeReview', () => setMaximized(!maximized));
   useCommand('view.toggleAllPanels', toggleAll);
   useCommand('pullRequest.open', startOpeningPullRequest);
   useCommand('pullRequest.back', closePullRequest, open !== undefined);
@@ -117,12 +124,13 @@ export function App() {
       style={
         {
           '--sidebar-width': layout.sidebar ? `${sizes.sidebar}px` : '0px',
-          '--review-width': layout.review ? `${sizes.review}px` : '0px',
+          '--review-width': reviewShown ? `${sizes.review}px` : '0px',
         } as CSSProperties
       }
       data-platform={platform}
       data-sidebar={layout.sidebar ? 'visible' : 'hidden'}
-      data-review={layout.review ? 'visible' : 'hidden'}
+      data-review={reviewShown ? 'visible' : 'hidden'}
+      data-maximized={maximized ? 'review' : undefined}
     >
       <div className={styles.leftBar}>
         <ToolWindowBar
@@ -148,7 +156,7 @@ export function App() {
           </ToolWindowButton>
         </ToolWindowBar>
       </div>
-      <div className={styles.sidebar} hidden={!layout.sidebar}>
+      <div className={styles.sidebar} hidden={!layout.sidebar || maximized}>
         {resizeHandle('sidebar', 'Resize the sidebar', 'right')}
         {open ? (
           <FilesPanel
@@ -167,7 +175,7 @@ export function App() {
           />
         )}
       </div>
-      <main className={styles.workspace}>
+      <main className={styles.workspace} hidden={maximized}>
         {open ? (
           <PullRequestWorkspace
             key={formatPullRequestRef(open)}
@@ -190,12 +198,14 @@ export function App() {
           </div>
         )}
       </main>
-      <div className={styles.review} hidden={!layout.review}>
-        {resizeHandle('review', 'Resize the AI panel', 'left')}
+      <div className={styles.review} hidden={!reviewShown}>
+        {!maximized && resizeHandle('review', 'Resize the AI panel', 'left')}
         <ReviewPanel
           target={open}
           onOpenLocation={openLocation}
           onConfigureAi={() => setSettings('ai')}
+          maximized={maximized}
+          onToggleMaximize={() => setMaximized(!maximized)}
         />
       </div>
       <div className={styles.rightBar}>
@@ -203,7 +213,7 @@ export function App() {
           <ToolWindowButton
             label="AI review"
             shortcut={reviewShortcut}
-            pressed={layout.review}
+            pressed={reviewShown}
             onClick={() => toggle('review')}
           >
             <Sparkles size={16} />

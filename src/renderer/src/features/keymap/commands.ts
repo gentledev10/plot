@@ -54,6 +54,12 @@ export const COMMANDS = [
   { id: 'view.toggleSidebar', title: 'Show or hide the sidebar', group: 'View', keys: ['Meta+1'] },
   { id: 'view.toggleReview', title: 'Show or hide the AI review', group: 'View', keys: ['Meta+2'] },
   {
+    id: 'view.maximizeReview',
+    title: 'Maximize or restore the AI panel',
+    group: 'View',
+    keys: ["Shift+Meta+'"],
+  },
+  {
     id: 'view.toggleAllPanels',
     title: 'Hide or restore all panels',
     group: 'View',

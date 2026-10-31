@@ -9,6 +9,10 @@
   height: 100%;
 }
 
+.app[data-maximized="review"] {
+  grid-template-areas: "left-bar review review review right-bar";
+}
+
 .leftBar,
 .rightBar,
 .sidebar,

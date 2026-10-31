@@ -101,6 +101,48 @@ describe('App', () => {
     expect(await screen.findByTestId('diff-viewer')).toHaveAttribute('data-reveal-line', '7');
   });
 
+  it('maximizes the AI panel over the diff and restores it to show the code', async () => {
+    const fake = {
+      ...api(),
+      getReviewStatus: vi.fn().mockResolvedValue({
+        state: 'done',
+        head: 'd'.repeat(40),
+        createdAt: new Date().toISOString(),
+        review: {
+          summary: 'Fixes the redirect.',
+          readingOrder: [],
+          flows: [],
+          architecture: { nodes: [], edges: [] },
+          risks: [
+            {
+              title: 'Open redirect',
+              detail: 'The target is not validated.',
+              severity: 'high',
+              location: { path: 'src/login.ts', line: 7, verified: true },
+            },
+          ],
+        },
+      }),
+    };
+    renderWithApi(<App />, fake);
+    await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
+    await screen.findByTestId('diff-viewer');
+
+    await userEvent.click(await screen.findByRole('button', { name: "Maximize (⇧⌘')" }));
+    expect(screen.queryByRole('main')).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Changed files' })).not.toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'AI review' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'src/login.ts:7' }));
+    expect(screen.getByRole('main')).toBeInTheDocument();
+    expect(await screen.findByTestId('diff-viewer')).toHaveAttribute('data-reveal-line', '7');
+
+    fireEvent.keyDown(document.body, { key: "'", code: 'Quote', shiftKey: true, metaKey: true });
+    expect(screen.queryByRole('main')).not.toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: "'", code: 'Quote', shiftKey: true, metaKey: true });
+    expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
   it('hides and shows the sidebar from the tool window bar', async () => {
     renderWithApi(<App />, api());
     const toggle = screen.getByRole('button', { name: 'Pull requests', pressed: true });

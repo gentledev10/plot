@@ -21,6 +21,11 @@
   font-weight: 600;
 }
 
+.headerActions {
+  display: flex;
+  gap: 2px;
+}
+
 .content {
   flex: 1;
   min-height: 0;
@@ -232,4 +237,17 @@
   padding: 8px 12px 12px;
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
+}
+
+.panel[data-maximized="true"] .content > * {
+  max-width: 1120px;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 24px;
+  padding-left: 24px;
+}
+
+.panel[data-maximized="true"] .diagram {
+  display: flex;
+  justify-content: center;
 }
