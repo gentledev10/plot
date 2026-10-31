@@ -1,26 +1,30 @@
 import { useCallback, useState } from 'react';
 
-const PREFIX = 'viewer.';
-
 export type PreferenceParser<T> = (stored: unknown) => T | undefined;
 
+type Save = (key: string, value: unknown) => void;
+
+let values = new Map<string, unknown>();
+let save: Save = () => {};
+
+// The main process keeps preferences in a file, because Chromium does not keep localStorage
+// for the app's own page across restarts. They are loaded once before the first render.
+export function initializePreferences(initial: Record<string, unknown>, onSave: Save): void {
+  values = new Map(Object.entries(initial));
+  save = onSave;
+}
+
 export function readPreference<T>(key: string, fallback: T, parse?: PreferenceParser<T>): T {
-  try {
-    const stored = localStorage.getItem(PREFIX + key);
-    if (stored === null) {
-      return fallback;
-    }
-    const value: unknown = JSON.parse(stored);
-    return parse ? (parse(value) ?? fallback) : (value as T);
-  } catch {
+  if (!values.has(key)) {
     return fallback;
   }
+  const value = values.get(key);
+  return parse ? (parse(value) ?? fallback) : (value as T);
 }
 
 export function writePreference<T>(key: string, value: T): void {
-  try {
-    localStorage.setItem(PREFIX + key, JSON.stringify(value));
-  } catch {}
+  values.set(key, value);
+  save(key, value);
 }
 
 export function usePreference<T>(

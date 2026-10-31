@@ -117,6 +117,12 @@ The pull request is written by someone else, so the agent is treated as if its i
 
 The shell in `app/App.tsx` lays out a tool window bar on each edge, the sidebar (pull requests or changed files), the workspace, and the AI review panel in one CSS grid. Like IntelliJ's tool windows, the side panels can be hidden from the bars or the keyboard, and resized by dragging their inner edge (`ResizeHandle`, which also works with the arrow keys). Hidden panels stay mounted so they keep their state. The AI panel can also be maximized over the sidebar and the diff, like IntelliJ's Maximize Tool Window, so diagrams get the whole window; opening a code location from it restores the layout. While a panel edge is dragged, the width is written straight to a CSS variable, and it is saved with the other preferences when the drag ends, so a drag does not re-render the app on every pointer move. On macOS the window controls cover the top-left corner, so the shell sets `--titlebar-inset` on whichever area sits there, and headers add it to their left padding.
 
+### Preferences and appearance
+
+Renderer preferences, such as the panel layout and widths, the keymap, diff options, and appearance, live in `userData/preferences.json`, which the main process owns (`preferences/preferences-store.ts`). The renderer loads them once before the first render with `initializePreferences` and sends each change back with `setPreference`. Nothing is kept in `localStorage`, because Chromium does not keep it for the app's own `app://` page across restarts.
+
+Themes are defined in `features/appearance/themes.ts`: the UI colors, which become CSS variables on the root element, and Monaco's syntax and editor colors. People can override a few colors per theme, such as the diff colors and the accent, and `editorTheme` builds a Monaco theme from the same colors, so the editor and the rest of the app always match. The saved appearance is applied before React renders, so the window does not flash the default colors. The main process sets `nativeTheme.themeSource` to light, dark, or system to match the theme, so scrollbars, form controls, and `prefers-color-scheme` follow it, and it remembers that choice to open the window in the right colors.
+
 Components get the API from `useApi()` instead of reading `window.viewer`, and fetch data through React Query hooks. Tests render components with a fake API through `renderWithApi` in `src/renderer/test/render.tsx`.
 
 ### The diff view

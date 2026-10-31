@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { readPreference } from '../../lib/preferences';
 import { KeymapProvider } from './KeymapProvider';
 import { KeymapSettings } from './KeymapSettings';
 
@@ -20,7 +21,7 @@ const row = (title: string) => {
   return within(item);
 };
 
-const stored = () => JSON.parse(localStorage.getItem('viewer.keymap') ?? '{}');
+const stored = () => readPreference('keymap', {});
 
 async function record(title: string, init: KeyboardEventInit) {
   await userEvent.click(screen.getByRole('button', { name: `Add a shortcut for ${title}` }));

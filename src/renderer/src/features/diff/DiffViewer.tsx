@@ -1,5 +1,6 @@
 import { type Ref, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
-import { useColorScheme } from '../../lib/color-scheme';
+import { useAppearance } from '../appearance/AppearanceProvider';
+import { codeFontStack, editorTheme, editorThemeName } from '../appearance/appearance';
 import { useCommand } from '../keymap/KeymapProvider';
 import {
   anchorLine,
@@ -13,7 +14,6 @@ import {
 import styles from './DiffViewer.module.css';
 import { languageForPath } from './language';
 import { monaco } from './monaco';
-import { themeName } from './themes';
 import './diff-colors.css';
 
 export interface ChangePosition {
@@ -59,9 +59,6 @@ const EDITOR_OPTIONS: monaco.editor.IStandaloneDiffEditorConstructionOptions = {
   diffAlgorithm: 'advanced',
   minimap: { enabled: false },
   scrollBeyondLastLine: false,
-  fontFamily: '"JetBrains Mono", ui-monospace, Menlo, monospace',
-  fontSize: 13,
-  lineHeight: 20,
   renderLineHighlight: 'line',
   occurrencesHighlight: 'singleFile',
   stickyScroll: { enabled: false },
@@ -99,7 +96,8 @@ export function DiffViewer({
   const pendingJump = useRef(initialChange);
   const latest = useRef({ settings, onChangesComputed, onReveal });
   latest.current = { settings, onChangesComputed, onReveal };
-  const scheme = useColorScheme();
+  const { theme, colors, appearance } = useAppearance();
+  const { family, size } = appearance.codeFont;
 
   const decorate = useCallback(() => {
     const collections = decorationsRef.current;
@@ -195,9 +193,24 @@ export function DiffViewer({
   }, [settings.collapseUnchanged, settings.ignoreWhitespace, settings.sideBySide]);
 
   useEffect(() => {
-    monaco.editor.setTheme(themeName(scheme, settings.sideBySide));
+    const data = editorTheme(theme, colors, settings.sideBySide);
+    const name = editorThemeName(data);
+    monaco.editor.defineTheme(name, data);
+    monaco.editor.setTheme(name);
     decorate();
-  }, [scheme, settings.sideBySide, decorate]);
+  }, [theme, colors, settings.sideBySide, decorate]);
+
+  useEffect(() => {
+    editorRef.current?.updateOptions({
+      fontFamily: codeFontStack(family),
+      fontSize: size,
+      lineHeight: Math.round(size * 1.54),
+    });
+    void document.fonts.load(`${size}px "${family}"`).then(
+      () => monaco.editor.remeasureFonts(),
+      () => {},
+    );
+  }, [family, size]);
 
   function runEditorAction(actionId: string) {
     const editor = editorRef.current;

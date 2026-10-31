@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
+import { initializePreferences } from '../src/lib/preferences';
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -27,5 +28,5 @@ HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
 
 afterEach(() => {
   cleanup();
-  localStorage.clear();
+  initializePreferences({}, () => {});
 });

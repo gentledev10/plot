@@ -1,5 +1,6 @@
 import type { Account, AccountList, BrowserSignIn, TokenSignIn } from './accounts';
 import type { AiProviderStatus, AiSettings } from './ai';
+import type { ThemeSource } from './appearance';
 import type { BlobContent, PullRequestDiff } from './diff';
 import type { ErrorPayload } from './errors';
 import type { Inbox, PullRequestDetail, PullRequestRef } from './github';
@@ -24,6 +25,9 @@ export interface ViewerApi {
   getAiSettings(): Promise<AiSettings>;
   updateAiSettings(settings: AiSettings): Promise<AiSettings>;
   detectAiProviders(): Promise<AiProviderStatus[]>;
+  setThemeSource(source: ThemeSource): Promise<void>;
+  getPreferences(): Promise<Record<string, unknown>>;
+  setPreference(key: string, value: unknown): Promise<void>;
 }
 
 export type IpcMethod = keyof ViewerApi;
@@ -47,6 +51,9 @@ const METHODS: Record<IpcMethod, true> = {
   getAiSettings: true,
   updateAiSettings: true,
   detectAiProviders: true,
+  setThemeSource: true,
+  getPreferences: true,
+  setPreference: true,
 };
 
 export const IPC_METHODS = Object.keys(METHODS) as readonly IpcMethod[];

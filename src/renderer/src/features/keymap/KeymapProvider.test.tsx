@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { writePreference } from '../../lib/preferences';
 import type { CommandId } from './commands';
 import { KeymapProvider, useCommand, useSuspendShortcuts } from './KeymapProvider';
 
@@ -100,7 +101,7 @@ describe('KeymapProvider', () => {
   });
 
   it('reads customized shortcuts from the preferences', () => {
-    localStorage.setItem('viewer.keymap', JSON.stringify({ 'diff.nextDifference': ['Meta+J'] }));
+    writePreference('keymap', { 'diff.nextDifference': ['Meta+J'] });
     const run = vi.fn();
     render(
       <KeymapProvider platform="darwin">

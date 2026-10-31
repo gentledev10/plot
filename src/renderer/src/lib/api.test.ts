@@ -26,6 +26,9 @@ function bridge(overrides: Partial<ViewerBridge> = {}): ViewerBridge {
     getAiSettings: vi.fn(),
     updateAiSettings: vi.fn(),
     detectAiProviders: vi.fn(),
+    setThemeSource: vi.fn(),
+    getPreferences: vi.fn(),
+    setPreference: vi.fn(),
     ...overrides,
   };
 }

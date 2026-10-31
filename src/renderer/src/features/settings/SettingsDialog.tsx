@@ -3,15 +3,17 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { AccountsSettings } from '../accounts/AccountsSettings';
 import { AiReviewSettings } from '../ai/AiReviewSettings';
+import { AppearanceSettings } from '../appearance/AppearanceSettings';
 import { useSuspendShortcuts } from '../keymap/KeymapProvider';
 import { KeymapSettings } from '../keymap/KeymapSettings';
 import styles from './SettingsDialog.module.css';
 
-export type SettingsSection = 'accounts' | 'ai' | 'keymap';
+export type SettingsSection = 'accounts' | 'ai' | 'appearance' | 'keymap';
 
 const SECTIONS: readonly { id: SettingsSection; title: string; render(): ReactNode }[] = [
   { id: 'accounts', title: 'Accounts', render: () => <AccountsSettings /> },
   { id: 'ai', title: 'AI overview', render: () => <AiReviewSettings /> },
+  { id: 'appearance', title: 'Appearance', render: () => <AppearanceSettings /> },
   { id: 'keymap', title: 'Keymap', render: () => <KeymapSettings /> },
 ];
 

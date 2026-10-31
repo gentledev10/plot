@@ -5,9 +5,9 @@ import { CircleAlert, LoaderCircle, Maximize2, Minimize2, RotateCw, Sparkles } f
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
-import { useColorScheme } from '../../lib/color-scheme';
 import { formatAge } from '../../lib/format';
 import { useAiSettings } from '../ai/queries';
+import { useAppearance } from '../appearance/AppearanceProvider';
 import { usePullRequestDiff } from '../diff/queries';
 import { useCommand, useShortcutLabel, withShortcut } from '../keymap/KeymapProvider';
 import { MermaidDiagram } from './MermaidDiagram';
@@ -263,7 +263,7 @@ interface ReviewMapViewProps {
 }
 
 function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewProps) {
-  const scheme = useColorScheme();
+  const scheme = useAppearance().theme.kind;
   const architecture = useMemo(
     () => architectureToMermaid(review.architecture, scheme),
     [review.architecture, scheme],

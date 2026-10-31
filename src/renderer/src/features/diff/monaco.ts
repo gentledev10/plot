@@ -11,13 +11,8 @@ import 'monaco-editor/features/wordHighlighter/register.js';
 import 'monaco-editor/features/wordOperations/register.js';
 import 'monaco-editor/languages/definitions/register.all.js';
 import EditorWorker from 'monaco-editor/editor/editor.worker.js?worker';
-import { themeDefinitions } from './themes';
 
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
-
-for (const { name, data } of themeDefinitions()) {
-  monaco.editor.defineTheme(name, data);
-}
 
 void document.fonts.ready.then(() => monaco.editor.remeasureFonts());
 

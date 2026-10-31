@@ -1,5 +1,6 @@
 import { isAccountId, type TokenSignIn } from '@shared/accounts';
 import { type AiSettings, parseAiSettings } from '@shared/ai';
+import { isThemeSource, type ThemeSource } from '@shared/appearance';
 import { isObjectId } from '@shared/diff';
 import type { PullRequestRef } from '@shared/github';
 import { isHost } from '@shared/hosts';
@@ -33,7 +34,35 @@ export const argumentParsers: ArgumentParsers = {
   getAiSettings: () => [],
   updateAiSettings: ([settings]) => [aiSettings(settings)],
   detectAiProviders: () => [],
+  setThemeSource: ([source]) => [themeSource(source)],
+  getPreferences: () => [],
+  setPreference: ([key, value]) => [preferenceKey(key), preferenceValue(value)],
 };
+
+const PREFERENCE_KEY = /^[a-z][a-zA-Z0-9.-]{0,63}$/;
+const MAX_PREFERENCE_BYTES = 64 * 1024;
+
+function preferenceKey(value: unknown): string {
+  if (typeof value !== 'string' || !PREFERENCE_KEY.test(value)) {
+    throw new AppError('invalid-argument', 'Expected a preference name.');
+  }
+  return value;
+}
+
+function preferenceValue(value: unknown): unknown {
+  const text = JSON.stringify(value ?? null);
+  if (text.length > MAX_PREFERENCE_BYTES) {
+    throw new AppError('invalid-argument', 'That preference is too large to save.');
+  }
+  return JSON.parse(text);
+}
+
+function themeSource(value: unknown): ThemeSource {
+  if (!isThemeSource(value)) {
+    throw new AppError('invalid-argument', 'Expected system, light, or dark.');
+  }
+  return value;
+}
 
 function aiSettings(value: unknown): AiSettings {
   const settings = parseAiSettings(value);

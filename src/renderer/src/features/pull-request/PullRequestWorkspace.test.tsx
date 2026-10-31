@@ -7,6 +7,7 @@ import { aPullRequestDetail } from '../../../test/builders';
 import { resetFakeDiffViewer, setFakeChangeCount } from '../../../test/fake-diff-viewer';
 import { renderWithApi } from '../../../test/render';
 import { ViewerError } from '../../lib/api';
+import { readPreference, writePreference } from '../../lib/preferences';
 import { PullRequestWorkspace } from './PullRequestWorkspace';
 
 vi.mock('../diff/DiffViewer', () => import('../../../test/fake-diff-viewer'));
@@ -54,7 +55,6 @@ const press = (key: string, modifiers: Partial<KeyboardEventInit> = {}) =>
 
 beforeEach(() => {
   resetFakeDiffViewer();
-  localStorage.clear();
 });
 
 describe('PullRequestWorkspace', () => {
@@ -87,10 +87,7 @@ describe('PullRequestWorkspace', () => {
   });
 
   it('follows the keymap the user set up', async () => {
-    localStorage.setItem(
-      'viewer.keymap',
-      JSON.stringify({ 'diff.nextDifference': ['Alt+Meta+ArrowDown'] }),
-    );
+    writePreference('keymap', { 'diff.nextDifference': ['Alt+Meta+ArrowDown'] });
     setFakeChangeCount('a.ts', 2);
     setFakeChangeCount('b.ts', 1);
     setup(diffOf(changed('a.ts'), changed('b.ts')));
@@ -107,10 +104,7 @@ describe('PullRequestWorkspace', () => {
   });
 
   it('switches diff options from the keyboard once they have a shortcut', async () => {
-    localStorage.setItem(
-      'viewer.keymap',
-      JSON.stringify({ 'diff.toggleSideBySide': ['Alt+Meta+U'] }),
-    );
+    writePreference('keymap', { 'diff.toggleSideBySide': ['Alt+Meta+U'] });
     setup(diffOf(changed('a.ts')));
     await screen.findByTestId('diff-viewer');
     expect(screen.getByRole('button', { name: 'Switch to unified view' })).toBeInTheDocument();
@@ -227,7 +221,7 @@ describe('PullRequestWorkspace', () => {
 
     await userEvent.click(collapse);
     expect(collapse).toHaveAttribute('aria-pressed', 'false');
-    expect(JSON.parse(localStorage.getItem('viewer.diff.settings') ?? '{}')).toMatchObject({
+    expect(readPreference('diff.settings', {})).toMatchObject({
       collapseUnchanged: false,
     });
   });

@@ -29,6 +29,9 @@ function setup(api: Partial<ViewerApi> = {}) {
     getAiSettings: vi.fn(),
     updateAiSettings: vi.fn(),
     detectAiProviders: vi.fn(),
+    setThemeSource: vi.fn(),
+    getPreferences: vi.fn(),
+    setPreference: vi.fn(),
     ...api,
   };
   registerIpcHandlers(ipc, fullApi, {

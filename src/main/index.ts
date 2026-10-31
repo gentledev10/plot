@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { AiProviderId } from '@shared/ai';
 import { MENU_COMMAND_CHANNEL, type MenuCommand, type ViewerApi } from '@shared/ipc';
-import { app, BrowserWindow, ipcMain, Menu, net, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme, net, shell } from 'electron';
 import { createAccountStore } from './accounts/account-store';
 import type { ReviewAgent } from './ai/agent';
 import { createAiSettingsStore } from './ai/ai-settings-store';
@@ -19,6 +19,7 @@ import {
   registerAppScheme,
   serveRenderer,
 } from './app/security';
+import { readThemeSource, writeThemeSource } from './app/theme-source';
 import { createMainWindow } from './app/window';
 import { basicAuthHeader } from './git/environment';
 import { createRepositoryCache } from './git/repository-cache';
@@ -28,6 +29,7 @@ import { GITHUB_OAUTH_CLIENT_ID } from './github/oauth-app';
 import { cachedTokens, createGhTokenProvider, type TokenProvider } from './github/token';
 import { argumentParsers } from './ipc/arguments';
 import { registerIpcHandlers } from './ipc/register';
+import { createPreferencesStore } from './preferences/preferences-store';
 import { createAccountService } from './services/account-service';
 import { createAiService } from './services/ai-service';
 import { createDiffService } from './services/diff-service';
@@ -79,6 +81,7 @@ function createApi(): ViewerApi {
     authHeader: async (repository) => (await connections.forHost(repository.host)).authHeader(),
   });
   const aiSettings = createAiSettingsStore(join(userData, 'ai-settings.json'));
+  const preferences = createPreferencesStore(join(userData, 'preferences.json'));
   const agents: Record<AiProviderId, ReviewAgent> = {
     'claude-code': createClaudeCodeAgent(),
     codex: createCodexAgent(),
@@ -109,7 +112,17 @@ function createApi(): ViewerApi {
     ...createDiffService({ connections, repositories }),
     ...reviews,
     ...createAiService({ store: aiSettings, detect: (id) => detectProvider(runCommand, id) }),
+    async setThemeSource(source) {
+      nativeTheme.themeSource = source;
+      await writeThemeSource(appearanceFile(), source);
+    },
+    getPreferences: () => preferences.all(),
+    setPreference: (key, value) => preferences.set(key, value),
   };
+}
+
+function appearanceFile(): string {
+  return join(app.getPath('userData'), 'appearance.json');
 }
 
 function sendMenuCommand(command: MenuCommand): void {
@@ -134,6 +147,7 @@ app.whenReady().then(async () => {
     await adoptLoginShellPath();
   }
   denyPermissionRequests();
+  nativeTheme.themeSource = await readThemeSource(appearanceFile());
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
       applicationMenu({

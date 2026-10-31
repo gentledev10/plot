@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { useColorScheme } from '../../lib/color-scheme';
+import { useAppearance } from '../appearance/AppearanceProvider';
 import styles from './ReviewPanel.module.css';
 
 interface MermaidDiagramProps {
@@ -10,7 +10,7 @@ interface MermaidDiagramProps {
 
 export function MermaidDiagram({ source, label, onElementClick }: MermaidDiagramProps) {
   const container = useRef<HTMLDivElement>(null);
-  const scheme = useColorScheme();
+  const scheme = useAppearance().theme.kind;
   const id = `diagram-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const [failed, setFailed] = useState(false);
   const latestClick = useRef(onElementClick);

@@ -29,6 +29,9 @@ export function fakeApi(overrides: Partial<ViewerApi> = {}): ViewerApi {
     getAiSettings: vi.fn().mockResolvedValue({ provider: 'claude-code', models: {} }),
     updateAiSettings: notStubbed('updateAiSettings'),
     detectAiProviders: notStubbed('detectAiProviders'),
+    setThemeSource: vi.fn().mockResolvedValue(undefined),
+    getPreferences: vi.fn().mockResolvedValue({}),
+    setPreference: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

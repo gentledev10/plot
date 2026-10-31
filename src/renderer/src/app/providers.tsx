@@ -1,6 +1,7 @@
 import type { MenuCommand, MenuCommandListener, ViewerApi } from '@shared/ipc';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
+import { AppearanceProvider } from '../features/appearance/AppearanceProvider';
 import { KeymapProvider } from '../features/keymap/KeymapProvider';
 import { isRetryable } from '../lib/api';
 
@@ -76,7 +77,9 @@ export function AppProviders({
     <QueryClientProvider client={queryClient}>
       <ApiContext.Provider value={api}>
         <ShellContext.Provider value={shell}>
-          <KeymapProvider platform={platform}>{children}</KeymapProvider>
+          <AppearanceProvider onThemeSource={(source) => void api.setThemeSource(source)}>
+            <KeymapProvider platform={platform}>{children}</KeymapProvider>
+          </AppearanceProvider>
         </ShellContext.Provider>
       </ApiContext.Provider>
     </QueryClientProvider>
