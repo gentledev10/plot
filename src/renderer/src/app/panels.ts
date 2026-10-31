@@ -32,3 +32,27 @@ export function toggleAllPanels(
   }
   return { layout: restore ?? DEFAULT_LAYOUT };
 }
+
+export type PanelSizes = Record<PanelId, number>;
+
+export const DEFAULT_SIZES: PanelSizes = { sidebar: 300, review: 360 };
+
+export const SIZE_LIMITS: Record<PanelId, { min: number; max: number }> = {
+  sidebar: { min: 200, max: 640 },
+  review: { min: 280, max: 1000 },
+};
+
+export function clampSize(panel: PanelId, width: number): number {
+  const { min, max } = SIZE_LIMITS[panel];
+  return Math.round(Math.min(max, Math.max(min, width)));
+}
+
+export function parseSizes(stored: unknown): PanelSizes | undefined {
+  if (typeof stored !== 'object' || stored === null) {
+    return undefined;
+  }
+  const { sidebar, review } = stored as Record<string, unknown>;
+  return typeof sidebar === 'number' && typeof review === 'number'
+    ? { sidebar: clampSize('sidebar', sidebar), review: clampSize('review', review) }
+    : undefined;
+}

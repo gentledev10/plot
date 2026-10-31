@@ -2,7 +2,7 @@ import type { PullRequestRef } from '@shared/github';
 import { formatPullRequestRef } from '@shared/pull-request-ref';
 import type { CodeLocation } from '@shared/review';
 import { FolderTree, GitPullRequest, Settings, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { type CSSProperties, useRef, useState } from 'react';
 import { StatusMessage } from '../components/StatusMessage';
 import { FilesPanel } from '../features/files/FilesPanel';
 import { InboxPanel } from '../features/inbox/InboxPanel';
@@ -18,13 +18,17 @@ import { usePreference } from '../lib/preferences';
 import styles from './App.module.css';
 import {
   DEFAULT_LAYOUT,
+  DEFAULT_SIZES,
   type PanelId,
   type PanelLayout,
   parseLayout,
+  parseSizes,
+  SIZE_LIMITS,
   toggleAllPanels,
   togglePanel,
 } from './panels';
 import { useMenuCommand, usePlatform } from './providers';
+import { ResizeHandle } from './ResizeHandle';
 import { ToolWindowBar, ToolWindowButton } from './ToolWindowBar';
 
 export function App() {
@@ -35,6 +39,8 @@ export function App() {
   const [reveal, setReveal] = useState<LocationRequest>();
   const [layout, setLayout] = usePreference('layout.panels', DEFAULT_LAYOUT, parseLayout);
   const [restore, setRestore] = useState<PanelLayout>();
+  const [sizes, setSizes] = usePreference('layout.sizes', DEFAULT_SIZES, parseSizes);
+  const shell = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<SettingsSection>();
   const [focusOpenField, setFocusOpenField] = useState(false);
   const sidebarShortcut = useShortcutLabel('view.toggleSidebar');
@@ -69,6 +75,25 @@ export function App() {
     setRestore(next.restore);
   }
 
+  function previewSize(panel: PanelId, width: number) {
+    shell.current?.style.setProperty(`--${panel}-width`, `${width}px`);
+  }
+
+  function resizeHandle(panel: PanelId, label: string, edge: 'left' | 'right') {
+    return (
+      <ResizeHandle
+        label={label}
+        edge={edge}
+        width={sizes[panel]}
+        min={SIZE_LIMITS[panel].min}
+        max={SIZE_LIMITS[panel].max}
+        onPreview={(width) => previewSize(panel, width)}
+        onResize={(width) => setSizes({ ...sizes, [panel]: width })}
+        onReset={() => setSizes({ ...sizes, [panel]: DEFAULT_SIZES[panel] })}
+      />
+    );
+  }
+
   function startOpeningPullRequest() {
     closePullRequest();
     if (!layout.sidebar) {
@@ -87,7 +112,14 @@ export function App() {
 
   return (
     <div
+      ref={shell}
       className={styles.app}
+      style={
+        {
+          '--sidebar-width': layout.sidebar ? `${sizes.sidebar}px` : '0px',
+          '--review-width': layout.review ? `${sizes.review}px` : '0px',
+        } as CSSProperties
+      }
       data-platform={platform}
       data-sidebar={layout.sidebar ? 'visible' : 'hidden'}
       data-review={layout.review ? 'visible' : 'hidden'}
@@ -117,6 +149,7 @@ export function App() {
         </ToolWindowBar>
       </div>
       <div className={styles.sidebar} hidden={!layout.sidebar}>
+        {resizeHandle('sidebar', 'Resize the sidebar', 'right')}
         {open ? (
           <FilesPanel
             target={open}
@@ -158,6 +191,7 @@ export function App() {
         )}
       </main>
       <div className={styles.review} hidden={!layout.review}>
+        {resizeHandle('review', 'Resize the AI panel', 'left')}
         <ReviewPanel
           target={open}
           onOpenLocation={openLocation}

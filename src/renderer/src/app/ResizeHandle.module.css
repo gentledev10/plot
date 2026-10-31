@@ -1,0 +1,46 @@
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 5;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+  -webkit-app-region: no-drag;
+}
+
+.handle[data-edge="right"] {
+  right: -4px;
+}
+
+.handle[data-edge="left"] {
+  left: -4px;
+}
+
+.handle::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 3px;
+  background: transparent;
+  content: "";
+  transition: background 0.1s;
+}
+
+.handle:hover::after,
+.handle:focus-visible::after,
+.handle[data-dragging="true"]::after {
+  background: var(--color-accent);
+}
+
+.handle:focus-visible {
+  outline: none;
+}
+
+.shield {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  cursor: col-resize;
+}

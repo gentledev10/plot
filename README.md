@@ -39,6 +39,7 @@ Reviews are saved on your Mac per commit, so reopening a pull request does not r
 | Show or hide the sidebar       | ⌘1                             |
 | Show or hide the AI review     | ⌘2                             |
 | Hide or restore all panels     | ⇧⌘F12                          |
+| Resize a side panel            | Drag its edge                  |
 | Open a pull request by URL     | ⌘O                             |
 | Back to the pull request list  | ⌘[                             |
 | Refresh                        | ⌘R                             |

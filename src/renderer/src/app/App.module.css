@@ -1,7 +1,5 @@
 .app {
   --tool-bar-width: 36px;
-  --sidebar-width: 300px;
-  --review-width: 360px;
 
   display: grid;
   grid-template-areas: "left-bar sidebar workspace review right-bar";
@@ -11,18 +9,11 @@
   height: 100%;
 }
 
-.app[data-sidebar="hidden"] {
-  --sidebar-width: 0px;
-}
-
-.app[data-review="hidden"] {
-  --review-width: 0px;
-}
-
 .leftBar,
 .rightBar,
 .sidebar,
 .review {
+  position: relative;
   display: grid;
   min-width: 0;
   min-height: 0;

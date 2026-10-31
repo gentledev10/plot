@@ -124,6 +124,24 @@ describe('App', () => {
     expect(screen.queryByRole('complementary', { name: 'AI review' })).not.toBeInTheDocument();
   });
 
+  it('remembers panel widths set by dragging their edge', () => {
+    const { unmount, container } = renderWithApi(<App />, api());
+    const handle = screen.getByRole('separator', { name: 'Resize the sidebar' });
+
+    fireEvent.pointerDown(handle, { button: 0, clientX: 300, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 360, pointerId: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 1 });
+    expect((container.firstChild as HTMLElement).style.getPropertyValue('--sidebar-width')).toBe(
+      '360px',
+    );
+    unmount();
+
+    const again = renderWithApi(<App />, api());
+    expect(
+      (again.container.firstChild as HTMLElement).style.getPropertyValue('--sidebar-width'),
+    ).toBe('360px');
+  });
+
   it('toggles panels from the keyboard', async () => {
     renderWithApi(<App />, api());
     const sidebar = () => screen.queryByRole('complementary', { name: 'Pull requests' });
