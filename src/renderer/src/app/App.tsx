@@ -240,7 +240,7 @@ export function App() {
                   : { label: 'Show pull requests', run: () => toggle('sidebar') }
               }
             >
-              Select a pull request or a local repository to start reviewing.
+              Select a pull request or a local repository to see what changed.
             </StatusMessage>
           </div>
         )}

@@ -42,7 +42,7 @@ describe('App', () => {
     renderWithApi(<App />, fake);
 
     expect(
-      screen.getByText('Select a pull request or a local repository to start reviewing.'),
+      screen.getByText('Select a pull request or a local repository to see what changed.'),
     ).toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
 
@@ -70,7 +70,7 @@ describe('App', () => {
       'true',
     );
     expect(
-      screen.getByText('Select a pull request or a local repository to start reviewing.'),
+      screen.getByText('Select a pull request or a local repository to see what changed.'),
     ).toBeInTheDocument();
   });
 
