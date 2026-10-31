@@ -1,6 +1,6 @@
 import type { BlobContent, ChangedFile } from '@shared/diff';
 import type { PullRequestRef } from '@shared/github';
-import type { ViewerApi } from '@shared/ipc';
+import type { PlotApi } from '@shared/ipc';
 import type { LocalDiff, LocalTarget } from '@shared/local';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../../app/providers';
@@ -65,7 +65,7 @@ export function useFileContent(target: DiffTarget, file: ChangedFile, side: File
 }
 
 function contentQuery(
-  api: ViewerApi,
+  api: PlotApi,
   target: DiffTarget,
   file: ChangedFile,
   side: FileSide,

@@ -8,7 +8,7 @@ let dir: string;
 let file: string;
 
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'viewer-preferences-'));
+  dir = await mkdtemp(join(tmpdir(), 'plot-preferences-'));
   file = join(dir, 'preferences.json');
 });
 

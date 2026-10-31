@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { aPullRequestDetail } from '../../../test/builders';
 import { resetFakeDiffViewer, setFakeChangeCount } from '../../../test/fake-diff-viewer';
 import { renderWithApi } from '../../../test/render';
-import { ViewerError } from '../../lib/api';
+import { PlotError } from '../../lib/api';
 import { readPreference, writePreference } from '../../lib/preferences';
 import { PullRequestWorkspace } from './PullRequestWorkspace';
 
@@ -229,7 +229,7 @@ describe('PullRequestWorkspace', () => {
   it('shows why the changes could not be loaded, and retries', async () => {
     const getPullRequestDiff = vi
       .fn()
-      .mockRejectedValueOnce(new ViewerError('git-failed', 'git fetch failed: timed out'))
+      .mockRejectedValueOnce(new PlotError('git-failed', 'git fetch failed: timed out'))
       .mockResolvedValue(diffOf(changed('a.ts')));
     renderWithApi(<Harness />, {
       getPullRequest: vi.fn().mockResolvedValue(aPullRequestDetail()),

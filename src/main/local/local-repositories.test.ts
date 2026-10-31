@@ -8,7 +8,7 @@ let dir: string;
 let file: string;
 
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'viewer-local-list-'));
+  dir = await mkdtemp(join(tmpdir(), 'plot-local-list-'));
   file = join(dir, 'local-repositories.json');
 });
 

@@ -1,4 +1,4 @@
-import type { ViewerApi } from '@shared/ipc';
+import type { PlotApi } from '@shared/ipc';
 import type { GitHubConnections } from '../github/connections';
 
 export const INBOX_QUERIES = {
@@ -8,7 +8,7 @@ export const INBOX_QUERIES = {
 
 const INBOX_LIMIT = 50;
 
-export type GitHubService = Pick<ViewerApi, 'listInbox' | 'getPullRequest'>;
+export type GitHubService = Pick<PlotApi, 'listInbox' | 'getPullRequest'>;
 
 export function createGitHubService(connections: GitHubConnections): GitHubService {
   return {

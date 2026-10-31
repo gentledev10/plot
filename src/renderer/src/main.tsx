@@ -15,7 +15,7 @@ if (!root) {
   throw new Error('Missing #root element');
 }
 
-const api = createApi(window.viewer);
+const api = createApi(window.plot);
 initializePreferences(
   await api.getPreferences().catch(() => ({})),
   (key, value) => void api.setPreference(key, value).catch(() => {}),
@@ -27,8 +27,8 @@ createRoot(root).render(
     <AppProviders
       api={api}
       queryClient={createQueryClient()}
-      platform={window.viewer.platform}
-      subscribeToMenu={window.viewer.onMenuCommand}
+      platform={window.plot.platform}
+      subscribeToMenu={window.plot.onMenuCommand}
     >
       <App />
     </AppProviders>

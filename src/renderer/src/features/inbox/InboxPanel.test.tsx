@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { anAccount, anAccountList, aPullRequestSummary } from '../../../test/builders';
 import { renderWithApi } from '../../../test/render';
-import { ViewerError } from '../../lib/api';
+import { PlotError } from '../../lib/api';
 import { InboxPanel } from './InboxPanel';
 
 const signedIn = vi.fn().mockResolvedValue(anAccountList([anAccount('octocat')]));
@@ -132,7 +132,7 @@ describe('InboxPanel', () => {
   it('shows inbox errors and recovers on retry', async () => {
     const listInbox = vi
       .fn()
-      .mockRejectedValueOnce(new ViewerError('network', 'Could not reach GitHub.'))
+      .mockRejectedValueOnce(new PlotError('network', 'Could not reach GitHub.'))
       .mockResolvedValue({ reviewRequested: [aPullRequestSummary(3)], authored: [] });
     renderWithApi(<InboxPanel onSelect={vi.fn()} />, { listAccounts: signedIn, listInbox });
 

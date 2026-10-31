@@ -63,7 +63,7 @@ function deferred<T>() {
 let root: string;
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), 'viewer-review-service-'));
+  root = await mkdtemp(join(tmpdir(), 'plot-review-service-'));
 });
 
 afterEach(async () => {

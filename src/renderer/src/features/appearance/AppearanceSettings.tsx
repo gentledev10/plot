@@ -219,7 +219,7 @@ function FontFields({ family, size, onChange }: FontFieldsProps) {
         {"const greeting = 'Hello, 세계'; // 0O il1 => !== ->"}
       </pre>
       <p className={styles.hint}>
-        Fonts that are not installed fall back to JetBrains Mono, which comes with Viewer.
+        Fonts that are not installed fall back to JetBrains Mono, which comes with Plot.
       </p>
     </div>
   );

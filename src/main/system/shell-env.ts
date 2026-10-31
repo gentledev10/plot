@@ -1,6 +1,6 @@
 import type { CommandRunner } from './process';
 
-const MARKER = '__VIEWER_PATH__';
+const MARKER = '__PLOT_PATH__';
 
 export function extractMarkedPath(output: string): string | undefined {
   const start = output.indexOf(MARKER);

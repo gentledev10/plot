@@ -13,7 +13,7 @@ const fakeClaude = [process.execPath, join(__dirname, 'fixtures', 'fake-claude.m
 let cwd: string;
 
 beforeAll(async () => {
-  cwd = await mkdtemp(join(tmpdir(), 'viewer-claude-'));
+  cwd = await mkdtemp(join(tmpdir(), 'plot-claude-'));
   await mkdir(join(cwd, 'src'));
 });
 
@@ -170,7 +170,7 @@ describe('createClaudeCodeAgent', () => {
   });
 
   it('explains how to install Claude Code when it is missing', async () => {
-    const agent = createClaudeCodeAgent({ command: ['viewer-claude-that-does-not-exist'] });
+    const agent = createClaudeCodeAgent({ command: ['plot-claude-that-does-not-exist'] });
     await expect(
       agent.run({
         cwd,

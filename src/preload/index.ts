@@ -4,7 +4,7 @@ import {
   isMenuCommand,
   MENU_COMMAND_CHANNEL,
   type MenuCommandListener,
-  type ViewerBridge,
+  type PlotBridge,
 } from '@shared/ipc';
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron';
 
@@ -25,6 +25,6 @@ function onMenuCommand(listener: MenuCommandListener): () => void {
   return () => ipcRenderer.removeListener(MENU_COMMAND_CHANNEL, forward);
 }
 
-const bridge = { platform: process.platform, onMenuCommand, ...methods } as ViewerBridge;
+const bridge = { platform: process.platform, onMenuCommand, ...methods } as PlotBridge;
 
-contextBridge.exposeInMainWorld('viewer', bridge);
+contextBridge.exposeInMainWorld('plot', bridge);

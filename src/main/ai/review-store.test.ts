@@ -25,7 +25,7 @@ const stored: StoredReview = {
 let root: string;
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), 'viewer-reviews-'));
+  root = await mkdtemp(join(tmpdir(), 'plot-reviews-'));
 });
 
 afterEach(async () => {

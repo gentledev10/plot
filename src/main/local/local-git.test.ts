@@ -40,7 +40,7 @@ async function write(dir: string, files: Record<string, string | null>) {
 }
 
 beforeAll(async () => {
-  root = await realpath(await mkdtemp(join(tmpdir(), 'viewer-local-')));
+  root = await realpath(await mkdtemp(join(tmpdir(), 'plot-local-')));
   repo = join(root, 'repo');
   outside = join(root, 'outside');
   await mkdir(repo);

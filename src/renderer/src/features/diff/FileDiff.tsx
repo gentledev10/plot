@@ -64,8 +64,7 @@ export function FileDiff({
   if (contents.some((content) => content.kind === 'binary')) {
     return (
       <StatusMessage title="Binary file">
-        {sizeChange(original.data, modified.data)} Viewer does not show the contents of binary
-        files.
+        {sizeChange(original.data, modified.data)} Plot does not show the contents of binary files.
       </StatusMessage>
     );
   }

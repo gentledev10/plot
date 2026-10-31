@@ -18,7 +18,7 @@ function fakeFetch(...responses: Array<Response | Error>) {
   return fetch;
 }
 
-const client = (fetch: Fetch) => ({ fetch, clientId: 'Iv1.test', userAgent: 'Viewer/test' });
+const client = (fetch: Fetch) => ({ fetch, clientId: 'Iv1.test', userAgent: 'Plot/test' });
 
 const grant: DeviceCodeGrant = {
   deviceCode: 'device-123',

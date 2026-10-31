@@ -23,7 +23,7 @@ export interface FixtureRepository {
 const RENAMED_LINES = Array.from({ length: 20 }, (_, i) => `export const value${i} = ${i};`);
 
 export async function createFixtureRepository(): Promise<FixtureRepository> {
-  const root = await mkdtemp(join(tmpdir(), 'viewer-git-'));
+  const root = await mkdtemp(join(tmpdir(), 'plot-git-'));
   const dir = join(root, 'origin');
   await mkdir(dir);
 

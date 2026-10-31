@@ -7,7 +7,7 @@ import type { Inbox, PullRequestDetail, PullRequestRef } from './github';
 import type { LocalDiff, LocalRepository, LocalTarget } from './local';
 import type { ReviewStatus } from './review';
 
-export interface ViewerApi {
+export interface PlotApi {
   listAccounts(): Promise<AccountList>;
   switchAccount(id: string): Promise<void>;
   removeAccount(id: string): Promise<void>;
@@ -38,7 +38,7 @@ export interface ViewerApi {
   readLocalFile(repositoryId: string, path: string): Promise<BlobContent>;
 }
 
-export type IpcMethod = keyof ViewerApi;
+export type IpcMethod = keyof PlotApi;
 
 const METHODS: Record<IpcMethod, true> = {
   listAccounts: true,
@@ -74,7 +74,7 @@ const METHODS: Record<IpcMethod, true> = {
 export const IPC_METHODS = Object.keys(METHODS) as readonly IpcMethod[];
 
 export function ipcChannel(method: IpcMethod): string {
-  return `viewer:${method}`;
+  return `plot:${method}`;
 }
 
 export type IpcResponse<T> = { ok: true; value: T } | { ok: false; error: ErrorPayload };
@@ -87,7 +87,7 @@ const MENU_COMMANDS = {
 
 export type MenuCommand = keyof typeof MENU_COMMANDS;
 
-export const MENU_COMMAND_CHANNEL = 'viewer:menu-command';
+export const MENU_COMMAND_CHANNEL = 'plot:menu-command';
 
 export function isMenuCommand(value: unknown): value is MenuCommand {
   return typeof value === 'string' && Object.hasOwn(MENU_COMMANDS, value);
@@ -95,11 +95,11 @@ export function isMenuCommand(value: unknown): value is MenuCommand {
 
 export type MenuCommandListener = (command: MenuCommand) => void;
 
-export type ViewerBridge = {
+export type PlotBridge = {
   readonly platform: string;
   onMenuCommand(listener: MenuCommandListener): () => void;
 } & {
   [K in IpcMethod]: (
-    ...args: Parameters<ViewerApi[K]>
-  ) => Promise<IpcResponse<Awaited<ReturnType<ViewerApi[K]>>>>;
+    ...args: Parameters<PlotApi[K]>
+  ) => Promise<IpcResponse<Awaited<ReturnType<PlotApi[K]>>>>;
 };

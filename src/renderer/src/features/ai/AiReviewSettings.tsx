@@ -47,7 +47,7 @@ export function AiReviewSettings() {
   return (
     <div className={styles.settings}>
       <p className={styles.intro}>
-        Overviews are made by an AI coding tool on this Mac, with your own account and plan. Viewer
+        Overviews are made by an AI coding tool on this Mac, with your own account and plan. Plot
         has no server and no API key of its own.
       </p>
       <fieldset className={styles.providers}>

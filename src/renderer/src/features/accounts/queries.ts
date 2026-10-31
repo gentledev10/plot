@@ -2,7 +2,7 @@ import type { Account, BrowserSignIn, TokenSignIn } from '@shared/accounts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApi } from '../../app/providers';
-import { ViewerError } from '../../lib/api';
+import { PlotError } from '../../lib/api';
 
 export const accountKeys = {
   list: ['accounts'] as const,
@@ -91,7 +91,7 @@ export function useBrowserSignIn(onSignedIn?: (account: Account) => void) {
         return;
       }
       active.current = undefined;
-      if (error instanceof ViewerError && error.code === 'sign-in-cancelled') {
+      if (error instanceof PlotError && error.code === 'sign-in-cancelled') {
         setState({ step: 'idle' });
         return;
       }

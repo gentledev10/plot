@@ -1,5 +1,5 @@
-appId: io.github.gentledev10.viewer
-productName: Viewer
+appId: io.github.gentledev10.plot
+productName: Plot
 directories:
   output: dist
   buildResources: build

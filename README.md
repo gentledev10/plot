@@ -1,22 +1,24 @@
-# Viewer
+# Plot
 
-A lightweight desktop app for reviewing GitHub pull requests, made for developers who are used to IntelliJ's diff viewer.
+**The story behind every change.**
+
+Plot is a lightweight Mac app for reading code changes, made for developers who are used to IntelliJ's diff viewer. It opens GitHub pull requests and the work in your local repositories, and for pull requests an AI overview explains what the change does, why, and how the code flows differently from before.
 
 > Status: early development. Expect rough edges, and please report them.
 
 ## Why
 
-Many developers now open a full IDE only to read diffs, often of code an AI wrote. Viewer does just that part, and opens fast:
+Many developers now open a full IDE only to read diffs, often of code an AI wrote. Plot does just that part, and opens fast:
 
 - **Pull requests in one click.** See the pull requests waiting for your review, or paste any pull request URL.
 - **IntelliJ's diff, outside IntelliJ.** Side-by-side diffs with IntelliJ's colors, collapsed unchanged fragments, and the same keyboard shortcuts.
 - **Understand a change before you read it.** An AI overview explains what the pull request changes, compares how the code flowed before and after in sequence diagrams, draws the components around it, and lists what else it affects. Every item links to the line it is about. Bring your own Claude Code or Codex CLI.
 - **Your own work, too.** Open a local repository to see everything on your branch, including work you have not committed, with the same diff and shortcuts. It refreshes as files change, which suits checking code an AI agent just wrote.
-- **Fast on large repositories.** Viewer fetches only the two commits a pull request compares, not the whole repository.
+- **Fast on large repositories.** Plot fetches only the two commits a pull request compares, not the whole repository.
 
 ## AI overviews and your code
 
-Overviews are made by an AI coding tool on your Mac, with your own account: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. Viewer has no server and no API key of its own.
+Overviews are made by an AI coding tool on your Mac, with your own account: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. Plot has no server and no API key of its own.
 
 The tool reads the pull request's diff and description, the list of file paths in the repository, and the directories the pull request touches. It only gets to read:
 
@@ -57,11 +59,11 @@ Settings > Appearance offers Light, Dark, and IntelliJ's classic Darcula theme, 
 
 ## Connecting GitHub
 
-Viewer connects to nothing until you choose how to sign in:
+Plot connects to nothing until you choose how to sign in:
 
-- **Browser.** Approve Viewer on github.com with a one-time code. Works with single sign-on.
+- **Browser.** Approve Plot on github.com with a one-time code. Works with single sign-on.
 - **Personal access token.** A classic token with the `repo` scope, or a fine-grained token with read access to contents and pull requests.
-- **GitHub CLI.** Uses the account you signed in to with `gh auth login`. Viewer asks `gh` for the token when it needs one and stores no copy.
+- **GitHub CLI.** Uses the account you signed in to with `gh auth login`. Plot asks `gh` for the token when it needs one and stores no copy.
 
 You can connect several accounts, including accounts on GitHub Enterprise Server, and switch between them in Settings > Accounts. Pull requests on an Enterprise server open with the account connected for that server. Tokens are encrypted with your macOS keychain and only sent to the server they belong to.
 

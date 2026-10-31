@@ -12,7 +12,7 @@ function items(menu: MenuItemConstructorOptions[]): MenuItemConstructorOptions[]
 function build(isDevelopment = false) {
   const send = vi.fn();
   const openExternal = vi.fn();
-  const menu = applicationMenu({ appName: 'Viewer', isDevelopment, send, openExternal });
+  const menu = applicationMenu({ appName: 'Plot', isDevelopment, send, openExternal });
   const find = (label: string) => items(menu).find((item) => item.label === label);
   const click = (label: string) =>
     (find(label)?.click as (() => void) | undefined)?.call(undefined);

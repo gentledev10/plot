@@ -118,7 +118,7 @@ export function createCodexAgent({
 }: AgentOptions = {}): ReviewAgent {
   return {
     async run(input) {
-      const scratch = await mkdtemp(join(tmpdir(), 'viewer-codex-'));
+      const scratch = await mkdtemp(join(tmpdir(), 'plot-codex-'));
       const files = {
         schemaFile: join(scratch, 'schema.json'),
         outputFile: join(scratch, 'review.json'),

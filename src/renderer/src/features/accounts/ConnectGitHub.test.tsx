@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { anAccount, anAccountList } from '../../../test/builders';
 import { renderWithApi } from '../../../test/render';
-import { ViewerError } from '../../lib/api';
+import { PlotError } from '../../lib/api';
 import { ConnectGitHub } from './ConnectGitHub';
 
 function deferred<T>() {
@@ -49,7 +49,7 @@ describe('ConnectGitHub', () => {
     await vi.waitFor(() => expect(onConnected).toHaveBeenCalledWith(account));
     expect(screen.getByRole('link', { name: 'Create a classic token' })).toHaveAttribute(
       'href',
-      'https://github.com/settings/tokens/new?scopes=repo&description=Viewer',
+      'https://github.com/settings/tokens/new?scopes=repo&description=Plot',
     );
   });
 
@@ -57,7 +57,7 @@ describe('ConnectGitHub', () => {
     setup({
       signInWithToken: vi
         .fn()
-        .mockRejectedValue(new ViewerError('github-unauthorized', 'Bad credentials.')),
+        .mockRejectedValue(new PlotError('github-unauthorized', 'Bad credentials.')),
     });
     await userEvent.click(
       await screen.findByRole('button', { name: /Use a personal access token/ }),
@@ -128,7 +128,7 @@ describe('ConnectGitHub', () => {
       startBrowserSignIn: vi.fn().mockResolvedValue(signIn),
       finishBrowserSignIn: vi
         .fn()
-        .mockRejectedValue(new ViewerError('sign-in-failed', 'The sign-in code expired.')),
+        .mockRejectedValue(new PlotError('sign-in-failed', 'The sign-in code expired.')),
     });
 
     await userEvent.click(await screen.findByRole('button', { name: /Sign in with your browser/ }));

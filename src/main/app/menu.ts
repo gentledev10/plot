@@ -1,7 +1,7 @@
 import type { MenuCommand } from '@shared/ipc';
 import type { MenuItemConstructorOptions } from 'electron';
 
-export const PROJECT_URL = 'https://github.com/gentledev10/viewer';
+export const PROJECT_URL = 'https://github.com/gentledev10/plot';
 
 interface ApplicationMenuOptions {
   appName: string;

@@ -179,5 +179,5 @@ export function editorThemeName(data: editor.IStandaloneThemeData): string {
   for (const character of JSON.stringify(data)) {
     hash = ((hash << 5) + hash + character.charCodeAt(0)) >>> 0;
   }
-  return `viewer-${hash.toString(36)}`;
+  return `plot-${hash.toString(36)}`;
 }

@@ -4,13 +4,13 @@ This document explains how the app is put together and why. Read it before makin
 
 ## Processes
 
-Viewer is an Electron app with three kinds of code. Each one has a single job.
+Plot is an Electron app with three kinds of code. Each one has a single job.
 
 | Process  | Directory      | Job                                                              | Can access                            |
 | -------- | -------------- | ---------------------------------------------------------------- | ------------------------------------- |
 | Main     | `src/main`     | Talks to GitHub, runs `git` and AI tools, owns tokens and caches | Node.js, the file system, the network |
-| Preload  | `src/preload`  | Exposes the IPC contract to the page as `window.viewer`          | `contextBridge`, `ipcRenderer`        |
-| Renderer | `src/renderer` | Draws the UI                                                     | Only `window.viewer`                  |
+| Preload  | `src/preload`  | Exposes the IPC contract to the page as `window.plot`            | `contextBridge`, `ipcRenderer`        |
+| Renderer | `src/renderer` | Draws the UI                                                     | Only `window.plot`                    |
 
 Code shared by more than one process lives in `src/shared`. It must stay free of Node.js and DOM APIs so every process can import it.
 
@@ -19,7 +19,7 @@ Code shared by more than one process lives in `src/shared`. It must stay free of
 The renderer shows content written by other people: pull request titles, descriptions, and diffs. It also shows text produced by AI tools that read that content. Treat everything on screen as untrusted, and keep the renderer unable to do damage even if a bug lets that content run as script.
 
 - The renderer runs sandboxed, with context isolation and without Node.js integration.
-- Pages are served from the custom `app://viewer` scheme with a strict Content-Security-Policy (`src/main/app/security.ts`). Only bundled scripts can run, and the page cannot open network connections of its own.
+- Pages are served from the custom `app://plot` scheme with a strict Content-Security-Policy (`src/main/app/security.ts`). Only bundled scripts can run, and the page cannot open network connections of its own.
 - Untrusted text is rendered as text. Nothing from GitHub or an AI tool is inserted as HTML.
 - Navigation away from the app is blocked. Links with `https://` open in the default browser.
 - Permission requests (camera, notifications, and so on) are denied.
@@ -28,20 +28,20 @@ The renderer shows content written by other people: pull request titles, descrip
 
 ## IPC contract
 
-`ViewerApi` in `src/shared/ipc.ts` is the single list of what the renderer can ask the main process to do. A call travels like this:
+`PlotApi` in `src/shared/ipc.ts` is the single list of what the renderer can ask the main process to do. A call travels like this:
 
 ```
 renderer                   preload                    main
-createApi(window.viewer) → ViewerBridge (Result)  →  registerIpcHandlers
-  throws ViewerError        ipcRenderer.invoke         1. check the sender frame
-                                                       2. parse arguments (ipc/arguments.ts)
-                                                       3. call the service
-                                                       4. return { ok, value } or { ok, error }
+createApi(window.plot)  →  PlotBridge (Result)   →    registerIpcHandlers
+  throws PlotError           ipcRenderer.invoke         1. check the sender frame
+                                                        2. parse arguments (ipc/arguments.ts)
+                                                        3. call the service
+                                                        4. return { ok, value } or { ok, error }
 ```
 
-Failures cross the boundary as `{ code, message }`. `AppError` in the main process carries a code from `src/shared/errors.ts`, and the renderer turns it back into a `ViewerError` with the same code, so the UI can react to `gh-not-installed` differently from `network`. Any other error is logged in the main process and reaches the renderer as `unknown`, without details such as file paths.
+Failures cross the boundary as `{ code, message }`. `AppError` in the main process carries a code from `src/shared/errors.ts`, and the renderer turns it back into a `PlotError` with the same code, so the UI can react to `gh-not-installed` differently from `network`. Any other error is logged in the main process and reaches the renderer as `unknown`, without details such as file paths.
 
-To add a method, add it to `ViewerApi` and `METHODS` in `src/shared/ipc.ts`, then follow the type errors: the argument parser, the service that implements it, and the fake API used in renderer tests all have to name it.
+To add a method, add it to `PlotApi` and `METHODS` in `src/shared/ipc.ts`, then follow the type errors: the argument parser, the service that implements it, and the fake API used in renderer tests all have to name it.
 
 ## Main process layout
 
@@ -63,9 +63,9 @@ Commands run through `runCommand`, which uses `execFile` without a shell. Argume
 
 ### Accounts and signing in
 
-Viewer talks to GitHub only after someone chooses how to sign in. Each connected account is kept in `userData/accounts.json` by `accounts/account-store.ts`: its host, login, and sign-in method. Tokens from browser sign-in and personal access tokens are encrypted with Electron's `safeStorage`, whose key lives in the macOS keychain, and are decrypted only in the main process. Accounts that use the GitHub CLI keep no token: Viewer runs `gh auth token --hostname <host> --user <login>` when it needs one, so signing out of `gh` signs Viewer out too.
+Plot talks to GitHub only after someone chooses how to sign in. Each connected account is kept in `userData/accounts.json` by `accounts/account-store.ts`: its host, login, and sign-in method. Tokens from browser sign-in and personal access tokens are encrypted with Electron's `safeStorage`, whose key lives in the macOS keychain, and are decrypted only in the main process. Accounts that use the GitHub CLI keep no token: Plot runs `gh auth token --hostname <host> --user <login>` when it needs one, so signing out of `gh` signs Plot out too.
 
-Browser sign-in uses GitHub's device flow (`github/device-flow.ts`). Viewer shows a one-time code, the person approves it on github.com, and Viewer polls until GitHub hands over a token. The flow needs the client ID of a GitHub OAuth app (`github/oauth-app.ts`); builds without one hide the option. GitHub has no read-only scope for private repositories, so the app asks for `repo`, and Viewer only reads with it.
+Browser sign-in uses GitHub's device flow (`github/device-flow.ts`). Plot shows a one-time code, the person approves it on github.com, and Plot polls until GitHub hands over a token. The flow needs the client ID of a GitHub OAuth app (`github/oauth-app.ts`); builds without one hide the option. GitHub has no read-only scope for private repositories, so the app asks for `repo`, and Plot only reads with it.
 
 Requests go through `GitHubConnections` (`github/connections.ts`). The inbox uses the current account. A pull request uses an account on its own host: the current account if it is there, otherwise the first one connected for that host. Pull request references carry their host, and so does everything cached for them, such as `userData/repositories/<host>/<owner>/<repo>.git`, so a token is only ever sent to the server it came from. REST calls go to `api.github.com` for github.com, `api.<host>` for GitHub Enterprise Cloud with data residency (`*.ghe.com`), and `https://<host>/api/v3` for GitHub Enterprise Server.
 
@@ -73,7 +73,7 @@ Apps opened from Finder get a minimal `PATH` that does not include Homebrew. The
 
 ### Reading a pull request's changes
 
-Viewer computes diffs with git instead of using the diff GitHub returns. That keeps whole files available for context, works for pull requests of any size, and gives later features such as symbol navigation a real repository to read.
+Plot computes diffs with git instead of using the diff GitHub returns. That keeps whole files available for context, works for pull requests of any size, and gives later features such as symbol navigation a real repository to read.
 
 Cloning large repositories would make opening a pull request slow, so `getPullRequestDiff` fetches only what the diff needs:
 
@@ -95,7 +95,7 @@ The repository belongs to the user, so their git config applies, unlike in the p
 
 ### AI overviews
 
-`createReviewService` turns a pull request into an overview that helps someone understand the change quickly, rather than judge it. In code it is a `ReviewMap`: a summary, the main changes described as before and now, the runtime flows the change alters with their steps before and after it, the components around the change marked as added, changed, removed, or unchanged, what else it affects, and a reading order. Items point to a file and line. It runs an AI coding tool the user already has, Claude Code or Codex CLI, chosen in Settings > AI overview, so Viewer needs no API key and adds no new place that code is sent to.
+`createReviewService` turns a pull request into an overview that helps someone understand the change quickly, rather than judge it. In code it is a `ReviewMap`: a summary, the main changes described as before and now, the runtime flows the change alters with their steps before and after it, the components around the change marked as added, changed, removed, or unchanged, what else it affects, and a reading order. Items point to a file and line. It runs an AI coding tool the user already has, Claude Code or Codex CLI, chosen in Settings > AI overview, so Plot needs no API key and adds no new place that code is sent to.
 
 1. Check out the directories the pull request touches at its head commit, as a sparse worktree of the repository cache. Write the diff, the list of every file in the repository (from git trees, without downloading contents), and the description next to it.
 2. Run the chosen tool in that worktree: `claude --print` (`ai/claude-code.ts`) or `codex exec` (`ai/codex.ts`). The tool reads the files and returns JSON that must match `REVIEW_SCHEMA`. Its tool calls stream back as progress such as "Reading src/app.ts", which the renderer polls once a second.
@@ -131,7 +131,7 @@ Renderer preferences, such as the panel layout and widths, the keymap, diff opti
 
 Themes are defined in `features/appearance/themes.ts`: the UI colors, which become CSS variables on the root element, and Monaco's syntax and editor colors. People can override a few colors per theme, such as the diff colors and the accent, and `editorTheme` builds a Monaco theme from the same colors, so the editor and the rest of the app always match. The saved appearance is applied before React renders, so the window does not flash the default colors. The main process sets `nativeTheme.themeSource` to light, dark, or system to match the theme, so scrollbars, form controls, and `prefers-color-scheme` follow it, and it remembers that choice to open the window in the right colors.
 
-Components get the API from `useApi()` instead of reading `window.viewer`, and fetch data through React Query hooks. Tests render components with a fake API through `renderWithApi` in `src/renderer/test/render.tsx`.
+Components get the API from `useApi()` instead of reading `window.plot`, and fetch data through React Query hooks. Tests render components with a fake API through `renderWithApi` in `src/renderer/test/render.tsx`.
 
 ### The diff view
 
@@ -147,7 +147,7 @@ Every shortcut is a command in `features/keymap/commands.ts`, with an id, a titl
 
 Shortcuts are stored as strings such as `Ctrl+Shift+ArrowRight`. Letters, digits, and punctuation are read from the physical key (`KeyboardEvent.code`), so shortcuts keep working while an input method such as Korean is active. Only the commands someone changed are saved, so later changes to the defaults still reach everyone else. `strokeProblem` rejects shortcuts that macOS, the app menu, or the editor's find already use, and keys without ⌘, ⌃, or ⌥ that would get in the way of typing.
 
-The application menu (`src/main/app/menu.ts`) owns the standard macOS shortcuts. Items that need the page, such as Settings, are sent to the renderer as menu commands over `MENU_COMMAND_CHANNEL`, a one-way channel separate from `ViewerApi`.
+The application menu (`src/main/app/menu.ts`) owns the standard macOS shortcuts. Items that need the page, such as Settings, are sent to the renderer as menu commands over `MENU_COMMAND_CHANNEL`, a one-way channel separate from `PlotApi`.
 
 Monaco needs a real browser, so component tests replace `DiffViewer` with `src/renderer/test/fake-diff-viewer.tsx`, which honors the same contract: `goToChange`, `onChangesComputed`, and `onReveal`. Everything that decides what to show lives outside `DiffViewer` and is tested directly.
 

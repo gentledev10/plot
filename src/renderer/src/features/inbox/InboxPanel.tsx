@@ -106,8 +106,8 @@ export function InboxPanel({
         <div className={styles.onboarding}>
           <h3 className={styles.onboardingTitle}>Connect GitHub</h3>
           <p className={styles.onboardingText}>
-            Viewer lists the pull requests waiting for your review and opens any pull request you
-            can read.
+            Plot lists the pull requests waiting for your review and opens any pull request you can
+            read.
           </p>
           <ConnectGitHub />
         </div>

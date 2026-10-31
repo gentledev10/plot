@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { type Account, type AccountMethod, accountId } from '@shared/accounts';
 import { GITHUB_HOST } from '@shared/hosts';
-import type { ViewerApi } from '@shared/ipc';
+import type { PlotApi } from '@shared/ipc';
 import type { AccountStore } from '../accounts/account-store';
 import { AppError } from '../errors';
 import type { GitHubClient } from '../github/client';
@@ -15,7 +15,7 @@ import {
 import { cachedTokens, type TokenProvider } from '../github/token';
 
 export type AccountService = Pick<
-  ViewerApi,
+  PlotApi,
   | 'listAccounts'
   | 'switchAccount'
   | 'removeAccount'
@@ -116,7 +116,7 @@ export function createAccountService({
       if (!browserSignIn) {
         throw new AppError(
           'sign-in-failed',
-          'This build of Viewer cannot sign in with a browser. Use a token or the GitHub CLI.',
+          'This build of Plot cannot sign in with a browser. Use a token or the GitHub CLI.',
         );
       }
       const grant = await requestDeviceCode(browserSignIn, BROWSER_SIGN_IN_SCOPES);

@@ -4,13 +4,13 @@ import { isThemeSource, type ThemeSource } from '@shared/appearance';
 import { isObjectId } from '@shared/diff';
 import type { PullRequestRef } from '@shared/github';
 import { isHost } from '@shared/hosts';
-import type { IpcMethod, ViewerApi } from '@shared/ipc';
+import type { IpcMethod, PlotApi } from '@shared/ipc';
 import { isLocalCompare, isLocalRepositoryId, type LocalTarget } from '@shared/local';
 import { isPullRequestRef } from '@shared/pull-request-ref';
 import { AppError } from '../errors';
 
 export type ArgumentParsers = {
-  [K in IpcMethod]: (args: readonly unknown[]) => Parameters<ViewerApi[K]>;
+  [K in IpcMethod]: (args: readonly unknown[]) => Parameters<PlotApi[K]>;
 };
 
 const TOKEN = /^[\x21-\x7e]{1,512}$/;

@@ -3,7 +3,7 @@ import { net, protocol, session, shell, type WebContents } from 'electron';
 import { isWithinOrigin, resolveRendererFile } from './navigation';
 
 const SCHEME = 'app';
-export const APP_ORIGIN = `${SCHEME}://viewer`;
+export const APP_ORIGIN = `${SCHEME}://plot`;
 
 // Pull request text and AI output are rendered in this window, so no remote script may run.
 const CONTENT_SECURITY_POLICY = [

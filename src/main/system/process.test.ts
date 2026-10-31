@@ -38,9 +38,7 @@ describe('runCommand', () => {
   });
 
   it('reports a missing executable as not-found', async () => {
-    const error = await runCommand('viewer-command-that-does-not-exist', []).catch(
-      (e: unknown) => e,
-    );
+    const error = await runCommand('plot-command-that-does-not-exist', []).catch((e: unknown) => e);
     expect(error).toMatchObject({ failure: 'not-found' });
   });
 

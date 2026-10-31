@@ -1,8 +1,8 @@
 import { AI_PROVIDER_IDS, type AiProviderId, type AiProviderStatus } from '@shared/ai';
-import type { ViewerApi } from '@shared/ipc';
+import type { PlotApi } from '@shared/ipc';
 import type { AiSettingsStore } from '../ai/ai-settings-store';
 
-export type AiService = Pick<ViewerApi, 'getAiSettings' | 'updateAiSettings' | 'detectAiProviders'>;
+export type AiService = Pick<PlotApi, 'getAiSettings' | 'updateAiSettings' | 'detectAiProviders'>;
 
 interface AiServiceOptions {
   store: AiSettingsStore;

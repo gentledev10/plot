@@ -7,7 +7,7 @@ import { readThemeSource, writeThemeSource } from './theme-source';
 let dir: string;
 
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'viewer-theme-'));
+  dir = await mkdtemp(join(tmpdir(), 'plot-theme-'));
 });
 
 afterEach(async () => {

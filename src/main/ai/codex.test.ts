@@ -9,7 +9,7 @@ const fakeCodex = [process.execPath, join(__dirname, 'fixtures', 'fake-codex.mjs
 let cwd: string;
 
 beforeAll(async () => {
-  cwd = await mkdtemp(join(tmpdir(), 'viewer-codex-test-'));
+  cwd = await mkdtemp(join(tmpdir(), 'plot-codex-test-'));
   await mkdir(join(cwd, 'src'));
 });
 
@@ -136,7 +136,7 @@ describe('createCodexAgent', () => {
 
   it('says how to install Codex when it is missing', async () => {
     await expect(
-      run('success', { command: ['viewer-test-missing-codex'] }).promise,
+      run('success', { command: ['plot-test-missing-codex'] }).promise,
     ).rejects.toMatchObject({
       code: 'ai-not-installed',
       message: expect.stringContaining('github.com/openai/codex'),

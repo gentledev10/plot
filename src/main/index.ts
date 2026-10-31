@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { AiProviderId } from '@shared/ai';
-import { MENU_COMMAND_CHANNEL, type MenuCommand, type ViewerApi } from '@shared/ipc';
+import { MENU_COMMAND_CHANNEL, type MenuCommand, type PlotApi } from '@shared/ipc';
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, shell } from 'electron';
 import { createAccountStore } from './accounts/account-store';
 import type { ReviewAgent } from './ai/agent';
@@ -51,9 +51,9 @@ async function adoptLoginShellPath(): Promise<void> {
   process.env.PATH = mergePaths(loginPath, process.env.PATH, '/opt/homebrew/bin:/usr/local/bin');
 }
 
-function createApi(): ViewerApi {
+function createApi(): PlotApi {
   const userData = app.getPath('userData');
-  const userAgent = `Viewer/${app.getVersion()}`;
+  const userAgent = `Plot/${app.getVersion()}`;
   const fetch = (url: string, init: RequestInit) => net.fetch(url, init);
   const clientFor = (host: string, tokens: TokenProvider) =>
     createGitHubClient({ fetch, tokens, userAgent, host });

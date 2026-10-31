@@ -5,7 +5,7 @@ import type { AiProviderId } from '@shared/ai';
 import type { ChangedFile } from '@shared/diff';
 import type { ErrorPayload } from '@shared/errors';
 import type { PullRequestRef } from '@shared/github';
-import type { ViewerApi } from '@shared/ipc';
+import type { PlotApi } from '@shared/ipc';
 import { pullRequestKey } from '@shared/pull-request-ref';
 import type { ReviewAgent } from '../ai/agent';
 import { verifyLocations } from '../ai/review-locations';
@@ -16,7 +16,7 @@ import { AppError, toErrorPayload } from '../errors';
 import type { RepositoryCache } from '../git/repository-cache';
 import type { GitHubConnections } from '../github/connections';
 
-export type ReviewService = Pick<ViewerApi, 'getReviewStatus' | 'startReview' | 'cancelReview'>;
+export type ReviewService = Pick<PlotApi, 'getReviewStatus' | 'startReview' | 'cancelReview'>;
 
 export interface SelectedAgent {
   provider: AiProviderId;

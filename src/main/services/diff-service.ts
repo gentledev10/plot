@@ -1,10 +1,10 @@
-import type { ViewerApi } from '@shared/ipc';
+import type { PlotApi } from '@shared/ipc';
 import type { RepositoryCache } from '../git/repository-cache';
 import type { GitHubConnections } from '../github/connections';
 
 export const MAX_BLOB_BYTES = 4 * 1024 * 1024;
 
-export type DiffService = Pick<ViewerApi, 'getPullRequestDiff' | 'readBlob'>;
+export type DiffService = Pick<PlotApi, 'getPullRequestDiff' | 'readBlob'>;
 
 interface DiffServiceOptions {
   connections: GitHubConnections;

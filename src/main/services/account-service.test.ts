@@ -52,7 +52,7 @@ function setup({ browser = true, fetch = vi.fn<Fetch>() } = {}) {
     clientFor,
     gitHubCliTokens: () => ({ getToken: async () => 'gh_cli', invalidate: () => {} }),
     browserSignIn: browser
-      ? { fetch, clientId: 'Iv1.test', userAgent: 'Viewer/test', sleep: async () => {} }
+      ? { fetch, clientId: 'Iv1.test', userAgent: 'Plot/test', sleep: async () => {} }
       : undefined,
     now: () => new Date('2026-10-31T00:00:00Z'),
     createId: () => 'sign-in-1',

@@ -4,21 +4,21 @@ import { extractMarkedPath, mergePaths, resolveLoginShellPath } from './shell-en
 
 describe('extractMarkedPath', () => {
   it('ignores anything a noisy shell profile prints around the value', () => {
-    const output = 'Welcome back!\n__VIEWER_PATH__/opt/homebrew/bin:/usr/bin__VIEWER_PATH__\nbye';
+    const output = 'Welcome back!\n__PLOT_PATH__/opt/homebrew/bin:/usr/bin__PLOT_PATH__\nbye';
     expect(extractMarkedPath(output)).toBe('/opt/homebrew/bin:/usr/bin');
   });
 
   it('returns undefined when the markers are missing or the value is empty', () => {
     expect(extractMarkedPath('/usr/bin')).toBeUndefined();
-    expect(extractMarkedPath('__VIEWER_PATH__/usr/bin')).toBeUndefined();
-    expect(extractMarkedPath('__VIEWER_PATH____VIEWER_PATH__')).toBeUndefined();
+    expect(extractMarkedPath('__PLOT_PATH__/usr/bin')).toBeUndefined();
+    expect(extractMarkedPath('__PLOT_PATH____PLOT_PATH__')).toBeUndefined();
   });
 });
 
 describe('resolveLoginShellPath', () => {
   it('asks an interactive login shell for PATH', async () => {
     const run = vi.fn<CommandRunner>().mockResolvedValue({
-      stdout: '__VIEWER_PATH__/opt/homebrew/bin:/usr/bin__VIEWER_PATH__',
+      stdout: '__PLOT_PATH__/opt/homebrew/bin:/usr/bin__PLOT_PATH__',
       stderr: '',
     });
 

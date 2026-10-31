@@ -3,35 +3,35 @@ import {
   IPC_METHODS,
   type IpcMethod,
   type IpcResponse,
-  type ViewerApi,
-  type ViewerBridge,
+  type PlotApi,
+  type PlotBridge,
 } from '@shared/ipc';
 
-export class ViewerError extends Error {
+export class PlotError extends Error {
   constructor(
     readonly code: ErrorCode,
     message: string,
   ) {
     super(message);
-    this.name = 'ViewerError';
+    this.name = 'PlotError';
   }
 }
 
 type BridgeMethod = (...args: unknown[]) => Promise<IpcResponse<unknown>>;
 
-export function createApi(bridge: ViewerBridge): ViewerApi {
+export function createApi(bridge: PlotBridge): PlotApi {
   const entries = IPC_METHODS.map((method: IpcMethod) => {
     const call = bridge[method] as BridgeMethod;
     const unwrapped = async (...args: unknown[]) => {
       const response = await call(...args);
       if (!response.ok) {
-        throw new ViewerError(response.error.code, response.error.message);
+        throw new PlotError(response.error.code, response.error.message);
       }
       return response.value;
     };
     return [method, unwrapped] as const;
   });
-  return Object.fromEntries(entries) as unknown as ViewerApi;
+  return Object.fromEntries(entries) as unknown as PlotApi;
 }
 
 const PERMANENT_ERRORS: ReadonlySet<ErrorCode> = new Set([
@@ -50,5 +50,5 @@ const PERMANENT_ERRORS: ReadonlySet<ErrorCode> = new Set([
 ]);
 
 export function isRetryable(error: unknown): boolean {
-  return !(error instanceof ViewerError && PERMANENT_ERRORS.has(error.code));
+  return !(error instanceof PlotError && PERMANENT_ERRORS.has(error.code));
 }

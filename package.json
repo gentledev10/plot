@@ -1,8 +1,8 @@
 {
-  "name": "viewer",
-  "productName": "Viewer",
+  "name": "plot",
+  "productName": "Plot",
   "version": "0.1.0",
-  "description": "A lightweight pull request diff viewer with IntelliJ-style navigation and AI review maps.",
+  "description": "The story behind every change: IntelliJ-style diffs for pull requests and local work, with AI overviews of what a pull request changes and why.",
   "license": "MIT",
   "private": true,
   "main": "./out/main/index.js",

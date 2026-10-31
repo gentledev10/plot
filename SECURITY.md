@@ -1,10 +1,10 @@
 # Security Policy
 
-Viewer renders pull requests written by other people and passes them to AI tools on your machine. We take reports about ways to abuse that seriously.
+Plot renders pull requests written by other people and passes them to AI tools on your machine. We take reports about ways to abuse that seriously.
 
 ## Reporting a vulnerability
 
-Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/gentledev10/viewer/security/advisories/new). Please include the steps to reproduce, the impact you expect, and the app version.
+Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/gentledev10/plot/security/advisories/new). Please include the steps to reproduce, the impact you expect, and the app version.
 
 You can expect a first response within a week.
 
@@ -12,6 +12,6 @@ You can expect a first response within a week.
 
 - Pull request content or AI output that runs script in the app window.
 - Anything that leaks a GitHub token, writes one to disk unencrypted, sends one to a server other than the one it belongs to, or lets the renderer reach privileged main-process features it should not.
-- Ways to make the AI tools that Viewer launches (Claude Code and Codex CLI) modify files, reach the network, or leave the limits described in the architecture document.
+- Ways to make the AI tools that Plot launches (Claude Code and Codex CLI) modify files, reach the network, or leave the limits described in the architecture document.
 
 The security model is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#trust-boundaries).

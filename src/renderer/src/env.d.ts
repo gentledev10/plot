@@ -1,7 +1,7 @@
-import type { ViewerBridge } from '@shared/ipc';
+import type { PlotBridge } from '@shared/ipc';
 
 declare global {
   interface Window {
-    viewer: ViewerBridge;
+    plot: PlotBridge;
   }
 }

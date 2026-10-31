@@ -32,7 +32,7 @@ let dir: string;
 let file: string;
 
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'viewer-accounts-'));
+  dir = await mkdtemp(join(tmpdir(), 'plot-accounts-'));
   file = join(dir, 'accounts.json');
 });
 

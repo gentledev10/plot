@@ -1,4 +1,4 @@
-import type { MenuCommand, MenuCommandListener, ViewerApi } from '@shared/ipc';
+import type { MenuCommand, MenuCommandListener, PlotApi } from '@shared/ipc';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 import { AppearanceProvider } from '../features/appearance/AppearanceProvider';
@@ -12,11 +12,11 @@ interface Shell {
   subscribeToMenu: SubscribeToMenu;
 }
 
-const ApiContext = createContext<ViewerApi | null>(null);
+const ApiContext = createContext<PlotApi | null>(null);
 
 const ShellContext = createContext<Shell>({ platform: 'darwin', subscribeToMenu: () => () => {} });
 
-export function useApi(): ViewerApi {
+export function useApi(): PlotApi {
   const api = useContext(ApiContext);
   if (!api) {
     throw new Error('useApi must be used inside <AppProviders>');
@@ -56,7 +56,7 @@ export function createQueryClient(): QueryClient {
 }
 
 interface AppProvidersProps {
-  api: ViewerApi;
+  api: PlotApi;
   queryClient: QueryClient;
   platform?: string;
   subscribeToMenu?: SubscribeToMenu;

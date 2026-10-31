@@ -1,11 +1,11 @@
-import type { ViewerApi } from '@shared/ipc';
+import type { PlotApi } from '@shared/ipc';
 import type { LocalGit } from '../local/local-git';
 import type { LocalRepositoryStore } from '../local/local-repositories';
 
 export const MAX_LOCAL_FILE_BYTES = 4 * 1024 * 1024;
 
 export type LocalService = Pick<
-  ViewerApi,
+  PlotApi,
   | 'openLocalRepository'
   | 'listLocalRepositories'
   | 'removeLocalRepository'

@@ -1,8 +1,8 @@
-import type { ViewerBridge } from '@shared/ipc';
+import type { PlotBridge } from '@shared/ipc';
 import { describe, expect, it, vi } from 'vitest';
-import { createApi, isRetryable, ViewerError } from './api';
+import { createApi, isRetryable, PlotError } from './api';
 
-function bridge(overrides: Partial<ViewerBridge> = {}): ViewerBridge {
+function bridge(overrides: Partial<PlotBridge> = {}): PlotBridge {
   return {
     platform: 'darwin',
     onMenuCommand: () => () => {},
@@ -55,7 +55,7 @@ describe('createApi', () => {
     expect(getPullRequest).toHaveBeenCalledWith(ref);
   });
 
-  it('turns failed responses into ViewerError with the code', async () => {
+  it('turns failed responses into PlotError with the code', async () => {
     const api = createApi(
       bridge({
         listInbox: vi.fn().mockResolvedValue({
@@ -66,21 +66,21 @@ describe('createApi', () => {
     );
 
     const error = await api.listInbox().catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(ViewerError);
+    expect(error).toBeInstanceOf(PlotError);
     expect(error).toMatchObject({ code: 'network', message: 'Could not reach GitHub.' });
   });
 });
 
 describe('isRetryable', () => {
   it('does not retry errors that need the user to act', () => {
-    expect(isRetryable(new ViewerError('gh-not-authenticated', ''))).toBe(false);
-    expect(isRetryable(new ViewerError('github-not-found', ''))).toBe(false);
-    expect(isRetryable(new ViewerError('github-rate-limited', ''))).toBe(false);
+    expect(isRetryable(new PlotError('gh-not-authenticated', ''))).toBe(false);
+    expect(isRetryable(new PlotError('github-not-found', ''))).toBe(false);
+    expect(isRetryable(new PlotError('github-rate-limited', ''))).toBe(false);
   });
 
   it('retries transient failures', () => {
-    expect(isRetryable(new ViewerError('network', ''))).toBe(true);
-    expect(isRetryable(new ViewerError('github-request-failed', ''))).toBe(true);
+    expect(isRetryable(new PlotError('network', ''))).toBe(true);
+    expect(isRetryable(new PlotError('github-request-failed', ''))).toBe(true);
     expect(isRetryable(new Error('IPC channel closed'))).toBe(true);
   });
 });

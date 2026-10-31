@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { aPullRequestDetail } from '../../../test/builders';
 import { renderWithApi } from '../../../test/render';
-import { ViewerError } from '../../lib/api';
+import { PlotError } from '../../lib/api';
 import { PullRequestHeader } from './PullRequestHeader';
 
 const target = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
@@ -75,7 +75,7 @@ describe('PullRequestHeader', () => {
   it('shows the error and retries', async () => {
     const getPullRequest = vi
       .fn()
-      .mockRejectedValueOnce(new ViewerError('network', 'Could not reach GitHub.'))
+      .mockRejectedValueOnce(new PlotError('network', 'Could not reach GitHub.'))
       .mockResolvedValue(aPullRequestDetail());
     renderWithApi(<PullRequestHeader target={target} />, { getPullRequest });
 

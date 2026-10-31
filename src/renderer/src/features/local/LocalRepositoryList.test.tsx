@@ -49,12 +49,12 @@ describe('LocalRepositoryList', () => {
   });
 
   it('shows why a folder could not be opened', async () => {
-    const { ViewerError } = await import('../../lib/api');
+    const { PlotError } = await import('../../lib/api');
     renderWithApi(<LocalRepositoryList onOpen={vi.fn()} />, {
       openLocalRepository: vi
         .fn()
         .mockRejectedValue(
-          new ViewerError('not-a-repository', 'That folder is not inside a git repository.'),
+          new PlotError('not-a-repository', 'That folder is not inside a git repository.'),
         ),
     });
     await userEvent.click(screen.getByRole('button', { name: 'Open a local repository' }));

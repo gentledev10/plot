@@ -27,7 +27,7 @@ function setup(...responses: Array<Response | Error>) {
   const client = createGitHubClient({
     fetch,
     tokens,
-    userAgent: 'Viewer/test',
+    userAgent: 'Plot/test',
     host: 'github.com',
     apiUrl: 'https://api.test',
   });
@@ -46,7 +46,7 @@ describe('createGitHubClient', () => {
     expect(init?.headers).toMatchObject({
       Accept: 'application/vnd.github+json',
       Authorization: 'Bearer gho_token',
-      'User-Agent': 'Viewer/test',
+      'User-Agent': 'Plot/test',
       'X-GitHub-Api-Version': '2022-11-28',
     });
   });

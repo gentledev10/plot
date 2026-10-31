@@ -1,4 +1,4 @@
-import type { MenuCommandListener, ViewerApi } from '@shared/ipc';
+import type { MenuCommandListener, PlotApi } from '@shared/ipc';
 import { QueryClient } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
@@ -9,7 +9,7 @@ function notStubbed(method: string) {
   return vi.fn().mockRejectedValue(new Error(`${method} was not stubbed in this test`));
 }
 
-export function fakeApi(overrides: Partial<ViewerApi> = {}): ViewerApi {
+export function fakeApi(overrides: Partial<PlotApi> = {}): PlotApi {
   return {
     listAccounts: notStubbed('listAccounts'),
     switchAccount: notStubbed('switchAccount'),
@@ -60,7 +60,7 @@ export function fakeMenu() {
 
 export function renderWithApi(
   ui: ReactElement,
-  api: Partial<ViewerApi> = {},
+  api: Partial<PlotApi> = {},
   { menu = fakeMenu() }: { menu?: ReturnType<typeof fakeMenu> } = {},
 ) {
   const fullApi = fakeApi(api);

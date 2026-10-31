@@ -97,7 +97,7 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
           <Method
             icon={<Globe size={16} />}
             title="Sign in with your browser"
-            detail="Approve Viewer on github.com. Works with single sign-on."
+            detail="Approve Plot on github.com. Works with single sign-on."
             busy={browser.state.step === 'starting'}
             disabled={busy}
             onClick={() => {
@@ -145,7 +145,7 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
             </div>
             <p className={styles.hint}>
               <a
-                href={`https://${host}/settings/tokens/new?scopes=repo&description=Viewer`}
+                href={`https://${host}/settings/tokens/new?scopes=repo&description=Plot`}
                 target="_blank"
                 rel="noreferrer"
               >

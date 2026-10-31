@@ -1,4 +1,4 @@
-import type { IpcResponse, ViewerApi } from '@shared/ipc';
+import type { IpcResponse, PlotApi } from '@shared/ipc';
 import { IPC_METHODS, type IpcMethod, ipcChannel } from '@shared/ipc';
 import { AppError, toErrorPayload } from '../errors';
 import type { ArgumentParsers } from './arguments';
@@ -24,7 +24,7 @@ type AnyMethod = (...args: unknown[]) => Promise<unknown>;
 
 export function registerIpcHandlers(
   ipc: IpcMainLike,
-  api: ViewerApi,
+  api: PlotApi,
   { parsers, isTrustedSender, onUnexpectedError }: RegisterOptions,
 ): void {
   for (const method of IPC_METHODS) {
@@ -32,7 +32,7 @@ export function registerIpcHandlers(
       try {
         const sender = event.senderFrame?.url;
         if (sender === undefined || !isTrustedSender(sender)) {
-          throw new AppError('forbidden', 'This request did not come from the Viewer window.');
+          throw new AppError('forbidden', 'This request did not come from the Plot window.');
         }
         const parsed = parsers[method](args) as unknown[];
         const value = await (api[method] as AnyMethod)(...parsed);

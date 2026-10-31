@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithApi } from '../../../test/render';
-import { ViewerError } from '../../lib/api';
+import { PlotError } from '../../lib/api';
 import { FilesPanel } from './FilesPanel';
 
 const target = { host: 'github.com', owner: 'octocat', repo: 'hello-world', number: 42 };
@@ -106,7 +106,7 @@ describe('FilesPanel', () => {
   it('shows progress while fetching and errors with a retry', async () => {
     const getPullRequestDiff = vi
       .fn()
-      .mockRejectedValueOnce(new ViewerError('git-not-installed', 'Git is not installed.'))
+      .mockRejectedValueOnce(new PlotError('git-not-installed', 'Git is not installed.'))
       .mockResolvedValue(diff);
     renderWithApi(
       <FilesPanel

@@ -1,14 +1,14 @@
 # Contributing
 
-Thanks for your interest in Viewer. This guide covers how to set up the project and what a good change looks like.
+Thanks for your interest in Plot. This guide covers how to set up the project and what a good change looks like.
 
 ## Setup
 
 You need macOS and Node.js 22 or later.
 
 ```sh
-git clone https://github.com/gentledev10/viewer.git
-cd viewer
+git clone https://github.com/gentledev10/plot.git
+cd plot
 npm install
 npm run dev
 ```
