@@ -28,6 +28,9 @@ Reviews are saved on your Mac per commit, so reopening a pull request does not r
 | Next / previous difference     | F7 / Shift+F7                  |
 | Next / previous file           | Ctrl+Shift+→ / Ctrl+Shift+←    |
 | Move in the changed files tree | ↑ ↓, ← → to collapse or expand |
+| Show or hide the sidebar       | ⌘1                             |
+| Show or hide the AI review     | ⌘2                             |
+| Hide or restore all panels     | ⌘⇧F12                          |
 | Find in file                   | ⌘F                             |
 | Expand selection               | ⌥↑                             |
 

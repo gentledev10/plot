@@ -9,6 +9,7 @@
   align-items: center;
   gap: 10px;
   min-height: 32px;
+  padding-left: var(--titlebar-inset, 0px);
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
   -webkit-app-region: drag;

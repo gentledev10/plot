@@ -23,6 +23,14 @@ describe('preferences', () => {
     expect(readPreference('diff.collapse', true)).toBe(true);
   });
 
+  it('falls back when a parser rejects the stored value', () => {
+    const parse = (value: unknown) => (typeof value === 'boolean' ? value : undefined);
+    localStorage.setItem('viewer.diff.collapse', '"yes"');
+    expect(readPreference('diff.collapse', true, parse)).toBe(true);
+    localStorage.setItem('viewer.diff.collapse', 'false');
+    expect(readPreference('diff.collapse', true, parse)).toBe(false);
+  });
+
   it('keeps the hook state and storage in sync', () => {
     const { result, unmount } = renderHook(() => usePreference('diff.sideBySide', true));
     act(() => result.current[1](false));

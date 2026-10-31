@@ -11,12 +11,8 @@
   align-items: center;
   justify-content: space-between;
   height: var(--header-height);
-  padding: 0 8px 0 12px;
+  padding: 0 8px 0 calc(12px + var(--titlebar-inset, 0px));
   -webkit-app-region: drag;
-}
-
-:global([data-platform="darwin"]) .header {
-  padding-left: 80px;
 }
 
 .title {

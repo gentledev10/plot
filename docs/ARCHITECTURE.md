@@ -106,6 +106,8 @@ The pull request is written by someone else, so the agent is treated as if its i
 | `src/renderer/src/lib`        | Framework-free helpers, such as the API client and formatting     |
 | `src/renderer/src/styles`     | Design tokens and base styles. Components use CSS Modules         |
 
+The shell in `app/App.tsx` lays out a tool window bar on each edge, the sidebar (pull requests or changed files), the workspace, and the AI review panel in one CSS grid. Like IntelliJ's tool windows, the side panels can be hidden from the bars or the keyboard; hidden panels stay mounted so they keep their state, and the layout is saved with the other preferences. On macOS the window controls cover the top-left corner, so the shell sets `--titlebar-inset` on whichever area sits there, and headers add it to their left padding.
+
 Components get the API from `useApi()` instead of reading `window.viewer`, and fetch data through React Query hooks. Tests render components with a fake API through `renderWithApi` in `src/renderer/test/render.tsx`.
 
 ### The diff view

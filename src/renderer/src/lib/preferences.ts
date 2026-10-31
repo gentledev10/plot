@@ -2,10 +2,16 @@ import { useCallback, useState } from 'react';
 
 const PREFIX = 'viewer.';
 
-export function readPreference<T>(key: string, fallback: T): T {
+export type PreferenceParser<T> = (stored: unknown) => T | undefined;
+
+export function readPreference<T>(key: string, fallback: T, parse?: PreferenceParser<T>): T {
   try {
     const stored = localStorage.getItem(PREFIX + key);
-    return stored === null ? fallback : (JSON.parse(stored) as T);
+    if (stored === null) {
+      return fallback;
+    }
+    const value: unknown = JSON.parse(stored);
+    return parse ? (parse(value) ?? fallback) : (value as T);
   } catch {
     return fallback;
   }
@@ -17,8 +23,12 @@ export function writePreference<T>(key: string, value: T): void {
   } catch {}
 }
 
-export function usePreference<T>(key: string, fallback: T): [T, (value: T) => void] {
-  const [value, setValue] = useState(() => readPreference(key, fallback));
+export function usePreference<T>(
+  key: string,
+  fallback: T,
+  parse?: PreferenceParser<T>,
+): [T, (value: T) => void] {
+  const [value, setValue] = useState(() => readPreference(key, fallback, parse));
   const update = useCallback(
     (next: T) => {
       setValue(next);

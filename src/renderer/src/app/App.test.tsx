@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { aPullRequestDetail, aPullRequestSummary, aUser } from '../../test/builders';
@@ -98,6 +98,48 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'src/login.ts:7' }));
 
     expect(await screen.findByTestId('diff-viewer')).toHaveAttribute('data-reveal-line', '7');
+  });
+
+  it('hides and shows the sidebar from the tool window bar', async () => {
+    renderWithApi(<App platform="darwin" />, api());
+    const toggle = screen.getByRole('button', { name: 'Pull requests', pressed: true });
+
+    await userEvent.click(toggle);
+
+    expect(screen.queryByRole('complementary', { name: 'Pull requests' })).not.toBeInTheDocument();
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(screen.getByRole('button', { name: 'Show pull requests' }));
+    expect(screen.getByRole('complementary', { name: 'Pull requests' })).toBeInTheDocument();
+  });
+
+  it('remembers which panels were hidden', async () => {
+    const { unmount } = renderWithApi(<App platform="darwin" />, api());
+    await userEvent.click(screen.getByRole('button', { name: 'AI review', pressed: true }));
+    unmount();
+
+    renderWithApi(<App platform="darwin" />, api());
+
+    expect(screen.getByRole('button', { name: 'AI review', pressed: false })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'AI review' })).not.toBeInTheDocument();
+  });
+
+  it('toggles panels from the keyboard', async () => {
+    renderWithApi(<App platform="darwin" />, api());
+    const sidebar = () => screen.queryByRole('complementary', { name: 'Pull requests' });
+    const review = () => screen.queryByRole('complementary', { name: 'AI review' });
+
+    fireEvent.keyDown(document.body, { key: '2', metaKey: true });
+    expect(review()).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document.body, { key: 'F12', metaKey: true, shiftKey: true });
+    expect(sidebar()).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document.body, { key: 'F12', metaKey: true, shiftKey: true });
+    expect(sidebar()).toBeInTheDocument();
+    expect(review()).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document.body, { key: '1', metaKey: true });
+    expect(sidebar()).not.toBeInTheDocument();
   });
 
   it('opens a pull request pasted as a URL', async () => {

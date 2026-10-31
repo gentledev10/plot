@@ -1,12 +1,69 @@
 .app {
+  --tool-bar-width: 36px;
+  --sidebar-width: 300px;
+  --review-width: 360px;
+
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 360px;
+  grid-template-areas: "left-bar sidebar workspace review right-bar";
+  grid-template-columns:
+    var(--tool-bar-width) var(--sidebar-width) minmax(0, 1fr) var(--review-width)
+    var(--tool-bar-width);
   height: 100%;
 }
 
-.workspace {
+.app[data-sidebar="hidden"] {
+  --sidebar-width: 0px;
+}
+
+.app[data-review="hidden"] {
+  --review-width: 0px;
+}
+
+.leftBar,
+.rightBar,
+.sidebar,
+.review {
+  display: grid;
   min-width: 0;
   min-height: 0;
+}
+
+.sidebar[hidden],
+.review[hidden] {
+  display: none;
+}
+
+.leftBar {
+  grid-area: left-bar;
+}
+
+.rightBar {
+  grid-area: right-bar;
+}
+
+.sidebar {
+  grid-area: sidebar;
+}
+
+.review {
+  grid-area: review;
+}
+
+.workspace {
+  grid-area: workspace;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sidebar,
+.workspace {
+  --titlebar-inset: 0px;
+}
+
+/* The window controls sit over the top-left corner, past the tool window bar. */
+.app[data-platform="darwin"] .sidebar,
+.app[data-platform="darwin"][data-sidebar="hidden"] .workspace {
+  --titlebar-inset: 40px;
 }
 
 .placeholder {
@@ -15,4 +72,8 @@
   justify-content: center;
   height: 100%;
   -webkit-app-region: drag;
+}
+
+.placeholder button {
+  -webkit-app-region: no-drag;
 }
