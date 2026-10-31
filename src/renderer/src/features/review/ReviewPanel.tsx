@@ -1,3 +1,4 @@
+import { AI_PROVIDERS, type AiProviderId } from '@shared/ai';
 import type { PullRequestRef } from '@shared/github';
 import type { CodeLocation, ReviewMap, ReviewStatus } from '@shared/review';
 import { CircleAlert, LoaderCircle, RotateCw, Sparkles } from 'lucide-react';
@@ -5,7 +6,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
 import { useColorScheme } from '../../lib/color-scheme';
-import { formatRelativeTime } from '../../lib/format';
+import { formatAge } from '../../lib/format';
+import { useAiSettings } from '../ai/queries';
 import { usePullRequestDiff } from '../diff/queries';
 import { useCommand } from '../keymap/KeymapProvider';
 import { MermaidDiagram } from './MermaidDiagram';
@@ -16,13 +18,18 @@ import styles from './ReviewPanel.module.css';
 interface ReviewPanelProps {
   target?: PullRequestRef;
   onOpenLocation(location: CodeLocation): void;
+  onConfigureAi?(): void;
 }
 
-export function ReviewPanel({ target, onOpenLocation }: ReviewPanelProps) {
+export function ReviewPanel({ target, onOpenLocation, onConfigureAi }: ReviewPanelProps) {
   return (
     <aside className={styles.panel} aria-label="AI review">
       {target ? (
-        <PullRequestReview target={target} onOpenLocation={onOpenLocation} />
+        <PullRequestReview
+          target={target}
+          onOpenLocation={onOpenLocation}
+          onConfigureAi={onConfigureAi}
+        />
       ) : (
         <>
           <PanelHeader />
@@ -49,10 +56,12 @@ function PanelHeader({ onRegenerate }: { onRegenerate?(): void }) {
 interface PullRequestReviewProps {
   target: PullRequestRef;
   onOpenLocation(location: CodeLocation): void;
+  onConfigureAi?(): void;
 }
 
-function PullRequestReview({ target, onOpenLocation }: PullRequestReviewProps) {
+function PullRequestReview({ target, onOpenLocation, onConfigureAi }: PullRequestReviewProps) {
   const status = useReviewStatus(target);
+  const ai = useAiSettings();
   const { start, cancel } = useReviewActions(target);
   const diff = usePullRequestDiff(target);
   const changedPaths = useMemo(
@@ -92,7 +101,14 @@ function PullRequestReview({ target, onOpenLocation }: PullRequestReviewProps) {
     const current: ReviewStatus = status.data;
     switch (current.state) {
       case 'idle':
-        return <Introduction onGenerate={generate} busy={start.isPending} />;
+        return (
+          <Introduction
+            provider={ai.data?.provider}
+            onGenerate={generate}
+            onConfigure={onConfigureAi}
+            busy={start.isPending}
+          />
+        );
       case 'running':
         return (
           <Progress
@@ -116,7 +132,9 @@ function PullRequestReview({ target, onOpenLocation }: PullRequestReviewProps) {
               onOpenLocation={onOpenLocation}
             />
             <p className={styles.footnote}>
-              Generated {formatRelativeTime(current.createdAt)} ago
+              Generated
+              {current.provider && ` by ${AI_PROVIDERS[current.provider].name}`}
+              {current.model && ` (${current.model})`} {formatAge(current.createdAt)}
               {current.costUsd !== undefined && <span>, cost ${current.costUsd.toFixed(2)}</span>}
             </p>
           </>
@@ -125,7 +143,15 @@ function PullRequestReview({ target, onOpenLocation }: PullRequestReviewProps) {
   }
 }
 
-function Introduction({ onGenerate, busy }: { onGenerate(): void; busy: boolean }) {
+interface IntroductionProps {
+  provider?: AiProviderId;
+  onGenerate(): void;
+  onConfigure?(): void;
+  busy: boolean;
+}
+
+function Introduction({ provider, onGenerate, onConfigure, busy }: IntroductionProps) {
+  const name = provider ? AI_PROVIDERS[provider].name : 'Your AI tool';
   return (
     <div className={styles.intro}>
       <p>
@@ -136,8 +162,16 @@ function Introduction({ onGenerate, busy }: { onGenerate(): void; busy: boolean 
         <Sparkles size={14} /> Generate review map
       </button>
       <p className={styles.muted}>
-        Claude Code reads this pull request and the directories it touches on this Mac, with
-        read-only tools. It takes a few minutes and uses your Claude Code plan.
+        {name} reads this pull request and the directories it touches on this Mac, with read-only
+        access. It takes a few minutes and counts toward your {name} usage.
+        {onConfigure && (
+          <>
+            {' '}
+            <button type="button" className={styles.link} onClick={onConfigure}>
+              Choose another AI tool
+            </button>
+          </>
+        )}
       </p>
     </div>
   );

@@ -15,11 +15,15 @@ const text = { type: 'string' } as const;
 
 const location = {
   type: 'object',
-  properties: { path: text, line: { type: 'integer', minimum: 1 } },
+  properties: { path: text, line: { type: 'integer' } },
   required: ['path', 'line'],
   additionalProperties: false,
 } as const;
 
+const optionalLocation = { anyOf: [location, { type: 'null' }] } as const;
+
+// Strict enough for OpenAI structured outputs, which Codex uses: every property is required,
+// optional values are nullable, and no object accepts properties it does not list.
 export const REVIEW_SCHEMA = {
   type: 'object',
   properties: {
@@ -43,8 +47,8 @@ export const REVIEW_SCHEMA = {
             type: 'array',
             items: {
               type: 'object',
-              properties: { from: text, to: text, label: text, location },
-              required: ['from', 'to', 'label'],
+              properties: { from: text, to: text, label: text, location: optionalLocation },
+              required: ['from', 'to', 'label', 'location'],
               additionalProperties: false,
             },
           },
@@ -60,8 +64,13 @@ export const REVIEW_SCHEMA = {
           type: 'array',
           items: {
             type: 'object',
-            properties: { id: text, label: text, changed: { type: 'boolean' }, location },
-            required: ['id', 'label', 'changed'],
+            properties: {
+              id: text,
+              label: text,
+              changed: { type: 'boolean' },
+              location: optionalLocation,
+            },
+            required: ['id', 'label', 'changed', 'location'],
             additionalProperties: false,
           },
         },
@@ -69,8 +78,8 @@ export const REVIEW_SCHEMA = {
           type: 'array',
           items: {
             type: 'object',
-            properties: { from: text, to: text, label: text },
-            required: ['from', 'to'],
+            properties: { from: text, to: text, label: { type: ['string', 'null'] } },
+            required: ['from', 'to', 'label'],
             additionalProperties: false,
           },
         },
@@ -85,10 +94,10 @@ export const REVIEW_SCHEMA = {
         properties: {
           title: text,
           detail: text,
-          severity: { enum: ['high', 'medium', 'low'] },
-          location,
+          severity: { type: 'string', enum: ['high', 'medium', 'low'] },
+          location: optionalLocation,
         },
-        required: ['title', 'detail', 'severity'],
+        required: ['title', 'detail', 'severity', 'location'],
         additionalProperties: false,
       },
     },

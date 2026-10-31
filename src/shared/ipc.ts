@@ -1,4 +1,5 @@
 import type { Account, AccountList, BrowserSignIn, TokenSignIn } from './accounts';
+import type { AiProviderStatus, AiSettings } from './ai';
 import type { BlobContent, PullRequestDiff } from './diff';
 import type { ErrorPayload } from './errors';
 import type { Inbox, PullRequestDetail, PullRequestRef } from './github';
@@ -20,6 +21,9 @@ export interface ViewerApi {
   getReviewStatus(ref: PullRequestRef): Promise<ReviewStatus>;
   startReview(ref: PullRequestRef): Promise<void>;
   cancelReview(ref: PullRequestRef): Promise<void>;
+  getAiSettings(): Promise<AiSettings>;
+  updateAiSettings(settings: AiSettings): Promise<AiSettings>;
+  detectAiProviders(): Promise<AiProviderStatus[]>;
 }
 
 export type IpcMethod = keyof ViewerApi;
@@ -40,6 +44,9 @@ const METHODS: Record<IpcMethod, true> = {
   getReviewStatus: true,
   startReview: true,
   cancelReview: true,
+  getAiSettings: true,
+  updateAiSettings: true,
+  detectAiProviders: true,
 };
 
 export const IPC_METHODS = Object.keys(METHODS) as readonly IpcMethod[];

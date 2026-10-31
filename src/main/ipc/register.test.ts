@@ -26,6 +26,9 @@ function setup(api: Partial<ViewerApi> = {}) {
     getReviewStatus: vi.fn(),
     startReview: vi.fn(),
     cancelReview: vi.fn(),
+    getAiSettings: vi.fn(),
+    updateAiSettings: vi.fn(),
+    detectAiProviders: vi.fn(),
     ...api,
   };
   registerIpcHandlers(ipc, fullApi, {

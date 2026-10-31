@@ -27,6 +27,14 @@ export function formatRelativeTime(iso: string, now: Date = new Date()): string 
   });
 }
 
+export function formatAge(iso: string, now: Date = new Date()): string {
+  const relative = formatRelativeTime(iso, now);
+  if (relative === 'now') {
+    return 'just now';
+  }
+  return /^\d+[mhd]$/.test(relative) ? `${relative} ago` : `on ${relative}`;
+}
+
 export function sizedAvatarUrl(url: string, pixels: number): string {
   try {
     const sized = new URL(url);

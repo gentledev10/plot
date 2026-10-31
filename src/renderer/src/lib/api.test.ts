@@ -23,6 +23,9 @@ function bridge(overrides: Partial<ViewerBridge> = {}): ViewerBridge {
     getReviewStatus: vi.fn(),
     startReview: vi.fn(),
     cancelReview: vi.fn(),
+    getAiSettings: vi.fn(),
+    updateAiSettings: vi.fn(),
+    detectAiProviders: vi.fn(),
     ...overrides,
   };
 }

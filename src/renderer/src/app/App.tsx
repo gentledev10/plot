@@ -158,7 +158,11 @@ export function App() {
         )}
       </main>
       <div className={styles.review} hidden={!layout.review}>
-        <ReviewPanel target={open} onOpenLocation={openLocation} />
+        <ReviewPanel
+          target={open}
+          onOpenLocation={openLocation}
+          onConfigureAi={() => setSettings('ai')}
+        />
       </div>
       <div className={styles.rightBar}>
         <ToolWindowBar side="right" label="Right tool windows">

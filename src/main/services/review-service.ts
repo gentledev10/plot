@@ -1,12 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import type { AiProviderId } from '@shared/ai';
 import type { ChangedFile } from '@shared/diff';
 import type { ErrorPayload } from '@shared/errors';
 import type { PullRequestRef } from '@shared/github';
 import type { ViewerApi } from '@shared/ipc';
 import { pullRequestKey } from '@shared/pull-request-ref';
-import type { ReviewAgent } from '../ai/claude-code';
+import type { ReviewAgent } from '../ai/agent';
 import { verifyLocations } from '../ai/review-locations';
 import { buildReviewPrompt, CONTEXT_FILES } from '../ai/review-prompt';
 import { parseReviewMap, REVIEW_SCHEMA } from '../ai/review-schema';
@@ -17,10 +18,16 @@ import type { GitHubConnections } from '../github/connections';
 
 export type ReviewService = Pick<ViewerApi, 'getReviewStatus' | 'startReview' | 'cancelReview'>;
 
+export interface SelectedAgent {
+  provider: AiProviderId;
+  model?: string;
+  agent: ReviewAgent;
+}
+
 interface ReviewServiceOptions {
   connections: GitHubConnections;
   repositories: RepositoryCache;
-  agent: ReviewAgent;
+  resolveAgent(): Promise<SelectedAgent>;
   store: ReviewStore;
   workspaceRoot: string;
   language: string;
@@ -37,7 +44,7 @@ const MAX_ACTIVITY = 50;
 export function createReviewService({
   connections,
   repositories,
-  agent,
+  resolveAgent,
   store,
   workspaceRoot,
   language,
@@ -95,11 +102,13 @@ export function createReviewService({
       );
       checkpoint();
 
+      const { provider, model, agent } = await resolveAgent();
       const result = await agent.run({
         cwd: repoDir,
         contextDir,
         prompt: buildReviewPrompt({ files, contextDir, language }),
         schema: REVIEW_SCHEMA,
+        model,
         signal: controller.signal,
         onActivity: note,
       });
@@ -108,6 +117,8 @@ export function createReviewService({
         review,
         head: pull.head.sha,
         createdAt: now().toISOString(),
+        provider,
+        model,
         costUsd: result.costUsd,
       });
       jobs.delete(key);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, formatRelativeTime, sizedAvatarUrl } from './format';
+import { formatAge, formatBytes, formatRelativeTime, sizedAvatarUrl } from './format';
 
 describe('formatRelativeTime', () => {
   const now = new Date('2026-10-30T12:00:00Z');
@@ -28,6 +28,16 @@ describe('formatRelativeTime', () => {
 
   it('returns an empty string for invalid dates', () => {
     expect(formatRelativeTime('not a date', now)).toBe('');
+  });
+});
+
+describe('formatAge', () => {
+  const now = new Date('2026-10-30T12:00:00Z');
+
+  it('reads naturally after a verb', () => {
+    expect(formatAge('2026-10-30T11:59:30Z', now)).toBe('just now');
+    expect(formatAge('2026-10-30T09:00:00Z', now)).toBe('3h ago');
+    expect(formatAge('2026-08-04T12:00:00Z', now)).toBe('on Aug 4');
   });
 });
 

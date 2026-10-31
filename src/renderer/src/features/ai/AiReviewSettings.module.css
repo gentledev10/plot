@@ -1,0 +1,113 @@
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 600px;
+}
+
+.intro {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.providers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+.provider {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+}
+
+.provider:has(input:checked) {
+  border-color: var(--color-accent);
+}
+
+.provider input {
+  margin-top: 3px;
+}
+
+.providerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.providerName {
+  font-weight: 600;
+}
+
+.status {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.status[data-state="missing"],
+.status[data-state="signed-out"] {
+  color: var(--color-danger);
+}
+
+.status[data-state="ready"] {
+  color: var(--color-success);
+}
+
+.access {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.model {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input {
+  width: 100%;
+  max-width: 320px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-input);
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--color-focus);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-danger);
+}

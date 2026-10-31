@@ -215,6 +215,18 @@
   background: var(--color-text-muted);
 }
 
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
 .footnote {
   margin: 0;
   padding: 8px 12px 12px;

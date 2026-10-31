@@ -47,6 +47,47 @@ describe('REVIEW_SCHEMA', () => {
       'risks',
     ]);
   });
+
+  it('follows the strict rules OpenAI structured outputs enforce for Codex', () => {
+    const problems: string[] = [];
+    const visit = (schema: unknown, path: string) => {
+      if (typeof schema !== 'object' || schema === null) {
+        return;
+      }
+      const node = schema as Record<string, unknown>;
+      if (node.type === 'object') {
+        const keys = Object.keys((node.properties ?? {}) as object);
+        const required = (node.required ?? []) as string[];
+        if (node.additionalProperties !== false) {
+          problems.push(`${path} allows extra properties`);
+        }
+        for (const key of keys.filter((name) => !required.includes(name))) {
+          problems.push(`${path}.${key} is not required`);
+        }
+      }
+      for (const [key, value] of Object.entries(node)) {
+        visit(value, `${path}.${key}`);
+      }
+    };
+    visit(REVIEW_SCHEMA, 'review');
+    expect(problems).toEqual([]);
+  });
+
+  it('accepts the nulls that strict schemas use for missing locations and labels', () => {
+    const review = parseReviewMap({
+      ...output(),
+      risks: [{ title: 'Risk', detail: 'd', severity: 'low', location: null }],
+      architecture: {
+        nodes: [
+          { id: 'a', label: 'A', changed: true, location: null },
+          { id: 'b', label: 'B', changed: false, location: null },
+        ],
+        edges: [{ from: 'a', to: 'b', label: null }],
+      },
+    });
+    expect(review.risks[0]).toEqual({ title: 'Risk', detail: 'd', severity: 'low' });
+    expect(review.architecture.edges).toEqual([{ from: 'a', to: 'b' }]);
+  });
 });
 
 describe('parseReviewMap', () => {

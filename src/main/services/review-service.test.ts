@@ -6,7 +6,7 @@ import type { ChangedFile } from '@shared/diff';
 import type { PullRequestDetail } from '@shared/github';
 import type { StoredReview } from '@shared/review';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AgentRunInput, ReviewAgent } from '../ai/claude-code';
+import type { AgentRunInput, ReviewAgent } from '../ai/agent';
 import type { ReviewStore } from '../ai/review-store';
 import { AppError } from '../errors';
 import type { RepositoryCache } from '../git/repository-cache';
@@ -95,7 +95,7 @@ function setup(run: (input: AgentRunInput) => Promise<{ output: unknown; costUsd
   const service = createReviewService({
     connections: fakeConnections(github),
     repositories,
-    agent,
+    resolveAgent: async () => ({ provider: 'codex', model: 'gpt-test', agent }),
     store,
     workspaceRoot: root,
     language: 'Korean',
@@ -132,7 +132,13 @@ describe('createReviewService', () => {
     await settled();
 
     const status = await service.getReviewStatus(ref);
-    expect(status).toMatchObject({ state: 'done', head: HEAD, costUsd: 0.5 });
+    expect(status).toMatchObject({
+      state: 'done',
+      head: HEAD,
+      provider: 'codex',
+      model: 'gpt-test',
+      costUsd: 0.5,
+    });
     if (status.state !== 'done') {
       throw new Error('expected a finished review');
     }

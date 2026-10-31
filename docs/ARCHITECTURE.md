@@ -54,7 +54,7 @@ To add a method, add it to `ViewerApi` and `METHODS` in `src/shared/ipc.ts`, the
 | `src/main/accounts` | Connected accounts and their encrypted tokens                                                     |
 | `src/main/github`   | GitHub adapter: connections per host, sign-in flows, the REST client, and response mappers        |
 | `src/main/git`      | Repository cache: fetches the commits a pull request needs and parses `git diff` output           |
-| `src/main/ai`       | AI review: the Claude Code runner, the prompt, the output schema, and stored reviews              |
+| `src/main/ai`       | AI review: Claude Code and Codex CLI runners, detection, the prompt, schema, and stored reviews   |
 | `src/main/system`   | Running commands, and reading `PATH` from the login shell                                         |
 
 Adapters receive what they depend on as arguments, for example `createGitHubClient({ fetch, tokens })`, so tests can pass fakes instead of mocking modules. Pure logic is kept out of files that import `electron`, so it can be tested in plain Node.js.
@@ -87,18 +87,20 @@ The cache runs git in an isolated environment (`isolatedGitEnvironment`): the us
 
 ### AI review maps
 
-`createReviewService` turns a pull request into a review map: a summary, a reading order, sequence diagrams of the flows the change touches, a component diagram, and risks, each tied to a file and line. It runs the user's own Claude Code, so Viewer needs no API key and adds no new place that code is sent to.
+`createReviewService` turns a pull request into a review map: a summary, a reading order, sequence diagrams of the flows the change touches, a component diagram, and risks, each tied to a file and line. It runs an AI coding tool the user already has, Claude Code or Codex CLI, chosen in Settings > AI review, so Viewer needs no API key and adds no new place that code is sent to.
 
 1. Check out the directories the pull request touches at its head commit, as a sparse worktree of the repository cache. Write the diff, the list of every file in the repository (from git trees, without downloading contents), and the description next to it.
-2. Run `claude --print` in that worktree (`claude-code.ts`). Claude Code reads the files and returns JSON that must match `REVIEW_SCHEMA`. Its tool calls stream back as progress such as "Reading src/app.ts", which the renderer polls once a second.
+2. Run the chosen tool in that worktree: `claude --print` (`ai/claude-code.ts`) or `codex exec` (`ai/codex.ts`). The tool reads the files and returns JSON that must match `REVIEW_SCHEMA`. Its tool calls stream back as progress such as "Reading src/app.ts", which the renderer polls once a second.
 3. `parseReviewMap` checks the result, caps its size, and drops anything malformed. `verifyLocations` marks every cited line that does not exist in the checked-out files as unverified, so the UI can flag it.
 4. Store the result under `userData/reviews`, keyed by pull request and head commit, and delete the worktree. A new push gets a new review; reopening the same commit shows the stored one.
 
+Each tool is a `ReviewAgent` (`ai/agent.ts`). `runAgentProcess` gives every runner the same timeout, cancellation, and "not installed" handling, and `ai/detect.ts` reports in Settings whether each tool is installed and signed in. `REVIEW_SCHEMA` stays within the strict subset that OpenAI structured outputs accept, with every property required and optional values nullable, so one schema serves both tools. Supporting another tool means writing one runner and adding it to `AI_PROVIDERS` in `src/shared/ai.ts`.
+
 The pull request is written by someone else, so the agent is treated as if its input may try to take it over:
 
-- Claude Code runs with `--restricted` and only the `Read`, `Grep`, and `Glob` tools. It cannot run commands, edit files, or fetch URLs, and file access is confined to the worktree and the context directory.
-- `--strict-mcp-config` keeps the user's MCP servers, such as mail or chat integrations, out of reach, so injected instructions have no tool that could send code anywhere.
-- `--no-session-persistence` keeps the run out of the user's Claude Code history.
+- Claude Code runs with `--restricted` and only the `Read`, `Grep`, and `Glob` tools. It cannot run commands, edit files, or fetch URLs, and file access is confined to the worktree and the context directory. `--strict-mcp-config` keeps the user's MCP servers, such as mail or chat integrations, out of reach, and `--no-session-persistence` keeps the run out of the user's history.
+- Codex CLI runs with `--sandbox read-only`: the commands it runs can read files but cannot write them or open network connections. `--ignore-user-config` and `--ignore-rules` leave out the user's configuration, including MCP servers, web search is turned off, and `--ephemeral` keeps the run out of the user's history. Unlike Claude Code's restricted mode, the sandbox does not limit reading to the worktree, so Claude Code is the stricter choice for sensitive machines.
+- Model names from settings are checked against a plain pattern and passed as `--model=<name>`, so a setting cannot smuggle in another flag.
 - Diagrams are built from the structured result by `mermaid-source.ts`, not from Mermaid text the model writes. Labels are reduced to characters that cannot start a new Mermaid statement, and Mermaid runs with `securityLevel: 'strict'`.
 
 ## Renderer layout

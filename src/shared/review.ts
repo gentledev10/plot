@@ -1,3 +1,4 @@
+import type { AiProviderId } from './ai';
 import type { ErrorPayload } from './errors';
 
 export interface CodeLocation {
@@ -57,6 +58,8 @@ export interface StoredReview {
   review: ReviewMap;
   head: string;
   createdAt: string;
+  provider?: AiProviderId;
+  model?: string;
   costUsd?: number;
 }
 

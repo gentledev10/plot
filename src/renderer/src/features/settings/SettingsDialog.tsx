@@ -2,14 +2,16 @@ import { X } from 'lucide-react';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { AccountsSettings } from '../accounts/AccountsSettings';
+import { AiReviewSettings } from '../ai/AiReviewSettings';
 import { useSuspendShortcuts } from '../keymap/KeymapProvider';
 import { KeymapSettings } from '../keymap/KeymapSettings';
 import styles from './SettingsDialog.module.css';
 
-export type SettingsSection = 'accounts' | 'keymap';
+export type SettingsSection = 'accounts' | 'ai' | 'keymap';
 
 const SECTIONS: readonly { id: SettingsSection; title: string; render(): ReactNode }[] = [
   { id: 'accounts', title: 'Accounts', render: () => <AccountsSettings /> },
+  { id: 'ai', title: 'AI review', render: () => <AiReviewSettings /> },
   { id: 'keymap', title: 'Keymap', render: () => <KeymapSettings /> },
 ];
 

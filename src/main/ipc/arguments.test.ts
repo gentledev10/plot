@@ -54,6 +54,20 @@ describe('argumentParsers', () => {
     expect(() => argumentParsers.finishBrowserSignIn(['not-a-uuid'])).toThrow(invalid);
   });
 
+  it('accepts known AI providers and plain model names only', () => {
+    expect(
+      argumentParsers.updateAiSettings([{ provider: 'codex', models: { codex: 'gpt-5.1-codex' } }]),
+    ).toEqual([{ provider: 'codex', models: { codex: 'gpt-5.1-codex' } }]);
+    expect(
+      argumentParsers.updateAiSettings([
+        { provider: 'claude-code', models: { 'claude-code': '--dangerously-skip-permissions' } },
+      ]),
+    ).toEqual([{ provider: 'claude-code', models: {} }]);
+    expect(() => argumentParsers.updateAiSettings([{ provider: 'gpt', models: {} }])).toThrow(
+      expect.objectContaining({ code: 'invalid-argument' }),
+    );
+  });
+
   it('rejects a missing pull request reference', () => {
     expect(() => argumentParsers.getPullRequest([])).toThrow(
       expect.objectContaining({ code: 'invalid-argument' }),

@@ -38,7 +38,7 @@ Produce:
 - architecture: three to twelve components (modules, layers, or services) around the change, marking the ones this pull request changes, and the dependencies between them. Use short, stable ids.
 - risks: what a careful reviewer should check, most important first, such as behavior changes, error handling, concurrency, data migrations, security, and missing tests. Skip generic advice.
 
-Locations use paths relative to the repository root and 1-based line numbers in the pull request's version of the file. Only cite lines you have read.
+Locations use paths relative to the repository root and 1-based line numbers in the pull request's version of the file. Only cite lines you have read, and use null where there is nothing to cite.
 Keep labels under six words. Write all prose in ${language}.`;
 }
 

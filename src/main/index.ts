@@ -1,8 +1,13 @@
 import { join } from 'node:path';
+import type { AiProviderId } from '@shared/ai';
 import { MENU_COMMAND_CHANNEL, type MenuCommand, type ViewerApi } from '@shared/ipc';
 import { app, BrowserWindow, ipcMain, Menu, net, shell } from 'electron';
 import { createAccountStore } from './accounts/account-store';
+import type { ReviewAgent } from './ai/agent';
+import { createAiSettingsStore } from './ai/ai-settings-store';
 import { createClaudeCodeAgent } from './ai/claude-code';
+import { createCodexAgent } from './ai/codex';
+import { detectProvider } from './ai/detect';
 import { languageName } from './ai/language';
 import { createFileReviewStore } from './ai/review-store';
 import { keychainCipher } from './app/keychain';
@@ -24,6 +29,7 @@ import { cachedTokens, createGhTokenProvider, type TokenProvider } from './githu
 import { argumentParsers } from './ipc/arguments';
 import { registerIpcHandlers } from './ipc/register';
 import { createAccountService } from './services/account-service';
+import { createAiService } from './services/ai-service';
 import { createDiffService } from './services/diff-service';
 import { createGitHubService } from './services/github-service';
 import { createReviewService } from './services/review-service';
@@ -72,10 +78,18 @@ function createApi(): ViewerApi {
     env: process.env,
     authHeader: async (repository) => (await connections.forHost(repository.host)).authHeader(),
   });
+  const aiSettings = createAiSettingsStore(join(userData, 'ai-settings.json'));
+  const agents: Record<AiProviderId, ReviewAgent> = {
+    'claude-code': createClaudeCodeAgent(),
+    codex: createCodexAgent(),
+  };
   const reviews = createReviewService({
     connections,
     repositories,
-    agent: createClaudeCodeAgent(),
+    async resolveAgent() {
+      const { provider, models } = await aiSettings.read();
+      return { provider, model: models[provider], agent: agents[provider] };
+    },
     store: createFileReviewStore(join(userData, 'reviews')),
     workspaceRoot: join(userData, 'review-workspaces'),
     language: languageName(app.getLocale()),
@@ -94,6 +108,7 @@ function createApi(): ViewerApi {
     ...createGitHubService(connections),
     ...createDiffService({ connections, repositories }),
     ...reviews,
+    ...createAiService({ store: aiSettings, detect: (id) => detectProvider(runCommand, id) }),
   };
 }
 

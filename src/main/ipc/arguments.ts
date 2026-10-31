@@ -1,4 +1,5 @@
 import { isAccountId, type TokenSignIn } from '@shared/accounts';
+import { type AiSettings, parseAiSettings } from '@shared/ai';
 import { isObjectId } from '@shared/diff';
 import type { PullRequestRef } from '@shared/github';
 import { isHost } from '@shared/hosts';
@@ -29,7 +30,18 @@ export const argumentParsers: ArgumentParsers = {
   getReviewStatus: ([ref]) => [pullRequestRef(ref)],
   startReview: ([ref]) => [pullRequestRef(ref)],
   cancelReview: ([ref]) => [pullRequestRef(ref)],
+  getAiSettings: () => [],
+  updateAiSettings: ([settings]) => [aiSettings(settings)],
+  detectAiProviders: () => [],
 };
+
+function aiSettings(value: unknown): AiSettings {
+  const settings = parseAiSettings(value);
+  if (!settings) {
+    throw new AppError('invalid-argument', 'Expected AI settings.');
+  }
+  return settings;
+}
 
 function pullRequestRef(value: unknown): PullRequestRef {
   if (!isPullRequestRef(value)) {
