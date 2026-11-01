@@ -102,6 +102,24 @@ describe('argumentParsers', () => {
     expect(() => argumentParsers.readLocalBlob([id, 'HEAD:src/app.ts'])).toThrow(invalid);
   });
 
+  it('accepts repositories and pages of their pull requests', () => {
+    const repository = { host: 'github.com', owner: 'acme', repo: 'api' };
+    const invalid = expect.objectContaining({ code: 'invalid-argument' });
+
+    expect(argumentParsers.findRepository([{ ...repository, number: 3 }])).toEqual([repository]);
+    expect(() => argumentParsers.countOpenPullRequests([{ ...repository, repo: '..' }])).toThrow(
+      invalid,
+    );
+    expect(argumentParsers.listRepositoryPullRequests([{ repository, page: 2 }])).toEqual([
+      { repository, page: 2 },
+    ]);
+    for (const page of [0, 1.5, '2', 101]) {
+      expect(() => argumentParsers.listRepositoryPullRequests([{ repository, page }])).toThrow(
+        invalid,
+      );
+    }
+  });
+
   it('rejects a missing pull request reference', () => {
     expect(() => argumentParsers.getPullRequest([])).toThrow(
       expect.objectContaining({ code: 'invalid-argument' }),

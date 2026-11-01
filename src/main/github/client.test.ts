@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGitHubClient, type Fetch } from './client';
+import { createGitHubClient, type Fetch, lastPage } from './client';
 import { octocat, pullRequest, searchItem } from './fixtures';
 import type { TokenProvider } from './token';
 
@@ -60,7 +60,9 @@ describe('createGitHubClient', () => {
   });
 
   it('searches pull requests sorted by last update', async () => {
-    const { client, fetch } = setup(json({ items: [searchItem(), searchItem({ number: 7 })] }));
+    const { client, fetch } = setup(
+      json({ total_count: 2, items: [searchItem(), searchItem({ number: 7 })] }),
+    );
     const results = await client.searchPullRequests('is:pr review-requested:@me', 25);
 
     expect(results.map((pull) => pull.ref.number)).toEqual([42, 7]);
@@ -71,7 +73,20 @@ describe('createGitHubClient', () => {
       sort: 'updated',
       order: 'desc',
       per_page: '25',
+      page: '1',
     });
+  });
+
+  it('reads one page of search results with the total', async () => {
+    const { client, fetch } = setup(json({ total_count: 61, items: [searchItem()] }));
+
+    const page = await client.searchPullRequestPage('repo:octocat/hello-world is:pr', 3, 30);
+
+    expect(page.total).toBe(61);
+    expect(page.pullRequests.map((pull) => pull.ref.number)).toEqual([42]);
+    const url = new URL(fetch.mock.calls[0]?.[0] ?? '');
+    expect(url.searchParams.get('page')).toBe('3');
+    expect(url.searchParams.get('per_page')).toBe('30');
   });
 
   it('loads a pull request by reference', async () => {
@@ -145,6 +160,17 @@ describe('createGitHubClient', () => {
     });
   });
 
+  it('prefers the reason GitHub gives for a rejected request', async () => {
+    const reason =
+      'The listed users and repositories cannot be searched either because the resources do not exist or you do not have permission to view them.';
+    const { client } = setup(
+      json({ message: 'Validation Failed', errors: [{ message: reason }] }, { status: 422 }),
+    );
+    await expect(client.searchPullRequests('repo:old/name', 10)).rejects.toMatchObject({
+      message: `GitHub returned 422: ${reason}`,
+    });
+  });
+
   it('reports network failures', async () => {
     const { client } = setup(new TypeError('fetch failed'));
     await expect(client.getViewer()).rejects.toMatchObject({ code: 'network' });
@@ -176,5 +202,62 @@ describe('getMergeBase', () => {
     await expect(client.getMergeBase(ref, 'a'.repeat(40), 'b'.repeat(40))).rejects.toMatchObject({
       code: 'github-request-failed',
     });
+  });
+});
+
+describe('repositories', () => {
+  const repository = (owner: string, name: string) => ({ name, owner: { login: owner } });
+  const api = { host: 'github.com', owner: 'acme', repo: 'api' };
+
+  it('lists the repositories the account works on, most recently pushed first', async () => {
+    const { client, fetch } = setup(
+      json([repository('acme', 'api'), repository('octocat', 'web')]),
+    );
+
+    await expect(client.listRepositories(100)).resolves.toEqual([
+      api,
+      { host: 'github.com', owner: 'octocat', repo: 'web' },
+    ]);
+    const url = new URL(fetch.mock.calls[0]?.[0] ?? '');
+    expect(url.pathname).toBe('/user/repos');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      sort: 'pushed',
+      per_page: '100',
+      affiliation: 'owner,collaborator,organization_member',
+    });
+  });
+
+  it('returns the name GitHub uses for a repository', async () => {
+    const { client, fetch } = setup(json(repository('acme', 'api')));
+
+    await expect(client.getRepository({ ...api, owner: 'ACME', repo: 'API' })).resolves.toEqual(
+      api,
+    );
+    expect(new URL(fetch.mock.calls[0]?.[0] ?? '').pathname).toBe('/repos/ACME/API');
+  });
+
+  it('counts open pull requests from the last page number', async () => {
+    const link =
+      '<https://api.test/repositories/1/pulls?state=open&per_page=1&page=2>; rel="next", ' +
+      '<https://api.test/repositories/1/pulls?state=open&per_page=1&page=12>; rel="last"';
+    const { client, fetch } = setup(json([pullRequest()], { headers: { link } }));
+
+    await expect(client.countOpenPullRequests(api)).resolves.toBe(12);
+    const url = new URL(fetch.mock.calls[0]?.[0] ?? '');
+    expect(url.pathname).toBe('/repos/acme/api/pulls');
+    expect(Object.fromEntries(url.searchParams)).toEqual({ state: 'open', per_page: '1' });
+  });
+
+  it('counts the pull requests on the only page when there is no Link header', async () => {
+    await expect(setup(json([pullRequest()])).client.countOpenPullRequests(api)).resolves.toBe(1);
+    await expect(setup(json([])).client.countOpenPullRequests(api)).resolves.toBe(0);
+  });
+});
+
+describe('lastPage', () => {
+  it('finds the last page in a Link header', () => {
+    expect(lastPage('<https://x/y?page=7&per_page=1>; rel="last"')).toBe(7);
+    expect(lastPage('<https://x/y?page=2>; rel="next"')).toBeUndefined();
+    expect(lastPage(null)).toBeUndefined();
   });
 });

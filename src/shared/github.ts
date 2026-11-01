@@ -3,10 +3,13 @@ export interface GitHubUser {
   avatarUrl: string;
 }
 
-export interface PullRequestRef {
+export interface RepositoryRef {
   host: string;
   owner: string;
   repo: string;
+}
+
+export interface PullRequestRef extends RepositoryRef {
   number: number;
 }
 
@@ -30,6 +33,16 @@ export interface PullRequestDetail extends PullRequestSummary {
   additions: number;
   deletions: number;
   changedFiles: number;
+}
+
+export interface PullRequestPage {
+  pullRequests: PullRequestSummary[];
+  total: number;
+}
+
+export interface RepositoryPullRequestQuery {
+  repository: RepositoryRef;
+  page: number;
 }
 
 export interface Inbox {

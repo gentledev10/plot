@@ -1,28 +1,16 @@
 import type { PullRequestRef } from './github';
-import { GITHUB_HOST, isHost, normalizeHost } from './hosts';
+import { GITHUB_HOST, normalizeHost } from './hosts';
+import { formatRepositoryRef, isRepositoryRef, repositoryKey } from './repository-ref';
 
-const OWNER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
-const REPO = /^[A-Za-z0-9._-]{1,100}$/;
 const PULL_URL = /^https:\/\/([^/\s]+)\/([^/\s]+)\/([^/\s]+)\/pull\/(\d+)(?:[/?#].*)?$/;
 const SHORTHAND = /^([^/\s]+)\/([^/\s#]+)#(\d+)$/;
 
 export function isPullRequestRef(value: unknown): value is PullRequestRef {
-  if (typeof value !== 'object' || value === null) {
+  if (!isRepositoryRef(value)) {
     return false;
   }
-  const { host, owner, repo, number } = value as Record<string, unknown>;
-  return (
-    isHost(host) &&
-    typeof owner === 'string' &&
-    OWNER.test(owner) &&
-    typeof repo === 'string' &&
-    REPO.test(repo) &&
-    repo !== '.' &&
-    repo !== '..' &&
-    typeof number === 'number' &&
-    Number.isSafeInteger(number) &&
-    number > 0
-  );
+  const { number } = value as { number?: unknown };
+  return typeof number === 'number' && Number.isSafeInteger(number) && number > 0;
 }
 
 export function parsePullRequestRef(
@@ -53,13 +41,12 @@ function toRef(
   return isPullRequestRef(ref) ? ref : undefined;
 }
 
-export function formatPullRequestRef({ host, owner, repo, number }: PullRequestRef): string {
-  const name = `${owner}/${repo}#${number}`;
-  return host === GITHUB_HOST ? name : `${host}/${name}`;
+export function formatPullRequestRef(ref: PullRequestRef): string {
+  return `${formatRepositoryRef(ref)}#${ref.number}`;
 }
 
-export function pullRequestKey({ host, owner, repo, number }: PullRequestRef): string {
-  return `${host}/${owner}/${repo}#${number}`.toLowerCase();
+export function pullRequestKey(ref: PullRequestRef): string {
+  return `${repositoryKey(ref)}#${ref.number}`;
 }
 
 export function pullRequestUrl({ host, owner, repo, number }: PullRequestRef): string {

@@ -3,7 +3,14 @@ import type { AiProviderId, AiProviderStatus, AiSettings } from './ai';
 import type { ThemeSource } from './appearance';
 import type { BlobContent, PullRequestDiff } from './diff';
 import type { ErrorPayload } from './errors';
-import type { Inbox, PullRequestDetail, PullRequestRef } from './github';
+import type {
+  Inbox,
+  PullRequestDetail,
+  PullRequestPage,
+  PullRequestRef,
+  RepositoryPullRequestQuery,
+  RepositoryRef,
+} from './github';
 import type { LocalDiff, LocalRepository, LocalStatus, LocalTarget } from './local';
 import type { ReviewStatus } from './review';
 
@@ -18,6 +25,10 @@ export interface PlotApi {
   cancelBrowserSignIn(id: string): Promise<void>;
   listInbox(): Promise<Inbox>;
   getPullRequest(ref: PullRequestRef): Promise<PullRequestDetail>;
+  listAccessibleRepositories(): Promise<RepositoryRef[]>;
+  findRepository(ref: RepositoryRef): Promise<RepositoryRef>;
+  countOpenPullRequests(ref: RepositoryRef): Promise<number>;
+  listRepositoryPullRequests(query: RepositoryPullRequestQuery): Promise<PullRequestPage>;
   getPullRequestDiff(ref: PullRequestRef): Promise<PullRequestDiff>;
   readBlob(ref: PullRequestRef, blob: string): Promise<BlobContent>;
   getReviewStatus(ref: PullRequestRef): Promise<ReviewStatus>;
@@ -54,6 +65,10 @@ const METHODS: Record<IpcMethod, true> = {
   cancelBrowserSignIn: true,
   listInbox: true,
   getPullRequest: true,
+  listAccessibleRepositories: true,
+  findRepository: true,
+  countOpenPullRequests: true,
+  listRepositoryPullRequests: true,
   getPullRequestDiff: true,
   readBlob: true,
   getReviewStatus: true,

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { anAccountList, aPullRequestDetail, aPullRequestSummary } from '../../test/builders';
 import { renderWithApi } from '../../test/render';
+import { initializePreferences } from '../lib/preferences';
 import { App } from './App';
 
 vi.mock('../features/diff/DiffViewer', () => import('../../test/fake-diff-viewer'));
@@ -371,6 +372,37 @@ describe('App', () => {
 
     expect(screen.getByRole('complementary', { name: 'Local changes' })).toBeInTheDocument();
     expect(screen.queryByRole('complementary', { name: 'Pull requests' })).not.toBeInTheDocument();
+  });
+
+  it('browses the pull requests of a saved repository and comes back one step at a time', async () => {
+    const repository = { host: 'github.com', owner: 'acme', repo: 'api' };
+    initializePreferences({ 'pullRequests.repositories': [repository] }, () => {});
+    const fake = {
+      ...api(),
+      countOpenPullRequests: vi.fn().mockResolvedValue(1),
+      listRepositoryPullRequests: vi.fn().mockResolvedValue({
+        pullRequests: [
+          aPullRequestSummary(7, {
+            title: 'Retry webhooks',
+            ref: { ...repository, number: 7 },
+          }),
+        ],
+        total: 1,
+      }),
+    };
+    renderWithApi(<App />, fake);
+
+    await userEvent.click(await screen.findByRole('button', { name: /^acme\/api/ }));
+    const browse = await screen.findByRole('complementary', { name: 'acme/api' });
+    await userEvent.click(await within(browse).findByRole('button', { name: /Retry webhooks/ }));
+    expect(fake.getPullRequestDiff).toHaveBeenCalledWith({ ...repository, number: 7 });
+
+    const files = await screen.findByRole('complementary', { name: 'Changed files' });
+    await userEvent.click(within(files).getByRole('button', { name: 'acme/api' }));
+    expect(await screen.findByRole('complementary', { name: 'acme/api' })).toBeVisible();
+
+    fireEvent.keyDown(document.body, { key: '[', code: 'BracketLeft', metaKey: true });
+    expect(screen.getByRole('complementary', { name: 'Pull requests' })).toBeVisible();
   });
 
   it('opens a pull request pasted as a URL', async () => {

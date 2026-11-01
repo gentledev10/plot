@@ -4,6 +4,7 @@ import type {
   PullRequestRef,
   PullRequestState,
   PullRequestSummary,
+  RepositoryRef,
 } from '@shared/github';
 import { AppError } from '../errors';
 
@@ -46,6 +47,16 @@ export function toPullRequestDetail(value: unknown, ref: PullRequestRef): PullRe
     additions: number(pull.additions, 'additions'),
     deletions: number(pull.deletions, 'deletions'),
     changedFiles: number(pull.changed_files, 'changed_files'),
+  };
+}
+
+export function toRepositoryRef(value: unknown, host: string): RepositoryRef {
+  const repository = object(value, 'repository');
+  const owner = object(repository.owner, 'repository owner');
+  return {
+    host,
+    owner: string(owner.login, 'repository owner'),
+    repo: string(repository.name, 'repository name'),
   };
 }
 

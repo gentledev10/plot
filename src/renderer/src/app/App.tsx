@@ -1,6 +1,7 @@
-import type { PullRequestRef } from '@shared/github';
+import type { PullRequestRef, RepositoryRef } from '@shared/github';
 import type { LocalRepository } from '@shared/local';
 import { formatPullRequestRef } from '@shared/pull-request-ref';
+import { formatRepositoryRef } from '@shared/repository-ref';
 import type { CodeLocation } from '@shared/review';
 import { FolderGit2, GitPullRequest, Settings, Sparkles } from 'lucide-react';
 import { type CSSProperties, useRef, useState } from 'react';
@@ -15,6 +16,7 @@ import { LocalChangesPanel } from '../features/local/LocalChangesPanel';
 import { LocalWorkspace } from '../features/local/LocalWorkspace';
 import { useLocalRepositories, useLocalRepositoryActions } from '../features/local/queries';
 import { PullRequestWorkspace } from '../features/pull-request/PullRequestWorkspace';
+import { RepositoryPullsPanel } from '../features/repositories/RepositoryPullsPanel';
 import { ReviewPanel } from '../features/review/ReviewPanel';
 import { SettingsDialog, type SettingsSection } from '../features/settings/SettingsDialog';
 import { usePreference } from '../lib/preferences';
@@ -42,6 +44,7 @@ export function App() {
   const platform = usePlatform();
   const [open, setOpen] = useState<DiffTarget>();
   const [lastOpened, setLastOpened] = useState<DiffTarget>();
+  const [browsing, setBrowsing] = useState<RepositoryRef>();
   const localRepositories = useLocalRepositories();
   const { open: chooseLocalRepository } = useLocalRepositoryActions();
   const [selectedPath, setSelectedPath] = useState<string>();
@@ -150,8 +153,17 @@ export function App() {
     );
   }
 
+  function goBack() {
+    if (open) {
+      backToList();
+    } else {
+      setBrowsing(undefined);
+    }
+  }
+
   function startOpeningPullRequest() {
     backToList();
+    setBrowsing(undefined);
     if (!layout.sidebar) {
       setLayout({ ...layout, sidebar: true });
     }
@@ -165,7 +177,11 @@ export function App() {
   useCommand('view.maximizeReview', () => setMaximized(!maximized));
   useCommand('view.toggleAllPanels', toggleAll);
   useCommand('pullRequest.open', startOpeningPullRequest);
-  useCommand('navigation.back', backToList, open !== undefined);
+  useCommand(
+    'navigation.back',
+    goBack,
+    open !== undefined || (browsing !== undefined && toolWindow === 'pull-requests'),
+  );
   useCommand('local.open', chooseAndOpenLocalRepository);
   useMenuCommand('open-local-repository', chooseAndOpenLocalRepository);
   useMenuCommand('open-settings', () => setSettings('accounts'));
@@ -225,10 +241,17 @@ export function App() {
             <FilesPanel
               target={open}
               title={titleOf(open)}
-              backLabel="Pull requests"
+              backLabel={browsing ? formatRepositoryRef(browsing) : 'Pull requests'}
               selectedPath={selectedPath}
               onSelectFile={setSelectedPath}
               onBack={backToList}
+            />
+          ) : browsing ? (
+            <RepositoryPullsPanel
+              repository={browsing}
+              selected={lastOpened?.kind === 'pull-request' ? lastOpened.ref : undefined}
+              onSelect={openPullRequest}
+              onBack={() => setBrowsing(undefined)}
             />
           ) : (
             <InboxPanel
@@ -237,6 +260,7 @@ export function App() {
               focusOpenField={focusOpenField}
               onOpenFieldFocused={() => setFocusOpenField(false)}
               onManageAccounts={() => setSettings('accounts')}
+              onOpenRepository={setBrowsing}
             />
           )}
         </div>

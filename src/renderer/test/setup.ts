@@ -26,6 +26,24 @@ HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
   this.dispatchEvent(new Event('close'));
 };
 
+// jsdom does not implement popovers.
+function setPopoverOpen(element: HTMLElement, open: boolean) {
+  if (element.hasAttribute('data-popover-open') === open) {
+    return;
+  }
+  element.toggleAttribute('data-popover-open', open);
+  element.dispatchEvent(Object.assign(new Event('toggle'), { newState: open ? 'open' : 'closed' }));
+}
+HTMLElement.prototype.showPopover ??= function showPopover(this: HTMLElement) {
+  setPopoverOpen(this, true);
+};
+HTMLElement.prototype.hidePopover ??= function hidePopover(this: HTMLElement) {
+  setPopoverOpen(this, false);
+};
+const popoverStyle = document.createElement('style');
+popoverStyle.textContent = '[popover][data-popover-open] { display: block !important; }';
+document.head.append(popoverStyle);
+
 afterEach(() => {
   cleanup();
   initializePreferences({}, () => {});

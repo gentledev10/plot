@@ -8,11 +8,12 @@ import {
 } from '@shared/ai';
 import { isThemeSource, type ThemeSource } from '@shared/appearance';
 import { isObjectId } from '@shared/diff';
-import type { PullRequestRef } from '@shared/github';
+import type { PullRequestRef, RepositoryPullRequestQuery, RepositoryRef } from '@shared/github';
 import { isHost } from '@shared/hosts';
 import type { IpcMethod, PlotApi } from '@shared/ipc';
 import { isLocalCompare, isLocalRepositoryId, type LocalTarget } from '@shared/local';
 import { isPullRequestRef } from '@shared/pull-request-ref';
+import { isRepositoryRef } from '@shared/repository-ref';
 import { AppError } from '../errors';
 
 export type ArgumentParsers = {
@@ -33,6 +34,10 @@ export const argumentParsers: ArgumentParsers = {
   cancelBrowserSignIn: ([id]) => [signInId(id)],
   listInbox: () => [],
   getPullRequest: ([ref]) => [pullRequestRef(ref)],
+  listAccessibleRepositories: () => [],
+  findRepository: ([ref]) => [repositoryRef(ref)],
+  countOpenPullRequests: ([ref]) => [repositoryRef(ref)],
+  listRepositoryPullRequests: ([query]) => [repositoryPullRequestQuery(query)],
   getPullRequestDiff: ([ref]) => [pullRequestRef(ref)],
   readBlob: ([ref, blob]) => [pullRequestRef(ref), objectId(blob)],
   getReviewStatus: ([ref]) => [pullRequestRef(ref)],
@@ -138,6 +143,21 @@ function pullRequestRef(value: unknown): PullRequestRef {
     throw new AppError('invalid-argument', 'Expected a pull request reference.');
   }
   return { host: value.host, owner: value.owner, repo: value.repo, number: value.number };
+}
+
+function repositoryRef(value: unknown): RepositoryRef {
+  if (!isRepositoryRef(value)) {
+    throw new AppError('invalid-argument', 'Expected a repository.');
+  }
+  return { host: value.host, owner: value.owner, repo: value.repo };
+}
+
+function repositoryPullRequestQuery(value: unknown): RepositoryPullRequestQuery {
+  const { repository, page } = (value ?? {}) as Record<string, unknown>;
+  if (typeof page !== 'number' || !Number.isInteger(page) || page < 1 || page > 100) {
+    throw new AppError('invalid-argument', 'Expected a page of pull requests.');
+  }
+  return { repository: repositoryRef(repository), page };
 }
 
 function objectId(value: unknown): string {

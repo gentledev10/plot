@@ -12,7 +12,8 @@
   -webkit-app-region: no-drag;
 }
 
-.button:hover {
+.button:hover,
+.button[aria-expanded="true"] {
   background: var(--color-bg-hover);
   color: var(--color-text);
 }

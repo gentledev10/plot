@@ -2,7 +2,7 @@ import type { PullRequestSummary } from '@shared/github';
 import { describe, expect, it, vi } from 'vitest';
 import type { GitHubClient } from '../github/client';
 import { fakeConnections } from '../github/fake-connections';
-import { createGitHubService, INBOX_QUERIES } from './github-service';
+import { createGitHubService, INBOX_QUERIES, REPOSITORY_PAGE_SIZE } from './github-service';
 
 const user = { login: 'octocat', avatarUrl: 'https://avatars.githubusercontent.com/u/1' };
 
@@ -21,8 +21,12 @@ function fakeClient(overrides: Partial<GitHubClient> = {}): GitHubClient {
   return {
     getViewer: vi.fn().mockResolvedValue(user),
     searchPullRequests: vi.fn().mockResolvedValue([]),
+    searchPullRequestPage: vi.fn().mockResolvedValue({ pullRequests: [], total: 0 }),
     getPullRequest: vi.fn(),
     getMergeBase: vi.fn(),
+    listRepositories: vi.fn().mockResolvedValue([]),
+    getRepository: vi.fn(),
+    countOpenPullRequests: vi.fn().mockResolvedValue(0),
     ...overrides,
   };
 }
@@ -60,5 +64,47 @@ describe('getPullRequest', () => {
     await expect(
       service.getPullRequest({ ...ref, host: 'github.example.com' }),
     ).rejects.toMatchObject({ code: 'github-no-account' });
+  });
+});
+
+describe('repositories', () => {
+  const api = { host: 'github.com', owner: 'acme', repo: 'api' };
+
+  it('suggests the repositories the current account can reach', async () => {
+    const listRepositories = vi.fn().mockResolvedValue([api]);
+    const service = createGitHubService(fakeConnections(fakeClient({ listRepositories })));
+
+    await expect(service.listAccessibleRepositories()).resolves.toEqual([api]);
+    expect(listRepositories).toHaveBeenCalledWith(100);
+  });
+
+  it('asks the account for the repository host', async () => {
+    const getRepository = vi.fn().mockResolvedValue(api);
+    const countOpenPullRequests = vi.fn().mockResolvedValue(12);
+    const service = createGitHubService(
+      fakeConnections(fakeClient({ getRepository, countOpenPullRequests })),
+    );
+
+    await expect(service.findRepository({ ...api, owner: 'ACME' })).resolves.toEqual(api);
+    await expect(service.countOpenPullRequests(api)).resolves.toBe(12);
+    await expect(
+      service.countOpenPullRequests({ ...api, host: 'github.example.com' }),
+    ).rejects.toMatchObject({ code: 'github-no-account' });
+  });
+
+  it('lists the open pull requests of a repository one page at a time', async () => {
+    const searchPullRequestPage = vi
+      .fn()
+      .mockResolvedValue({ pullRequests: [summary(4)], total: 31 });
+    const service = createGitHubService(fakeConnections(fakeClient({ searchPullRequestPage })));
+
+    await expect(service.listRepositoryPullRequests({ repository: api, page: 2 })).resolves.toEqual(
+      { pullRequests: [summary(4)], total: 31 },
+    );
+    expect(searchPullRequestPage).toHaveBeenCalledWith(
+      'repo:acme/api is:pr is:open',
+      2,
+      REPOSITORY_PAGE_SIZE,
+    );
   });
 });

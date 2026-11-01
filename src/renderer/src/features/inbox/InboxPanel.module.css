@@ -169,9 +169,14 @@ button.groupHeader:hover {
   -webkit-box-orient: vertical;
 }
 
-.draft {
-  align-self: flex-start;
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-top: 2px;
+}
+
+.badge {
   padding: 0 6px;
   border: 1px solid var(--color-border-strong);
   border-radius: 8px;

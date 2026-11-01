@@ -1,3 +1,4 @@
+import type { RepositoryPullRequestQuery } from '@shared/github';
 import type { PlotApi } from '@shared/ipc';
 import type { GitHubConnections } from '../github/connections';
 
@@ -8,7 +9,23 @@ export const INBOX_QUERIES = {
 
 const INBOX_LIMIT = 50;
 
-export type GitHubService = Pick<PlotApi, 'listInbox' | 'getPullRequest'>;
+const REPOSITORY_CHOICES = 100;
+
+export const REPOSITORY_PAGE_SIZE = 30;
+
+export function repositorySearch({ repository }: RepositoryPullRequestQuery): string {
+  return `repo:${repository.owner}/${repository.repo} is:pr is:open`;
+}
+
+export type GitHubService = Pick<
+  PlotApi,
+  | 'listInbox'
+  | 'getPullRequest'
+  | 'listAccessibleRepositories'
+  | 'findRepository'
+  | 'countOpenPullRequests'
+  | 'listRepositoryPullRequests'
+>;
 
 export function createGitHubService(connections: GitHubConnections): GitHubService {
   return {
@@ -24,6 +41,30 @@ export function createGitHubService(connections: GitHubConnections): GitHubServi
     async getPullRequest(ref) {
       const { client } = await connections.forHost(ref.host);
       return client.getPullRequest(ref);
+    },
+
+    async listAccessibleRepositories() {
+      const { client } = await connections.current();
+      return client.listRepositories(REPOSITORY_CHOICES);
+    },
+
+    async findRepository(ref) {
+      const { client } = await connections.forHost(ref.host);
+      return client.getRepository(ref);
+    },
+
+    async countOpenPullRequests(ref) {
+      const { client } = await connections.forHost(ref.host);
+      return client.countOpenPullRequests(ref);
+    },
+
+    async listRepositoryPullRequests(query) {
+      const { client } = await connections.forHost(query.repository.host);
+      return client.searchPullRequestPage(
+        repositorySearch(query),
+        query.page,
+        REPOSITORY_PAGE_SIZE,
+      );
     },
   };
 }

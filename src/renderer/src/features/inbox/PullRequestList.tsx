@@ -1,11 +1,9 @@
 import type { PullRequestRef, PullRequestSummary } from '@shared/github';
-import { isSamePullRequest } from '@shared/pull-request-ref';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useId } from 'react';
-import { Avatar } from '../../components/Avatar';
-import { formatRelativeTime } from '../../lib/format';
 import { groupByRepository, type RepositoryGroup } from './grouping';
 import styles from './InboxPanel.module.css';
+import { PullRequestItem } from './PullRequestItem';
 
 interface PullRequestListProps {
   title: string;
@@ -100,22 +98,7 @@ function RepositoryGroupItem({
       <ul id={listId} className={styles.list} aria-label={group.name} hidden={!open}>
         {group.pulls.map((pull) => (
           <li key={pull.ref.number}>
-            <button
-              type="button"
-              className={styles.item}
-              aria-current={isSamePullRequest(pull.ref, selected) ? 'true' : undefined}
-              onClick={() => onSelect(pull.ref)}
-            >
-              <Avatar user={pull.author} size={20} />
-              <span className={styles.itemBody}>
-                <span className={styles.itemMeta}>
-                  <span>#{pull.ref.number}</span>
-                  <time dateTime={pull.updatedAt}>{formatRelativeTime(pull.updatedAt)}</time>
-                </span>
-                <span className={styles.itemTitle}>{pull.title}</span>
-                {pull.isDraft && <span className={styles.draft}>Draft</span>}
-              </span>
-            </button>
+            <PullRequestItem pull={pull} selected={selected} onSelect={onSelect} />
           </li>
         ))}
       </ul>

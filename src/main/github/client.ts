@@ -1,8 +1,10 @@
 import type {
   GitHubUser,
   PullRequestDetail,
+  PullRequestPage,
   PullRequestRef,
   PullRequestSummary,
+  RepositoryRef,
 } from '@shared/github';
 import { apiBaseUrl } from '@shared/hosts';
 import { AppError } from '../errors';
@@ -11,14 +13,19 @@ import {
   toMergeBase,
   toPullRequestDetail,
   toPullRequestSummaryFromSearch,
+  toRepositoryRef,
 } from './mappers';
 import type { TokenProvider } from './token';
 
 export interface GitHubClient {
   getViewer(): Promise<GitHubUser>;
   searchPullRequests(query: string, limit: number): Promise<PullRequestSummary[]>;
+  searchPullRequestPage(query: string, page: number, perPage: number): Promise<PullRequestPage>;
   getPullRequest(ref: PullRequestRef): Promise<PullRequestDetail>;
   getMergeBase(ref: PullRequestRef, base: string, head: string): Promise<string>;
+  listRepositories(limit: number): Promise<RepositoryRef[]>;
+  getRepository(ref: RepositoryRef): Promise<RepositoryRef>;
+  countOpenPullRequests(ref: RepositoryRef): Promise<number>;
 }
 
 export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
@@ -38,7 +45,7 @@ export function createGitHubClient({
   host,
   apiUrl = apiBaseUrl(host),
 }: GitHubClientOptions): GitHubClient {
-  async function request(path: string, isRetry = false): Promise<unknown> {
+  async function send(path: string, isRetry = false): Promise<Response> {
     const token = await tokens.getToken();
     let response: Response;
     try {
@@ -57,12 +64,41 @@ export function createGitHubClient({
     }
     if (response.status === 401 && !isRetry) {
       tokens.invalidate(token);
-      return request(path, true);
+      return send(path, true);
     }
     if (!response.ok) {
       throw await toAppError(response);
     }
-    return response.json();
+    return response;
+  }
+
+  async function request(path: string): Promise<unknown> {
+    return (await send(path)).json();
+  }
+
+  async function searchPullRequestPage(
+    query: string,
+    page: number,
+    perPage: number,
+  ): Promise<PullRequestPage> {
+    const params = new URLSearchParams({
+      q: query,
+      sort: 'updated',
+      order: 'desc',
+      per_page: String(perPage),
+      page: String(page),
+    });
+    const result = (await request(`/search/issues?${params}`)) as {
+      items?: unknown;
+      total_count?: unknown;
+    };
+    if (!Array.isArray(result.items) || typeof result.total_count !== 'number') {
+      throw new AppError('github-request-failed', 'GitHub returned an unexpected search result.');
+    }
+    return {
+      pullRequests: result.items.map((item) => toPullRequestSummaryFromSearch(item, host)),
+      total: result.total_count,
+    };
   }
 
   return {
@@ -71,18 +107,10 @@ export function createGitHubClient({
     },
 
     async searchPullRequests(query, limit) {
-      const params = new URLSearchParams({
-        q: query,
-        sort: 'updated',
-        order: 'desc',
-        per_page: String(limit),
-      });
-      const result = (await request(`/search/issues?${params}`)) as { items?: unknown };
-      if (!Array.isArray(result.items)) {
-        throw new AppError('github-request-failed', 'GitHub returned an unexpected search result.');
-      }
-      return result.items.map((item) => toPullRequestSummaryFromSearch(item, host));
+      return (await searchPullRequestPage(query, 1, limit)).pullRequests;
     },
+
+    searchPullRequestPage,
 
     async getPullRequest(ref) {
       return toPullRequestDetail(await request(`${repositoryPath(ref)}/pulls/${ref.number}`), ref);
@@ -93,11 +121,48 @@ export function createGitHubClient({
         await request(`${repositoryPath(ref)}/compare/${base}...${head}?per_page=1`),
       );
     },
+
+    async listRepositories(limit) {
+      const params = new URLSearchParams({
+        sort: 'pushed',
+        per_page: String(limit),
+        affiliation: 'owner,collaborator,organization_member',
+      });
+      const repositories = await request(`/user/repos?${params}`);
+      if (!Array.isArray(repositories)) {
+        throw new AppError(
+          'github-request-failed',
+          'GitHub returned an unexpected repository list.',
+        );
+      }
+      return repositories.map((repository) => toRepositoryRef(repository, host));
+    },
+
+    async getRepository(ref) {
+      return toRepositoryRef(await request(repositoryPath(ref)), host);
+    },
+
+    // GitHub has no count endpoint. With one pull request per page, the number of the last
+    // page in the Link header is the count.
+    async countOpenPullRequests(ref) {
+      const response = await send(`${repositoryPath(ref)}/pulls?state=open&per_page=1`);
+      const last = lastPage(response.headers.get('link'));
+      if (last !== undefined) {
+        return last;
+      }
+      const pulls = await response.json();
+      return Array.isArray(pulls) ? pulls.length : 0;
+    },
   };
 }
 
-function repositoryPath({ owner, repo }: PullRequestRef): string {
+function repositoryPath({ owner, repo }: RepositoryRef): string {
   return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+}
+
+export function lastPage(link: string | null): number | undefined {
+  const match = /[?&]page=(\d+)[^>]*>;\s*rel="last"/.exec(link ?? '');
+  return match?.[1] ? Number(match[1]) : undefined;
 }
 
 async function toAppError(response: Response): Promise<AppError> {
@@ -153,10 +218,20 @@ function rateLimitMessage(response: Response): string {
 
 async function readMessage(response: Response): Promise<string> {
   try {
-    const body = (await response.json()) as { message?: unknown };
+    const body = (await response.json()) as { message?: unknown; errors?: unknown };
+    const detail = Array.isArray(body.errors)
+      ? body.errors.map((error) => (error as { message?: unknown })?.message).find(isString)
+      : undefined;
+    if (detail) {
+      return detail;
+    }
     if (typeof body.message === 'string') {
       return body.message;
     }
   } catch {}
   return response.statusText || 'Unknown error';
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
 }
