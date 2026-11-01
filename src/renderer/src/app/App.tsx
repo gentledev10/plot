@@ -5,7 +5,7 @@ import { formatRepositoryRef } from '@shared/repository-ref';
 import type { CodeLocation } from '@shared/review';
 import { FolderGit2, GitPullRequest, Settings, Sparkles } from 'lucide-react';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
-import { StatusMessage } from '../components/StatusMessage';
+import { useCurrentAccount } from '../features/accounts/queries';
 import type { LocationRequest } from '../features/diff/DiffWorkspace';
 import { type DiffTarget, targetKey } from '../features/diff/target';
 import { FilesPanel } from '../features/files/FilesPanel';
@@ -44,6 +44,7 @@ import { ResizeHandle } from './ResizeHandle';
 import { ToolWindowBar, ToolWindowButton } from './ToolWindowBar';
 export function App() {
   const t = useT();
+  const currentAccount = useCurrentAccount();
   const platform = usePlatform();
   const [open, setOpen] = useState<DiffTarget>();
   const [lastOpened, setLastOpened] = useState<DiffTarget>();
@@ -375,28 +376,22 @@ export function App() {
         )}
         {!open && (
           <div className={styles.placeholder}>
-            <h1>{t('Understand your changes.')}</h1>
+            <h1>{t('Open changes')}</h1>
+            <p className={styles.startDescription}>
+              {t('Open a local folder or a pull request to compare changes file by file.')}
+            </p>
             <div className={styles.startActions}>
               <button type="button" onClick={chooseAndOpenLocalRepository}>
                 {t('Open a local folder…')}
               </button>
-              <button type="button" onClick={() => setSettings('accounts')}>
-                {t('Connect GitHub…')}
+              <button
+                type="button"
+                onClick={currentAccount ? startOpeningPullRequest : () => setSettings('accounts')}
+              >
+                {currentAccount ? t('Open a pull request…') : t('Connect GitHub…')}
               </button>
             </div>
             <p className={styles.startHint}>{t('Local changes work without a GitHub account.')}</p>
-            <StatusMessage
-              action={
-                sidebarShown
-                  ? undefined
-                  : {
-                      label: 'Show pull requests',
-                      run: () => toggleWindow('pull-requests'),
-                    }
-              }
-            >
-              {t('Select a pull request or a local repository to see what changed.')}
-            </StatusMessage>
           </div>
         )}
       </main>

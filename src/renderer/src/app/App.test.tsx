@@ -1,3 +1,4 @@
+import { DEFAULT_AI_SETTINGS } from '@shared/ai';
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -42,12 +43,45 @@ function api() {
 }
 
 describe('App', () => {
+  it('nests review format under AI settings and opens the matching page', async () => {
+    renderWithApi(<App />, {
+      ...api(),
+      detectAiProviders: vi.fn().mockResolvedValue([]),
+      getAiSettings: vi.fn().mockResolvedValue(DEFAULT_AI_SETTINGS),
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    const dialog = screen.getByRole('dialog');
+    const aiChildren = within(dialog).getByRole('list', { name: 'AI overview settings' });
+    const format = within(aiChildren).getByRole('button', { name: 'Review format' });
+    await userEvent.click(format);
+    expect(format).toHaveAttribute('aria-current', 'page');
+    expect(
+      within(dialog).getByRole('heading', { name: 'AI overview / Review format' }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole('list', { name: 'Review steps' })).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'AI overview' }));
+    expect(within(dialog).getByRole('heading', { name: 'AI overview' })).toBeInTheDocument();
+    expect(format).not.toHaveAttribute('aria-current');
+  });
+
+  it('offers GitHub connection before sign-in and a direct pull request opener after sign-in', async () => {
+    const fake = { ...api(), listAccounts: vi.fn().mockResolvedValue(anAccountList([])) };
+    const { queryClient } = renderWithApi(<App />, fake);
+    await userEvent.click(screen.getByRole('button', { name: 'Connect GitHub…' }));
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Close settings' }));
+    act(() => queryClient.setQueryData(['accounts'], anAccountList()));
+    await userEvent.click(await screen.findByRole('button', { name: 'Open a pull request…' }));
+    expect(screen.queryByRole('button', { name: 'Connect GitHub…' })).not.toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Find or open a pull request' })).toHaveFocus();
+  });
+
   it('opens a pull request from the inbox and shows its changed files', async () => {
     const fake = api();
     renderWithApi(<App />, fake);
 
     expect(
-      screen.getByText('Select a pull request or a local repository to see what changed.'),
+      screen.getByText('Open a local folder or a pull request to compare changes file by file.'),
     ).toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
 
@@ -76,7 +110,7 @@ describe('App', () => {
       'true',
     );
     expect(
-      screen.getByText('Select a pull request or a local repository to see what changed.'),
+      screen.getByText('Open a local folder or a pull request to compare changes file by file.'),
     ).toBeInTheDocument();
   });
 
@@ -163,7 +197,8 @@ describe('App', () => {
 
     expect(screen.queryByRole('complementary', { name: 'Pull requests' })).not.toBeInTheDocument();
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
-    await userEvent.click(screen.getByRole('button', { name: 'Show pull requests' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Open a pull request…' }));
+    expect(screen.getByRole('searchbox', { name: 'Find or open a pull request' })).toHaveFocus();
     expect(screen.getByRole('complementary', { name: 'Pull requests' })).toBeInTheDocument();
   });
 

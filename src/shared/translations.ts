@@ -289,7 +289,11 @@ export const korean: Record<string, string> = {
   'Uncommitted only': '커밋하지 않은 변경만',
   'Understand this change before reading the diff: what it changes, how the flow differs from before, and the architecture around it. Every item links to the code.':
     '코드를 읽기 전에 무엇이 바뀌었는지, 실행 흐름과 구조가 어떻게 달라졌는지 확인하세요. 각 항목에서 관련 코드로 이동할 수 있습니다.',
-  'Understand your changes.': '변경 내용을 이해하세요.',
+  'Open changes': '변경 내용 열기',
+  'Open a local folder or a pull request to compare changes file by file.':
+    '로컬 폴더나 풀 리퀘스트를 열어 파일별 변경을 비교하세요.',
+  'Open a pull request…': '풀 리퀘스트 열기…',
+  '{section} settings': '{section} 설정',
   Use: '사용',
   'Use a model name the tool lists, without spaces.':
     '도구가 지원하는 모델 이름을 공백 없이 입력해 주세요.',

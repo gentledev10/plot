@@ -233,6 +233,8 @@ try {
   page.setDefaultTimeout(10_000);
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  await page.getByRole('heading', { name: 'Open changes', exact: true }).waitFor();
+  await page.screenshot({ path: join(root, 'dist/e2e-start.png'), scale: 'css' });
   await page.getByRole('button', { name: 'Open a local folder…', exact: true }).click();
   await page.getByRole('treeitem').filter({ hasText: 'item.txt' }).click();
   await page.locator('.monaco-editor').first().waitFor();
@@ -284,6 +286,13 @@ try {
   );
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   const settings = page.getByRole('dialog');
+  assert.equal(
+    await settings
+      .getByRole('list', { name: 'AI overview settings', exact: true })
+      .getByRole('button', { name: 'Review format', exact: true })
+      .count(),
+    1,
+  );
   await settings.getByRole('button', { name: 'AI overview', exact: true }).click();
   await settings.getByText(/Update to Claude Code 2.1.248/).waitFor();
   assert.equal(await settings.getByRole('radio', { name: /^Codex CLI/ }).isChecked(), true);

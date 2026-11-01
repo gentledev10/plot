@@ -45,7 +45,24 @@
   font-weight: 600;
 }
 
+.navList,
+.navChildren {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.navChildren {
+  margin: 2px 0 4px 12px;
+  padding-left: 10px;
+  border-left: 1px solid var(--color-border-strong);
+}
+
 .navItem {
+  width: 100%;
   padding: 5px 10px;
   border: none;
   border-radius: var(--radius);
@@ -59,6 +76,10 @@
 
 .navItem[aria-current="page"] {
   background: var(--color-bg-selected);
+}
+
+.navItem[data-active-branch="true"] {
+  font-weight: 600;
 }
 
 .content {
@@ -81,9 +102,20 @@
 }
 
 .sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   font-size: 15px;
   font-weight: 600;
+}
+
+.parentTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-weight: 400;
 }
 
 .body {

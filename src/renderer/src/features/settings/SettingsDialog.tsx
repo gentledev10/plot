@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2, X } from 'lucide-react';
+import { ChevronRight, Maximize2, Minimize2, X } from 'lucide-react';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { AccountsSettings } from '../accounts/AccountsSettings';
@@ -18,11 +18,13 @@ export type SettingsSection =
   | 'keymap'
   | 'language'
   | 'review-format';
-const SECTIONS: readonly {
+interface SettingsItem {
   id: SettingsSection;
   title: string;
   render(): ReactNode;
-}[] = [
+  children?: readonly SettingsItem[];
+}
+const SECTIONS: readonly SettingsItem[] = [
   {
     id: 'language',
     title: 'Language',
@@ -37,8 +39,10 @@ const SECTIONS: readonly {
     id: 'ai',
     title: 'AI overview',
     render: () => <AiReviewSettings />,
+    children: [
+      { id: 'review-format', title: 'Review format', render: () => <ReviewFormatSettings /> },
+    ],
   },
-  { id: 'review-format', title: 'Review format', render: () => <ReviewFormatSettings /> },
   {
     id: 'appearance',
     title: 'Appearance',
@@ -69,7 +73,11 @@ export function SettingsDialog({ section, onSectionChange, onClose }: SettingsDi
     width: '',
     height: '',
   });
-  const current = SECTIONS.find((item) => item.id === section) ?? SECTIONS[0];
+  const parent = SECTIONS.find((item) => item.children?.some((child) => child.id === section));
+  const current =
+    parent?.children?.find((item) => item.id === section) ??
+    SECTIONS.find((item) => item.id === section) ??
+    SECTIONS[0];
   useSuspendShortcuts();
   useEffect(() => {
     if (dialog.current && !dialog.current.open) {
@@ -100,21 +108,40 @@ export function SettingsDialog({ section, onSectionChange, onClose }: SettingsDi
         <h2 id="settings-title" className={styles.title}>
           {t('Settings')}
         </h2>
-        {SECTIONS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={styles.navItem}
-            aria-current={item.id === current?.id ? 'page' : undefined}
-            onClick={() => onSectionChange(item.id)}
-          >
-            {t(item.title)}
-          </button>
-        ))}
+        <ul className={styles.navList}>
+          {SECTIONS.map((item) => (
+            <li key={item.id}>
+              {navigationButton(item, parent?.id === item.id)}
+              {item.children && (
+                <ul
+                  className={styles.navChildren}
+                  aria-label={t('{section} settings', { section: t(item.title) })}
+                >
+                  {item.children.map((child) => (
+                    <li key={child.id}>{navigationButton(child)}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
       </nav>
       <div className={styles.content}>
         <header className={styles.header}>
-          <h3 className={styles.sectionTitle}>{t(current?.title ?? 'Settings')}</h3>
+          <h3
+            className={styles.sectionTitle}
+            aria-label={
+              parent ? `${t(parent.title)} / ${t(current?.title ?? 'Settings')}` : undefined
+            }
+          >
+            {parent && (
+              <span className={styles.parentTitle}>
+                {t(parent.title)}
+                <ChevronRight size={13} aria-hidden="true" />
+              </span>
+            )}
+            {t(current?.title ?? 'Settings')}
+          </h3>
           <div className={styles.windowActions}>
             <IconButton
               label={expanded ? t('Restore settings size') : t('Expand settings')}
@@ -140,4 +167,17 @@ export function SettingsDialog({ section, onSectionChange, onClose }: SettingsDi
       </div>
     </dialog>
   );
+  function navigationButton(item: SettingsItem, activeBranch = false) {
+    return (
+      <button
+        type="button"
+        className={styles.navItem}
+        data-active-branch={activeBranch}
+        aria-current={item.id === current?.id ? 'page' : undefined}
+        onClick={() => onSectionChange(item.id)}
+      >
+        {t(item.title)}
+      </button>
+    );
+  }
 }

@@ -73,8 +73,15 @@
 }
 
 .placeholder h1 {
-  margin: 0 0 16px;
+  margin: 0 0 10px;
   font-size: 22px;
+}
+
+.startDescription {
+  max-width: 440px;
+  margin: 0 0 20px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
 }
 .startActions {
   display: flex;
