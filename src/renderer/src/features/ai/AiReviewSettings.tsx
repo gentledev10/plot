@@ -136,6 +136,14 @@ function ProviderStatusLine({ id, auth, status, checking }: ProviderStatusLinePr
     );
   }
   const version = status.version ? `${status.version}. ` : '';
+  if (status.compatibilityIssue) {
+    return (
+      <span className={styles.status} data-state="signed-out">
+        {version}
+        {status.compatibilityIssue}
+      </span>
+    );
+  }
   if (auth === 'api-key') {
     return status.apiKeySaved ? (
       <span className={styles.status} data-state="ready">
@@ -373,13 +381,30 @@ function ModelFields({ settings, onSave }: ModelFieldsProps) {
           }}
         />
       )}
+      {models.isError && (
+        <p className={styles.error} role="alert">
+          {models.error.message}{' '}
+          <button type="button" className={styles.button} onClick={() => void models.refetch()}>
+            Reload models
+          </button>
+        </p>
+      )}
+      {provider === 'codex' && model && !listed && models.isSuccess && (
+        <p className={styles.error} role="alert">
+          This saved model is not available for the selected sign-in. Choose a model from the
+          updated list.
+        </p>
+      )}
       <span className={styles.hint}>
         {provider === 'claude-code'
           ? 'Each name uses the newest version of that model.'
           : options.length > 0
-            ? 'The models your installed Codex offers.'
-            : 'Install Codex to choose from its models, or pick Other to type a name.'}{' '}
-        Default uses the setting of {tool.name} itself. Higher effort thinks longer and costs more.
+            ? 'Available for the selected sign-in.'
+            : 'Check your Codex sign-in to load available models.'}{' '}
+        {provider === 'codex'
+          ? 'Default uses the recommended available model with isolated settings.'
+          : 'Default uses the Claude Code default model.'}{' '}
+        Higher effort thinks longer and costs more.
       </span>
     </fieldset>
   );

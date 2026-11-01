@@ -162,7 +162,12 @@ function PullRequestReview({
       case 'failed':
         return (
           <StatusMessage tone="error" title="Could not make the overview" onRetry={generate}>
-            {current.error.message}
+            <p>{current.error.message}</p>
+            {onConfigureAi && (
+              <button type="button" className={styles.link} onClick={onConfigureAi}>
+                Open AI settings
+              </button>
+            )}
           </StatusMessage>
         );
       case 'done':

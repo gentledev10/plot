@@ -116,6 +116,25 @@ export function lastLine(text: string): string {
   return text.trim().split('\n').filter(Boolean).at(-1) ?? '';
 }
 
+export function explainAiFailure(text: string): string {
+  let message = text;
+  try {
+    const parsed = JSON.parse(text) as { error?: { message?: string }; message?: string };
+    message = parsed.error?.message ?? parsed.message ?? text;
+  } catch {}
+  if (
+    /model.*(?:not supported|not available|not found|does not exist|do not have access)|model_not_found/i.test(
+      message,
+    )
+  ) {
+    return 'This model is not available for the selected sign-in. Choose another model in Settings > AI overview.';
+  }
+  if (/unknown option.*restricted/i.test(message)) {
+    return 'Update Claude Code to 2.1.248 or later for read-only overviews, then check the installed tools again in Settings > AI overview.';
+  }
+  return message.slice(0, 600);
+}
+
 export function rootsOf(cwd: string): string[] {
   try {
     return [cwd, realpathSync(cwd)];

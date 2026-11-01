@@ -5,25 +5,18 @@ import {
   isEffort,
   isModelName,
 } from '@shared/ai';
-import type { CommandRunner } from '../system/process';
+import { queryCodexModels } from './codex-models';
 
-const TIMEOUT_MS = 15_000;
-
-export async function listAiModels(run: CommandRunner, id: AiProviderId): Promise<AiModelOption[]> {
+export async function listAiModels(
+  id: AiProviderId,
+  options: Parameters<typeof queryCodexModels>[0] = {},
+): Promise<AiModelOption[]> {
   if (id === 'claude-code') {
     return [...CLAUDE_CODE_MODELS];
   }
-  try {
-    const { stdout } = await run('codex', ['debug', 'models', '--bundled'], {
-      timeoutMs: TIMEOUT_MS,
-    });
-    return parseCodexModels(stdout);
-  } catch {
-    return [];
-  }
+  return parseCodexModels(JSON.stringify({ data: await queryCodexModels(options) }));
 }
 
-// The catalog Codex shows in its own model picker, with the efforts each model accepts.
 export function parseCodexModels(text: string): AiModelOption[] {
   let catalog: unknown;
   try {
@@ -31,29 +24,33 @@ export function parseCodexModels(text: string): AiModelOption[] {
   } catch {
     return [];
   }
-  const models = (catalog as { models?: unknown } | null)?.models;
+  const models = (catalog as { data?: unknown } | null)?.data;
   if (!Array.isArray(models)) {
     return [];
   }
   return models.flatMap((entry: Record<string, unknown>) => {
     if (
-      entry?.visibility !== 'list' ||
-      typeof entry.slug !== 'string' ||
-      !isModelName(entry.slug)
+      !entry ||
+      entry.hidden === true ||
+      typeof entry.model !== 'string' ||
+      !isModelName(entry.model)
     ) {
       return [];
     }
-    const levels = Array.isArray(entry.supported_reasoning_levels)
-      ? entry.supported_reasoning_levels
+    const levels = Array.isArray(entry.supportedReasoningEfforts)
+      ? entry.supportedReasoningEfforts
       : [];
     return [
       {
-        id: entry.slug,
-        name: typeof entry.display_name === 'string' ? entry.display_name : entry.slug,
-        efforts: levels.map((level: { effort?: unknown }) => level?.effort).filter(isEffort),
-        defaultEffort: isEffort(entry.default_reasoning_level)
-          ? entry.default_reasoning_level
+        id: entry.model,
+        name: typeof entry.displayName === 'string' ? entry.displayName : entry.model,
+        efforts: levels
+          .map((level: { reasoningEffort?: unknown }) => level?.reasoningEffort)
+          .filter(isEffort),
+        defaultEffort: isEffort(entry.defaultReasoningEffort)
+          ? entry.defaultReasoningEffort
           : undefined,
+        ...(entry.isDefault === true ? { isDefault: true } : {}),
       },
     ];
   });

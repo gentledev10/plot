@@ -16,6 +16,16 @@ function runner(responses: Record<string, string | CommandError>) {
 }
 
 describe('detectProvider', () => {
+  it('explains when the installed Claude Code cannot safely run overviews', async () => {
+    const run = runner({
+      'claude --version': '2.1.76',
+      'claude auth status --json': '{"loggedIn":true}',
+    });
+    await expect(detectProvider(run, 'claude-code')).resolves.toMatchObject({
+      installed: true,
+      compatibilityIssue: expect.stringContaining('2.1.248'),
+    });
+  });
   it('reports the Claude Code version and sign-in, without exposing account details', async () => {
     const run = runner({
       'claude --version': '2.1.314 (Claude Code)\n',

@@ -8,6 +8,7 @@ import { createAiSettingsStore } from './ai/ai-settings-store';
 import { apiKeyFor, createApiKeyStore } from './ai/api-key-store';
 import { createClaudeCodeAgent } from './ai/claude-code';
 import { createCodexAgent } from './ai/codex';
+import { requireRestrictedMode } from './ai/compatibility';
 import { detectProvider } from './ai/detect';
 import { languageName } from './ai/language';
 import { listAiModels } from './ai/models';
@@ -23,6 +24,7 @@ import {
 } from './app/security';
 import { readThemeSource, writeThemeSource } from './app/theme-source';
 import { createMainWindow } from './app/window';
+import { AppError } from './errors';
 import { createFontLibrary } from './fonts/font-library';
 import { listInstalledFonts } from './fonts/installed-fonts';
 import { basicAuthHeader } from './git/environment';
@@ -119,11 +121,32 @@ function createApi(): PlotApi {
     async resolveAgent() {
       const settings = await aiSettings.read();
       const { provider } = settings;
+      const apiKey = await apiKeyFor(apiKeys, settings);
+      if (provider === 'claude-code') {
+        const status = await detectProvider(runCommand, provider);
+        requireRestrictedMode(status.version ?? '');
+      }
+      let model = settings.models[provider];
+      if (provider === 'codex') {
+        const models = await listAiModels(provider, { apiKey });
+        if (model && !models.some((option) => option.id === model)) {
+          throw new AppError(
+            'ai-not-configured',
+            'This model is not available for your selected sign-in. Choose another model in Settings > AI overview.',
+          );
+        }
+        model ??= models.find((option) => option.isDefault)?.id ?? models[0]?.id;
+        if (!model)
+          throw new AppError(
+            'ai-not-configured',
+            'No Codex models are available. Check your sign-in in Settings > AI overview.',
+          );
+      }
       return {
         provider,
-        model: settings.models[provider],
+        model,
         effort: settings.efforts[provider],
-        apiKey: await apiKeyFor(apiKeys, settings),
+        apiKey,
         agent: agents[provider],
       };
     },
@@ -147,7 +170,10 @@ function createApi(): PlotApi {
       store: aiSettings,
       keys: apiKeys,
       detect: (id) => detectProvider(runCommand, id),
-      listModels: (id) => listAiModels(runCommand, id),
+      async listModels(id) {
+        const settings = { ...(await aiSettings.read()), provider: id };
+        return listAiModels(id, { apiKey: await apiKeyFor(apiKeys, settings) });
+      },
     }),
     async setThemeSource(source) {
       nativeTheme.themeSource = source;

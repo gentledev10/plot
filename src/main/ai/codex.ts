@@ -8,6 +8,7 @@ import {
   type AgentOptions,
   type AgentRunInput,
   DEFAULT_TIMEOUT_MS,
+  explainAiFailure,
   lastLine,
   REJECTED_KEY,
   type ReviewAgent,
@@ -110,7 +111,7 @@ function shortCommand(command: string, roots: readonly string[]): string {
 
 function describeFailure(message: string, usedApiKey: boolean): string {
   if (!REJECTED_KEY.test(message)) {
-    return message;
+    return explainAiFailure(message);
   }
   return usedApiKey
     ? rejectedKey(apiKeyVendor)
@@ -160,7 +161,7 @@ export function createCodexAgent({
         if (exitCode !== 0) {
           throw new AppError(
             'ai-failed',
-            `${name} stopped with exit code ${exitCode}. ${lastLine(stderr)}`.trim(),
+            explainAiFailure(lastLine(stderr)) || `${name} stopped with exit code ${exitCode}.`,
           );
         }
         return { output: await readOutput(files.outputFile) };

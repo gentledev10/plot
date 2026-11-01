@@ -44,7 +44,12 @@ export function useUpdateAiSettings() {
     onError: (_error, _settings, context) => {
       client.setQueryData(aiKeys.settings, context?.previous);
     },
-    onSuccess: (settings) => client.setQueryData(aiKeys.settings, settings),
+    onSuccess: (settings, _input, context) => {
+      client.setQueryData(aiKeys.settings, settings);
+      if (JSON.stringify(settings.auth) !== JSON.stringify(context?.previous?.auth)) {
+        void client.invalidateQueries({ queryKey: ['ai', 'models'] });
+      }
+    },
   });
 }
 
@@ -54,7 +59,10 @@ export function useSaveAiApiKey() {
   return useMutation({
     mutationFn: ({ provider, key }: { provider: AiProviderId; key: string }) =>
       api.saveAiApiKey(provider, key),
-    onSuccess: () => client.invalidateQueries({ queryKey: aiKeys.providers }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: aiKeys.providers });
+      return client.invalidateQueries({ queryKey: ['ai', 'models'] });
+    },
   });
 }
 
@@ -63,6 +71,9 @@ export function useRemoveAiApiKey() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (provider: AiProviderId) => api.removeAiApiKey(provider),
-    onSuccess: () => client.invalidateQueries({ queryKey: aiKeys.providers }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: aiKeys.providers });
+      return client.invalidateQueries({ queryKey: ['ai', 'models'] });
+    },
   });
 }

@@ -37,6 +37,7 @@ export interface AiModelOption {
   name: string;
   efforts: readonly string[];
   defaultEffort?: string;
+  isDefault?: boolean;
 }
 
 // Claude Code resolves these aliases to the newest model of each family, so the list stays
@@ -72,6 +73,7 @@ export interface AiProviderStatus {
   version?: string;
   signedIn?: boolean;
   apiKeySaved: boolean;
+  compatibilityIssue?: string;
 }
 
 const MODEL = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}$/;

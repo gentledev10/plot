@@ -6,6 +6,7 @@ import {
   type AgentRunInput,
   DEFAULT_TIMEOUT_MS,
   displayPath,
+  explainAiFailure,
   lastLine,
   REJECTED_KEY,
   type ReviewAgent,
@@ -149,7 +150,7 @@ export function createClaudeCodeAgent({
       if (!result) {
         throw new AppError(
           'ai-failed',
-          `${name} stopped without a result. ${lastLine(stderr)}`.trim(),
+          explainAiFailure(lastLine(stderr)) || `${name} stopped without a result.`,
         );
       }
       if (result.isError) {

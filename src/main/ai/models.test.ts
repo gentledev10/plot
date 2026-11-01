@@ -1,27 +1,29 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { CLAUDE_CODE_MODELS } from '@shared/ai';
-import { describe, expect, it, vi } from 'vitest';
-import { CommandError } from '../system/process';
+import { describe, expect, it } from 'vitest';
+import { queryCodexModels } from './codex-models';
 import { listAiModels, parseCodexModels } from './models';
 
 const catalog = {
-  models: [
+  data: [
     {
-      slug: 'gpt-6-sol',
-      display_name: 'GPT-6-Sol',
-      visibility: 'list',
-      default_reasoning_level: 'medium',
-      supported_reasoning_levels: [
-        { effort: 'low', description: 'Fast' },
-        { effort: 'medium', description: 'Balanced' },
-        { effort: 'ultra', description: 'Delegates' },
+      model: 'gpt-6-sol',
+      displayName: 'GPT-6-Sol',
+      hidden: false,
+      defaultReasoningEffort: 'medium',
+      supportedReasoningEfforts: [
+        { reasoningEffort: 'low', description: 'Fast' },
+        { reasoningEffort: 'medium', description: 'Balanced' },
+        { reasoningEffort: 'ultra', description: 'Delegates' },
       ],
     },
-    { slug: 'codex-auto-review', display_name: 'Auto review', visibility: 'hide' },
-    { slug: 'bad name', visibility: 'list' },
+    { model: 'codex-auto-review', displayName: 'Auto review', hidden: true },
+    { model: 'bad name', hidden: false },
     {
-      slug: 'gpt-5.5',
-      visibility: 'list',
-      supported_reasoning_levels: [{ effort: 'HIGH;rm' }, { effort: 'high' }],
+      model: 'gpt-5.5',
+      hidden: false,
+      supportedReasoningEfforts: [{ reasoningEffort: 'HIGH;rm' }, { reasoningEffort: 'high' }],
     },
   ],
 };
@@ -45,21 +47,49 @@ describe('parseCodexModels', () => {
   });
 });
 
+const command = [process.execPath, join(__dirname, 'fixtures/fake-model-server.mjs')];
+
 describe('listAiModels', () => {
-  it('offers the Claude Code aliases without running anything', async () => {
-    const run = vi.fn();
-    await expect(listAiModels(run, 'claude-code')).resolves.toEqual(CLAUDE_CODE_MODELS);
-    expect(run).not.toHaveBeenCalled();
+  it('offers the Claude Code aliases', async () => {
+    await expect(listAiModels('claude-code')).resolves.toEqual(CLAUDE_CODE_MODELS);
   });
 
-  it('reads the catalog bundled with Codex, and nothing when Codex is missing', async () => {
-    const run = vi.fn().mockResolvedValue({ stdout: JSON.stringify(catalog), stderr: '' });
-    await expect(listAiModels(run, 'codex')).resolves.toHaveLength(2);
-    expect(run).toHaveBeenCalledWith('codex', ['debug', 'models', '--bundled'], {
-      timeoutMs: 15_000,
+  it('uses model/list rather than a bundled catalog, including pagination', async () => {
+    const models = await listAiModels('codex', {
+      command,
+      env: { ...process.env, PLOT_TEST_MODEL_MODE: 'pages' },
     });
+    expect(models.map((model) => model.id)).toEqual(['available-model', 'second-model']);
+    expect(models[0]).toMatchObject({ isDefault: true, efforts: ['high'] });
+  });
 
-    const missing = vi.fn().mockRejectedValue(new CommandError('not-found', 'codex', ''));
-    await expect(listAiModels(missing, 'codex')).resolves.toEqual([]);
+  it('keeps API-key discovery out of the user Codex home and cleans it up', async () => {
+    const models = (await queryCodexModels({ command, apiKey: 'fixture-key' })) as {
+      debugHome: string;
+    }[];
+    const home = models[0]?.debugHome;
+    expect(home).toBeTruthy();
+    expect(home).not.toBe(process.env.CODEX_HOME);
+    expect(existsSync(home ?? '')).toBe(false);
+  });
+
+  it('reports failures without leaking provider details or falling back to stale models', async () => {
+    await expect(
+      listAiModels('codex', { command, env: { ...process.env, PLOT_TEST_MODEL_MODE: 'error' } }),
+    ).rejects.toThrow(/could not load/);
+    await expect(
+      queryCodexModels({
+        command,
+        env: { ...process.env, PLOT_TEST_MODEL_MODE: 'hang' },
+        timeoutMs: 50,
+      }),
+    ).rejects.toThrow(/Could not load/);
+  });
+
+  it('rejects a stale ChatGPT catalog but retains API-key access to the same model', async () => {
+    const options = { command, env: { ...process.env, PLOT_TEST_MODEL_MODE: 'retired' } };
+    await expect(queryCodexModels(options)).rejects.toThrow(/only retired models/);
+    const models = await listAiModels('codex', { ...options, apiKey: 'fixture-key' });
+    expect(models[0]?.id).toBe('gpt-5.5');
   });
 });

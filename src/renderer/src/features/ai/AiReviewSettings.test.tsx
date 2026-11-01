@@ -200,7 +200,9 @@ describe('AiReviewSettings', () => {
       listAiModels: vi.fn().mockResolvedValue([]),
     });
 
-    expect(await screen.findByText(/Install Codex to choose from its models/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Check your Codex sign-in to load available models/),
+    ).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Model' })).toHaveTextContent('Other…');
   });
 

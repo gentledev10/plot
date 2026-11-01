@@ -1,5 +1,6 @@
 import type { AiProviderId, AiProviderStatus } from '@shared/ai';
 import { CommandError, type CommandRunner } from '../system/process';
+import { MINIMUM_CLAUDE_VERSION, supportsRestrictedMode } from './compatibility';
 
 const COMMANDS: Record<AiProviderId, string> = { 'claude-code': 'claude', codex: 'codex' };
 
@@ -21,7 +22,17 @@ export async function detectProvider(run: CommandRunner, id: AiProviderId): Prom
   } catch (error) {
     return { id, installed: !(error instanceof CommandError && error.failure === 'not-found') };
   }
-  return { id, installed: true, version, signedIn: await isSignedIn(run, id) };
+  return {
+    id,
+    installed: true,
+    version,
+    signedIn: await isSignedIn(run, id),
+    ...(id === 'claude-code' && !supportsRestrictedMode(version ?? '')
+      ? {
+          compatibilityIssue: `Update to Claude Code ${MINIMUM_CLAUDE_VERSION} or later for read-only overviews.`,
+        }
+      : {}),
+  };
 }
 
 async function isSignedIn(run: CommandRunner, id: AiProviderId): Promise<boolean | undefined> {

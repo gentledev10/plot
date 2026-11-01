@@ -78,6 +78,9 @@ export function createReviewService({
     const contextDir = join(workspace, 'context');
 
     try {
+      note('Checking the selected AI tool');
+      const { provider, model, effort, apiKey, agent } = await resolveAgent();
+      checkpoint();
       note('Loading the pull request');
       const { client } = await connections.forHost(ref.host);
       const pull = await client.getPullRequest(ref);
@@ -104,7 +107,6 @@ export function createReviewService({
       );
       checkpoint();
 
-      const { provider, model, effort, apiKey, agent } = await resolveAgent();
       const result = await agent.run({
         cwd: repoDir,
         contextDir,
