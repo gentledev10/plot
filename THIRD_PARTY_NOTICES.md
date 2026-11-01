@@ -2,6 +2,10 @@
 
 Plot includes the fonts and colors below from other projects. Each stays under its own license, printed at the end of this file.
 
+The build also generates THIRD_PARTY_LICENSES.txt from the bundled JavaScript packages and their upstream notices. It travels with the packaged app and is available from Help > Open Source Licenses. This includes Monaco’s ThirdPartyNotices.txt, all bundled font notices, the full license of elkjs, and instructions for obtaining the matching ELK sources under EPL-2.0. Plot’s MIT license does not replace those component licenses.
+
+The build replaces Monaco’s embedded DOMPurify implementation with the separately maintained DOMPurify package. Its Apache-2.0 license option is used and original upstream notices are retained.
+
 ## Fonts
 
 These fonts come with Plot as packaged by [Fontsource](https://fontsource.org), which splits each font by Unicode range. They are licensed under the SIL Open Font License, Version 1.1.

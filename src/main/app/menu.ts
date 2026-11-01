@@ -9,6 +9,7 @@ interface ApplicationMenuOptions {
   send(command: MenuCommand): void;
   openExternal(url: string): void;
   resetZoom(): void;
+  openLicenses?(): void;
 }
 
 export function applicationMenu({
@@ -17,6 +18,7 @@ export function applicationMenu({
   send,
   openExternal,
   resetZoom,
+  openLicenses,
 }: ApplicationMenuOptions): MenuItemConstructorOptions[] {
   const development: MenuItemConstructorOptions[] = isDevelopment
     ? [{ role: 'forceReload' }, { role: 'toggleDevTools' }, { type: 'separator' }]
@@ -67,6 +69,7 @@ export function applicationMenu({
         { type: 'separator' },
         { label: 'Report an Issue', click: () => openExternal(`${PROJECT_URL}/issues/new`) },
         { label: 'Source Code', click: () => openExternal(PROJECT_URL) },
+        { label: 'Open Source Licenses', click: openLicenses, enabled: openLicenses !== undefined },
       ],
     },
   ];

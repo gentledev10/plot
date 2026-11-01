@@ -9,6 +9,8 @@ files:
 extraResources:
   - LICENSE
   - THIRD_PARTY_NOTICES.md
+  - from: out/renderer/THIRD_PARTY_LICENSES.txt
+    to: THIRD_PARTY_LICENSES.txt
 mac:
   category: public.app-category.developer-tools
   hardenedRuntime: true

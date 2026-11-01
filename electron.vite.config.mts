@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'electron-vite';
+import { thirdPartyNotices } from './build/third-party-notices';
 
 const alias = { '@shared': resolve('src/shared') };
 
@@ -20,6 +21,7 @@ export default defineConfig({
         },
       },
       react(),
+      thirdPartyNotices(),
     ],
   },
 });

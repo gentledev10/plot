@@ -256,6 +256,13 @@ app.whenReady().then(async () => {
         send: sendMenuCommand,
         openExternal: (url) => void shell.openExternal(url),
         resetZoom: () => BrowserWindow.getFocusedWindow()?.webContents.setZoomLevel(0),
+        openLicenses: () => {
+          void shell.openPath(
+            app.isPackaged
+              ? join(process.resourcesPath, 'THIRD_PARTY_LICENSES.txt')
+              : join(__dirname, '../renderer/THIRD_PARTY_LICENSES.txt'),
+          );
+        },
       }),
     ),
   );
