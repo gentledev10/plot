@@ -31,6 +31,28 @@ function setup(overrides: Parameters<typeof renderWithApi>[1] = {}) {
 }
 
 describe('AiReviewSettings', () => {
+  it('reloads cached models and tool status after the user updates their CLI', async () => {
+    const listAiModels = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', efforts: ['low'] }])
+      .mockResolvedValue([{ id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', efforts: ['low'] }]);
+    const { api } = setup({
+      getAiSettings: vi.fn().mockResolvedValue({
+        provider: 'codex',
+        models: {},
+        efforts: {},
+        auth: {},
+      }),
+      listAiModels,
+    });
+    await screen.findByRole('option', { name: 'GPT-5.6 Sol' });
+    expect(screen.queryByRole('option', { name: 'GPT-6.1 Sol' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Reload models' }));
+    expect(await screen.findByRole('option', { name: 'GPT-6.1 Sol' })).toBeInTheDocument();
+    expect(listAiModels).toHaveBeenCalledTimes(2);
+    expect(api.detectAiProviders).toHaveBeenCalledTimes(2);
+  });
+
   it('shows the actual default model and its supported efforts from the live catalog', async () => {
     setup({
       getAiSettings: vi.fn().mockResolvedValue({

@@ -37,6 +37,10 @@ export function AiReviewSettings() {
   const update = useUpdateAiSettings();
   const groupName = useId();
 
+  function refreshTools() {
+    return Promise.all([providers.refetch(), settings.refetch()]);
+  }
+
   if (settings.isPending) {
     return <StatusMessage>Loading AI settings…</StatusMessage>;
   }
@@ -67,7 +71,7 @@ export function AiReviewSettings() {
           <IconButton
             label="Check the installed tools again"
             busy={providers.isFetching}
-            onClick={() => void Promise.all([providers.refetch(), settings.refetch()])}
+            onClick={() => void refreshTools()}
           >
             <RefreshCw size={13} />
           </IconButton>
@@ -124,6 +128,7 @@ export function AiReviewSettings() {
         key={`model-${current.provider}`}
         settings={current}
         onSave={(next) => update.mutate(next)}
+        onReloadTools={refreshTools}
       />
       {update.isError && (
         <p className={styles.error} role="alert">
@@ -316,9 +321,10 @@ const EFFORT_NAMES: Record<string, string> = {
 interface ModelFieldsProps {
   settings: AiSettings;
   onSave(settings: AiSettings): void;
+  onReloadTools(): Promise<unknown>;
 }
 
-function ModelFields({ settings, onSave }: ModelFieldsProps) {
+function ModelFields({ settings, onSave, onReloadTools }: ModelFieldsProps) {
   const { provider } = settings;
   const tool = AI_PROVIDERS[provider];
   const models = useAiModels(provider);
@@ -333,6 +339,17 @@ function ModelFields({ settings, onSave }: ModelFieldsProps) {
   const [typing, setTyping] = useState(false);
   const modelId = useId();
   const effortId = useId();
+  const reloadButton = (
+    <button
+      type="button"
+      className={styles.reload}
+      disabled={models.isFetching}
+      aria-busy={models.isFetching}
+      onClick={() => void Promise.all([models.refetch(), onReloadTools()])}
+    >
+      Reload models
+    </button>
+  );
 
   function save(next: { model?: string; effort?: string }) {
     const nextModels = { ...settings.models, [provider]: next.model };
@@ -410,10 +427,7 @@ function ModelFields({ settings, onSave }: ModelFieldsProps) {
       )}
       {models.isError && (
         <p className={styles.error} role="alert">
-          {models.error.message}{' '}
-          <button type="button" className={styles.button} onClick={() => void models.refetch()}>
-            Reload models
-          </button>
+          {models.error.message} {provider !== 'codex' && reloadButton}
         </p>
       )}
       {provider === 'codex' && model && !listed && models.isSuccess && (
@@ -433,6 +447,15 @@ function ModelFields({ settings, onSave }: ModelFieldsProps) {
           : 'Default uses the Claude Code default model.'}{' '}
         Higher effort thinks longer and costs more.
       </span>
+      {provider === 'codex' && (
+        <div className={styles.modelHelp}>
+          <p className={styles.hint}>
+            Missing a newer model? Try updating Codex CLI, then reload the list. Model availability
+            also depends on your account.
+          </p>
+          {reloadButton}
+        </div>
+      )}
     </fieldset>
   );
 }
