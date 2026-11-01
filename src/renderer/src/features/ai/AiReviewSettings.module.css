@@ -111,3 +111,53 @@
   margin: 0;
   color: var(--color-danger);
 }
+
+.signIn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.choice input {
+  margin-top: 3px;
+}
+
+.choiceText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.keyForm {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 22px;
+}
+
+.keyRow {
+  display: flex;
+  gap: 6px;
+}
+
+.button {
+  flex: none;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-input);
+  font-weight: 600;
+}
+
+.button:disabled {
+  opacity: 0.55;
+}

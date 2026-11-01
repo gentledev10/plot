@@ -1,5 +1,11 @@
 import { isAccountId, type TokenSignIn } from '@shared/accounts';
-import { type AiSettings, parseAiSettings } from '@shared/ai';
+import {
+  type AiProviderId,
+  type AiSettings,
+  isAiProviderId,
+  isApiKey,
+  parseAiSettings,
+} from '@shared/ai';
 import { isThemeSource, type ThemeSource } from '@shared/appearance';
 import { isObjectId } from '@shared/diff';
 import type { PullRequestRef } from '@shared/github';
@@ -35,6 +41,8 @@ export const argumentParsers: ArgumentParsers = {
   getAiSettings: () => [],
   updateAiSettings: ([settings]) => [aiSettings(settings)],
   detectAiProviders: () => [],
+  saveAiApiKey: ([provider, key]) => [aiProvider(provider), apiKey(key)],
+  removeAiApiKey: ([provider]) => [aiProvider(provider)],
   setThemeSource: ([source]) => [themeSource(source)],
   getPreferences: () => [],
   setPreference: ([key, value]) => [preferenceKey(key), preferenceValue(value)],
@@ -99,6 +107,21 @@ function themeSource(value: unknown): ThemeSource {
     throw new AppError('invalid-argument', 'Expected system, light, or dark.');
   }
   return value;
+}
+
+function aiProvider(value: unknown): AiProviderId {
+  if (!isAiProviderId(value)) {
+    throw new AppError('invalid-argument', 'Expected an AI tool.');
+  }
+  return value;
+}
+
+function apiKey(value: unknown): string {
+  const key = typeof value === 'string' ? value.trim() : '';
+  if (!isApiKey(key)) {
+    throw new AppError('invalid-argument', 'That does not look like an API key.');
+  }
+  return key;
 }
 
 function aiSettings(value: unknown): AiSettings {

@@ -32,7 +32,10 @@ if (mode === 'hang') {
   });
   emit({ type: 'item.completed', item: { id: 'item_2', type: 'agent_message', text: '{}' } });
   if (mode === 'success') {
-    writeFileSync(outputFile, JSON.stringify({ summary: 'ok', args }));
+    writeFileSync(
+      outputFile,
+      JSON.stringify({ summary: 'ok', args, apiKey: process.env.CODEX_API_KEY ?? null }),
+    );
   } else if (mode === 'not-json') {
     writeFileSync(outputFile, 'Here is your review!');
   }

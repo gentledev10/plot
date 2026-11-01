@@ -6,6 +6,8 @@ export interface AiProviderInfo {
   name: string;
   installUrl: string;
   signInCommand: string;
+  apiKeyVendor: string;
+  apiKeyUrl: string;
 }
 
 export const AI_PROVIDERS: Record<AiProviderId, AiProviderInfo> = {
@@ -13,49 +15,66 @@ export const AI_PROVIDERS: Record<AiProviderId, AiProviderInfo> = {
     name: 'Claude Code',
     installUrl: 'https://claude.com/claude-code',
     signInCommand: 'claude',
+    apiKeyVendor: 'Anthropic',
+    apiKeyUrl: 'https://platform.claude.com/settings/keys',
   },
   codex: {
     name: 'Codex CLI',
     installUrl: 'https://github.com/openai/codex',
     signInCommand: 'codex login',
+    apiKeyVendor: 'OpenAI',
+    apiKeyUrl: 'https://platform.openai.com/api-keys',
   },
 };
+
+export const AI_AUTH_METHODS = ['cli', 'api-key'] as const;
+
+export type AiAuth = (typeof AI_AUTH_METHODS)[number];
 
 export interface AiSettings {
   provider: AiProviderId;
   models: Partial<Record<AiProviderId, string>>;
+  auth: Partial<Record<AiProviderId, AiAuth>>;
 }
 
-export const DEFAULT_AI_SETTINGS: AiSettings = { provider: 'claude-code', models: {} };
+export const DEFAULT_AI_SETTINGS: AiSettings = { provider: 'claude-code', models: {}, auth: {} };
 
 export interface AiProviderStatus {
   id: AiProviderId;
   installed: boolean;
   version?: string;
   signedIn?: boolean;
+  apiKeySaved: boolean;
 }
 
 const MODEL = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}$/;
+const API_KEY = /^[\x21-\x7e]{20,300}$/;
 
 export function isAiProviderId(value: unknown): value is AiProviderId {
   return typeof value === 'string' && (AI_PROVIDER_IDS as readonly string[]).includes(value);
+}
+
+export function authOf(settings: AiSettings, id: AiProviderId): AiAuth {
+  return settings.auth[id] ?? 'cli';
 }
 
 export function parseAiSettings(value: unknown): AiSettings | undefined {
   if (typeof value !== 'object' || value === null) {
     return undefined;
   }
-  const { provider, models } = value as Record<string, unknown>;
+  const { provider, models, auth } = value as Record<string, unknown>;
   if (!isAiProviderId(provider)) {
     return undefined;
   }
-  const parsed: AiSettings = { provider, models: {} };
-  if (typeof models === 'object' && models !== null) {
-    for (const id of AI_PROVIDER_IDS) {
-      const model = (models as Record<string, unknown>)[id];
-      if (typeof model === 'string' && MODEL.test(model)) {
-        parsed.models[id] = model;
-      }
+  const parsed: AiSettings = { provider, models: {}, auth: {} };
+  for (const id of AI_PROVIDER_IDS) {
+    const model = fieldOf(models, id);
+    if (typeof model === 'string' && MODEL.test(model)) {
+      parsed.models[id] = model;
+    }
+    const method = fieldOf(auth, id);
+    if ((AI_AUTH_METHODS as readonly unknown[]).includes(method)) {
+      parsed.auth[id] = method as AiAuth;
     }
   }
   return parsed;
@@ -63,4 +82,14 @@ export function parseAiSettings(value: unknown): AiSettings | undefined {
 
 export function isModelName(value: string): boolean {
   return MODEL.test(value);
+}
+
+export function isApiKey(value: string): boolean {
+  return API_KEY.test(value);
+}
+
+function fieldOf(record: unknown, key: string): unknown {
+  return typeof record === 'object' && record !== null
+    ? (record as Record<string, unknown>)[key]
+    : undefined;
 }

@@ -19,11 +19,15 @@ beforeAll(async () => {
 
 afterAll(() => {});
 
-function run(mode: string, options: { timeoutMs?: number; signal?: AbortSignal } = {}) {
+function run(
+  mode: string,
+  options: { timeoutMs?: number; signal?: AbortSignal; apiKey?: string } = {},
+) {
   const activity: string[] = [];
+  const { ANTHROPIC_API_KEY: _fromShell, ...env } = process.env;
   const agent = createClaudeCodeAgent({
     command: fakeClaude,
-    env: { ...process.env, FAKE_CLAUDE_MODE: mode },
+    env: { ...env, FAKE_CLAUDE_MODE: mode },
     timeoutMs: options.timeoutMs,
   });
   const promise = agent.run({
@@ -31,6 +35,7 @@ function run(mode: string, options: { timeoutMs?: number; signal?: AbortSignal }
     contextDir: '/tmp/context',
     prompt: 'Review this.',
     schema: { type: 'object' },
+    apiKey: options.apiKey,
     signal: options.signal ?? new AbortController().signal,
     onActivity: (text) => activity.push(text),
   });
@@ -141,6 +146,22 @@ describe('createClaudeCodeAgent', () => {
     await expect(run('error').promise).rejects.toMatchObject({
       code: 'ai-failed',
       message: 'Usage limit reached.',
+    });
+  });
+
+  it('gives Claude Code an API key only when one is chosen', async () => {
+    await expect(run('success').promise).resolves.toMatchObject({ output: { apiKey: null } });
+    await expect(
+      run('success', { apiKey: 'sk-ant-test-0000000000000000' }).promise,
+    ).resolves.toMatchObject({ output: { apiKey: 'sk-ant-test-0000000000000000' } });
+  });
+
+  it('says when Anthropic does not accept the API key', async () => {
+    await expect(
+      run('bad-key', { apiKey: 'sk-ant-test-0000000000000000' }).promise,
+    ).rejects.toMatchObject({
+      code: 'ai-failed',
+      message: 'Anthropic did not accept the API key. Check it in Settings > AI overview.',
     });
   });
 

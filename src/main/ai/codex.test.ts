@@ -13,11 +13,15 @@ beforeAll(async () => {
   await mkdir(join(cwd, 'src'));
 });
 
-function run(mode: string, options: { signal?: AbortSignal; command?: string[] } = {}) {
+function run(
+  mode: string,
+  options: { signal?: AbortSignal; command?: string[]; apiKey?: string } = {},
+) {
   const activity: string[] = [];
+  const { CODEX_API_KEY: _fromShell, ...env } = process.env;
   const agent = createCodexAgent({
     command: options.command ?? fakeCodex,
-    env: { ...process.env, FAKE_CODEX_MODE: mode },
+    env: { ...env, FAKE_CODEX_MODE: mode },
   });
   const promise = agent.run({
     cwd,
@@ -25,6 +29,7 @@ function run(mode: string, options: { signal?: AbortSignal; command?: string[] }
     prompt: 'Review this.',
     schema: { type: 'object' },
     model: 'gpt-test',
+    apiKey: options.apiKey,
     signal: options.signal ?? new AbortController().signal,
     onActivity: (text) => activity.push(text),
   });
@@ -51,6 +56,11 @@ describe('codexArguments', () => {
       expect.arrayContaining(['--ignore-user-config', '--ignore-rules', '--ephemeral']),
     );
     expect(value('--config')).toBe('web_search="disabled"');
+  });
+
+  it('gives the commands Codex runs only the basic environment, so no keys reach them', () => {
+    const configs = args.flatMap((arg, index) => (args[index - 1] === '--config' ? [arg] : []));
+    expect(configs).toContain('shell_environment_policy.inherit="core"');
   });
 
   it('passes the model as one token and the prompt after the end of options', () => {
@@ -112,6 +122,22 @@ describe('createCodexAgent', () => {
     await expect(run('signed-out').promise).rejects.toMatchObject({
       code: 'ai-failed',
       message: expect.stringContaining('codex login'),
+    });
+  });
+
+  it('gives Codex an API key for this run only when one is chosen', async () => {
+    await expect(run('success').promise).resolves.toMatchObject({ output: { apiKey: null } });
+    await expect(
+      run('success', { apiKey: 'sk-proj-test-000000000000' }).promise,
+    ).resolves.toMatchObject({ output: { apiKey: 'sk-proj-test-000000000000' } });
+  });
+
+  it('says when OpenAI does not accept the API key', async () => {
+    await expect(
+      run('signed-out', { apiKey: 'sk-proj-test-000000000000' }).promise,
+    ).rejects.toMatchObject({
+      code: 'ai-failed',
+      message: 'OpenAI did not accept the API key. Check it in Settings > AI overview.',
     });
   });
 

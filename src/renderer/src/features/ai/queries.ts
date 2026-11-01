@@ -1,4 +1,4 @@
-import type { AiSettings } from '@shared/ai';
+import type { AiProviderId, AiSettings } from '@shared/ai';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../app/providers';
 
@@ -35,5 +35,24 @@ export function useUpdateAiSettings() {
       client.setQueryData(aiKeys.settings, context?.previous);
     },
     onSuccess: (settings) => client.setQueryData(aiKeys.settings, settings),
+  });
+}
+
+export function useSaveAiApiKey() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ provider, key }: { provider: AiProviderId; key: string }) =>
+      api.saveAiApiKey(provider, key),
+    onSuccess: () => client.invalidateQueries({ queryKey: aiKeys.providers }),
+  });
+}
+
+export function useRemoveAiApiKey() {
+  const api = useApi();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (provider: AiProviderId) => api.removeAiApiKey(provider),
+    onSuccess: () => client.invalidateQueries({ queryKey: aiKeys.providers }),
   });
 }

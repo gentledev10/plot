@@ -18,12 +18,12 @@ Many developers now open a full IDE only to read diffs, often of code an AI wrot
 
 ## AI overviews and your code
 
-Overviews are made by an AI coding tool on your Mac, with your own account: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. Plot has no server and no API key of its own.
+Overviews are made by an AI coding tool on your Mac: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. The tool can use its own sign-in, or an Anthropic or OpenAI API key that you add there, which your provider bills for each overview. Plot keeps the key in your macOS keychain and gives it only to that tool while it makes an overview. Plot has no server and no API key of its own.
 
 The tool reads the pull request's diff and description, the list of file paths in the repository, and the directories the pull request touches. It only gets to read:
 
 - **Claude Code** runs with the `Read`, `Grep`, and `Glob` tools only, inside the checkout, without commands, the web, or your MCP servers.
-- **Codex CLI** runs in its read-only sandbox: it can run commands that read files, but cannot change them or use the network. Web search, your Codex configuration, and its MCP servers are turned off.
+- **Codex CLI** runs in its read-only sandbox: it can run commands that read files, but cannot change them or use the network. Those commands see only basic environment variables such as `PATH` and `HOME`, so keys in your environment do not reach them. Web search, your Codex configuration, and its MCP servers are turned off.
 
 Instructions hidden in a pull request therefore cannot make the tool change files or send code elsewhere. Lines the AI cites are checked against the code, and anything it made up is marked as unverified.
 

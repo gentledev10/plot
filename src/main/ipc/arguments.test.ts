@@ -57,15 +57,30 @@ describe('argumentParsers', () => {
   it('accepts known AI providers and plain model names only', () => {
     expect(
       argumentParsers.updateAiSettings([{ provider: 'codex', models: { codex: 'gpt-5.1-codex' } }]),
-    ).toEqual([{ provider: 'codex', models: { codex: 'gpt-5.1-codex' } }]);
+    ).toEqual([{ provider: 'codex', models: { codex: 'gpt-5.1-codex' }, auth: {} }]);
     expect(
       argumentParsers.updateAiSettings([
         { provider: 'claude-code', models: { 'claude-code': '--dangerously-skip-permissions' } },
       ]),
-    ).toEqual([{ provider: 'claude-code', models: {} }]);
+    ).toEqual([{ provider: 'claude-code', models: {}, auth: {} }]);
     expect(() => argumentParsers.updateAiSettings([{ provider: 'gpt', models: {} }])).toThrow(
       expect.objectContaining({ code: 'invalid-argument' }),
     );
+  });
+
+  it('accepts an API key only for a known tool, trimmed, and without spaces', () => {
+    const key = `sk-ant-api03-${'a'.repeat(40)}`;
+    expect(argumentParsers.saveAiApiKey(['claude-code', `  ${key}\n`])).toEqual([
+      'claude-code',
+      key,
+    ]);
+    expect(argumentParsers.removeAiApiKey(['codex'])).toEqual(['codex']);
+
+    const invalid = expect.objectContaining({ code: 'invalid-argument' });
+    expect(() => argumentParsers.saveAiApiKey(['gpt', key])).toThrow(invalid);
+    expect(() => argumentParsers.saveAiApiKey(['codex', 'my secret key'])).toThrow(invalid);
+    expect(() => argumentParsers.saveAiApiKey(['codex', 42])).toThrow(invalid);
+    expect(() => argumentParsers.removeAiApiKey(['../codex'])).toThrow(invalid);
   });
 
   it('accepts local repositories only by id, and paths only inside them', () => {

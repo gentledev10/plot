@@ -1,15 +1,20 @@
 import { AI_PROVIDER_IDS, type AiProviderId, type AiProviderStatus } from '@shared/ai';
 import type { PlotApi } from '@shared/ipc';
 import type { AiSettingsStore } from '../ai/ai-settings-store';
+import type { ApiKeyStore } from '../ai/api-key-store';
 
-export type AiService = Pick<PlotApi, 'getAiSettings' | 'updateAiSettings' | 'detectAiProviders'>;
+export type AiService = Pick<
+  PlotApi,
+  'getAiSettings' | 'updateAiSettings' | 'detectAiProviders' | 'saveAiApiKey' | 'removeAiApiKey'
+>;
 
 interface AiServiceOptions {
   store: AiSettingsStore;
-  detect(id: AiProviderId): Promise<AiProviderStatus>;
+  keys: Pick<ApiKeyStore, 'has' | 'save' | 'remove'>;
+  detect(id: AiProviderId): Promise<Omit<AiProviderStatus, 'apiKeySaved'>>;
 }
 
-export function createAiService({ store, detect }: AiServiceOptions): AiService {
+export function createAiService({ store, keys, detect }: AiServiceOptions): AiService {
   return {
     getAiSettings() {
       return store.read();
@@ -21,7 +26,20 @@ export function createAiService({ store, detect }: AiServiceOptions): AiService 
     },
 
     detectAiProviders() {
-      return Promise.all(AI_PROVIDER_IDS.map((id) => detect(id)));
+      return Promise.all(
+        AI_PROVIDER_IDS.map(async (id) => ({
+          ...(await detect(id)),
+          apiKeySaved: await keys.has(id),
+        })),
+      );
+    },
+
+    saveAiApiKey(provider, key) {
+      return keys.save(provider, key);
+    },
+
+    removeAiApiKey(provider) {
+      return keys.remove(provider);
     },
   };
 }

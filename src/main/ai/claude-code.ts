@@ -7,7 +7,9 @@ import {
   DEFAULT_TIMEOUT_MS,
   displayPath,
   lastLine,
+  REJECTED_KEY,
   type ReviewAgent,
+  rejectedKey,
   rootsOf,
   runAgentProcess,
 } from './agent';
@@ -16,7 +18,7 @@ type StreamEvent =
   | { kind: 'tool'; name: string; input: Record<string, unknown> }
   | { kind: 'result'; isError: boolean; message?: string; output?: unknown; costUsd?: number };
 
-const { name, installUrl } = AI_PROVIDERS['claude-code'];
+const { name, installUrl, apiKeyVendor } = AI_PROVIDERS['claude-code'];
 
 export function claudeArguments(
   input: Pick<AgentRunInput, 'prompt' | 'schema' | 'contextDir' | 'model'>,
@@ -113,7 +115,7 @@ export function createClaudeCodeAgent({
         command,
         args: claudeArguments(input),
         cwd: input.cwd,
-        env,
+        env: input.apiKey ? { ...env, ANTHROPIC_API_KEY: input.apiKey } : env,
         timeoutMs,
         spawnProcess,
         signal: input.signal,
@@ -134,7 +136,11 @@ export function createClaudeCodeAgent({
         );
       }
       if (result.isError) {
-        throw new AppError('ai-failed', result.message ?? `${name} reported an error.`);
+        const message = result.message ?? `${name} reported an error.`;
+        throw new AppError(
+          'ai-failed',
+          input.apiKey && REJECTED_KEY.test(message) ? rejectedKey(apiKeyVendor) : message,
+        );
       }
       if (result.output === undefined) {
         throw new AppError('ai-invalid-output', `${name} did not return a review map.`);

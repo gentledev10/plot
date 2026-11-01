@@ -9,12 +9,14 @@ import {
   type AgentRunInput,
   DEFAULT_TIMEOUT_MS,
   lastLine,
+  REJECTED_KEY,
   type ReviewAgent,
+  rejectedKey,
   rootsOf,
   runAgentProcess,
 } from './agent';
 
-const { name, installUrl, signInCommand } = AI_PROVIDERS.codex;
+const { name, installUrl, signInCommand, apiKeyVendor } = AI_PROVIDERS.codex;
 
 interface CodexFiles {
   schemaFile: string;
@@ -46,6 +48,8 @@ export function codexArguments(
     files.outputFile,
     '--config',
     'web_search="disabled"',
+    '--config',
+    'shell_environment_policy.inherit="core"',
     ...(input.model ? [`--model=${input.model}`] : []),
     '--',
     input.prompt,
@@ -103,11 +107,13 @@ function shortCommand(command: string, roots: readonly string[]): string {
   return text.length > 80 ? `${text.slice(0, 79)}…` : text;
 }
 
-function describeFailure(message: string): string {
-  if (/\b401\b|unauthorized/i.test(message)) {
-    return `${name} is not signed in. Run \`${signInCommand}\` in a terminal, then try again.`;
+function describeFailure(message: string, usedApiKey: boolean): string {
+  if (!REJECTED_KEY.test(message)) {
+    return message;
   }
-  return message;
+  return usedApiKey
+    ? rejectedKey(apiKeyVendor)
+    : `${name} is not signed in. Run \`${signInCommand}\` in a terminal, then try again.`;
 }
 
 export function createCodexAgent({
@@ -133,7 +139,7 @@ export function createCodexAgent({
           command,
           args: codexArguments(input, files),
           cwd: input.cwd,
-          env,
+          env: input.apiKey ? { ...env, CODEX_API_KEY: input.apiKey } : env,
           timeoutMs,
           spawnProcess,
           signal: input.signal,
@@ -148,7 +154,7 @@ export function createCodexAgent({
           },
         });
         if (failure !== undefined) {
-          throw new AppError('ai-failed', describeFailure(failure));
+          throw new AppError('ai-failed', describeFailure(failure, input.apiKey !== undefined));
         }
         if (exitCode !== 0) {
           throw new AppError(

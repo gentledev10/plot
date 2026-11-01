@@ -10,6 +10,7 @@ export interface AgentRunInput {
   prompt: string;
   schema: object;
   model?: string;
+  apiKey?: string;
   signal: AbortSignal;
   onActivity(activity: string): void;
 }
@@ -102,6 +103,12 @@ export function runAgentProcess(run: ProcessRun): Promise<ProcessExit> {
       }
     });
   });
+}
+
+export const REJECTED_KEY = /\b401\b|unauthorized|invalid api key|authentication/i;
+
+export function rejectedKey(vendor: string): string {
+  return `${vendor} did not accept the API key. Check it in Settings > AI overview.`;
 }
 
 export function lastLine(text: string): string {

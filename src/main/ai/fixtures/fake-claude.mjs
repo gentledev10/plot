@@ -26,6 +26,13 @@ if (mode === 'hang') {
       is_error: true,
       result: 'Usage limit reached.',
     });
+  } else if (mode === 'bad-key') {
+    emit({
+      type: 'result',
+      subtype: 'success',
+      is_error: true,
+      result: 'Invalid API key · Fix external API key',
+    });
   } else if (mode === 'no-output') {
     emit({ type: 'result', subtype: 'success', is_error: false, result: 'Done.' });
   } else {
@@ -35,7 +42,11 @@ if (mode === 'hang') {
       subtype: 'success',
       is_error: false,
       total_cost_usd: 0.42,
-      structured_output: { summary: 'ok', args: process.argv.slice(2) },
+      structured_output: {
+        summary: 'ok',
+        args: process.argv.slice(2),
+        apiKey: process.env.ANTHROPIC_API_KEY ?? null,
+      },
     });
   }
 }

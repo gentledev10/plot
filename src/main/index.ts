@@ -5,6 +5,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, shell } fr
 import { createAccountStore } from './accounts/account-store';
 import type { ReviewAgent } from './ai/agent';
 import { createAiSettingsStore } from './ai/ai-settings-store';
+import { apiKeyFor, createApiKeyStore } from './ai/api-key-store';
 import { createClaudeCodeAgent } from './ai/claude-code';
 import { createCodexAgent } from './ai/codex';
 import { detectProvider } from './ai/detect';
@@ -99,6 +100,10 @@ function createApi(): PlotApi {
     authHeader: async (repository) => (await connections.forHost(repository.host)).authHeader(),
   });
   const aiSettings = createAiSettingsStore(join(userData, 'ai-settings.json'));
+  const apiKeys = createApiKeyStore({
+    file: join(userData, 'ai-api-keys.json'),
+    cipher: keychainCipher,
+  });
   const preferences = createPreferencesStore(join(userData, 'preferences.json'));
   const agents: Record<AiProviderId, ReviewAgent> = {
     'claude-code': createClaudeCodeAgent(),
@@ -108,8 +113,14 @@ function createApi(): PlotApi {
     connections,
     repositories,
     async resolveAgent() {
-      const { provider, models } = await aiSettings.read();
-      return { provider, model: models[provider], agent: agents[provider] };
+      const settings = await aiSettings.read();
+      const { provider } = settings;
+      return {
+        provider,
+        model: settings.models[provider],
+        apiKey: await apiKeyFor(apiKeys, settings),
+        agent: agents[provider],
+      };
     },
     store: createFileReviewStore(join(userData, 'reviews')),
     workspaceRoot: join(userData, 'review-workspaces'),
@@ -127,7 +138,11 @@ function createApi(): PlotApi {
     ...createGitHubService(connections),
     ...createDiffService({ connections, repositories }),
     ...reviews,
-    ...createAiService({ store: aiSettings, detect: (id) => detectProvider(runCommand, id) }),
+    ...createAiService({
+      store: aiSettings,
+      keys: apiKeys,
+      detect: (id) => detectProvider(runCommand, id),
+    }),
     async setThemeSource(source) {
       nativeTheme.themeSource = source;
       await writeThemeSource(appearanceFile(), source);

@@ -10,10 +10,9 @@ const SIGN_IN_CHECKS: Record<AiProviderId, readonly string[]> = {
 
 const TIMEOUT_MS = 10_000;
 
-export async function detectProvider(
-  run: CommandRunner,
-  id: AiProviderId,
-): Promise<AiProviderStatus> {
+export type CliStatus = Omit<AiProviderStatus, 'apiKeySaved'>;
+
+export async function detectProvider(run: CommandRunner, id: AiProviderId): Promise<CliStatus> {
   const command = COMMANDS[id];
   let version: string | undefined;
   try {

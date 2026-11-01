@@ -17,6 +17,7 @@ export type ErrorCode =
   | 'git-not-installed'
   | 'git-failed'
   | 'ai-not-installed'
+  | 'ai-not-configured'
   | 'ai-failed'
   | 'ai-cancelled'
   | 'ai-invalid-output'
