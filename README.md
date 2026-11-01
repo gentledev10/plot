@@ -51,7 +51,9 @@ Homebrew installation will use a project-maintained tap after the first signed r
 
 ## Demo
 
-[Watch the English demo](https://github.com/gentledev10/plot/blob/main/docs/media/plot-demo.mp4): open a PR, inspect the diff, compare diagrams and open local work.
+https://github.com/user-attachments/assets/008b92de-4fc4-4aea-b248-2d35f4854479
+
+Open a PR, inspect the diff, follow a diagram back to its code and open local work. [Download the English demo](https://github.com/gentledev10/plot/raw/refs/heads/main/docs/media/plot-demo.mp4).
 
 Screenshots and the demo are captured from the real app in English using an illustrative repository and a prepared overview. They do not show a live AI request or its generation speed.
 
