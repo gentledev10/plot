@@ -1,0 +1,159 @@
+.visual {
+  margin: 12px 0 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  min-width: 0;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.heading h4 {
+  margin: 0;
+  font-size: var(--font-size);
+}
+.kind {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+.takeaway {
+  line-height: 1.6;
+  margin: 8px 0 12px;
+}
+.controls {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border: none;
+  padding: 0;
+  margin: 8px 0;
+  min-width: 0;
+}
+.controls button,
+.expand {
+  font: inherit;
+  font-size: var(--font-size-small);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  padding: 3px 8px;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.controls button[aria-pressed="true"] {
+  background: var(--color-bg-selected);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+.expand {
+  color: var(--color-accent);
+}
+.pair {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+@container (min-width: 760px) {
+  .pair[data-paired="true"] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.pane {
+  min-width: 0;
+  padding: 10px;
+  background: var(--color-bg-editor);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+.pane h5 {
+  margin: 0 0 6px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+.canvas {
+  overflow: auto;
+  max-height: 420px;
+  min-width: 0;
+}
+.canvas svg {
+  display: block;
+  height: auto;
+  min-width: 0;
+  margin-inline: auto;
+}
+.edge rect {
+  fill: var(--color-bg-editor);
+}
+.area rect {
+  fill: var(--color-bg-panel);
+  stroke: var(--color-border-strong);
+  stroke-dasharray: 4 3;
+}
+.area text {
+  fill: var(--color-text-muted);
+  font:
+    12px -apple-system,
+    sans-serif;
+}
+.node rect {
+  fill: var(--color-bg-input);
+  stroke: var(--color-border-strong);
+  stroke-width: 1.5;
+}
+.node text {
+  fill: var(--color-text);
+  font:
+    14px -apple-system,
+    sans-serif;
+}
+.node[data-status="added"] rect {
+  fill: var(--diff-inserted-line);
+  stroke: var(--color-success);
+}
+.node[data-status="changed"] rect {
+  fill: var(--diff-modified-line);
+  stroke: var(--color-accent);
+}
+.node[data-status="removed"] rect {
+  fill: var(--diff-deleted-line);
+  stroke-dasharray: 4 3;
+}
+.node[data-inferred="true"] rect {
+  stroke-dasharray: 4 3;
+}
+.node[role="button"] {
+  cursor: pointer;
+  outline: none;
+}
+.edge path {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.4;
+}
+.edge[data-inferred="true"] path {
+  stroke-dasharray: 5 4;
+}
+.edge text {
+  fill: var(--color-text-muted);
+  font:
+    11px -apple-system,
+    sans-serif;
+}
+.node[role="button"]:hover rect,
+.node[role="button"]:focus-visible rect {
+  stroke: var(--color-accent);
+  stroke-width: 3;
+}
+.evidence {
+  margin-top: 10px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+.evidence summary {
+  cursor: pointer;
+}
+.evidence li {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}

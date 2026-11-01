@@ -528,12 +528,15 @@ try {
       .getByRole('button', { name: /Fixture pull request/ })
       .first()
       .click();
-    await changeMap.getByRole('img').locator('svg').waitFor();
+    await page.locator('[data-step-id="architecture"] svg').first().waitFor();
   };
   await reopenFixture();
   assert.equal(
     await changeMap.getByRole('button', { name: 'System overview' }).getAttribute('aria-pressed'),
     'true',
+  );
+  await page.waitForFunction(
+    () => document.querySelectorAll('[data-step-id="architecture"] g.node').length === 4,
   );
   assert.equal(await mapImage.locator('g.node').count(), 4);
   const mapMeasurements = async () =>
@@ -587,6 +590,108 @@ try {
     document.querySelector('.editor.modified .view-lines')?.textContent?.includes('result'),
   );
   pass('Read detailed maps at a stable font size and navigate their original code locations');
+  const beforeGraph = {
+    groups: [],
+    nodes: [
+      { id: 'caller', label: 'Caller', status: 'unchanged' },
+      {
+        id: 'processor',
+        label: 'Shared processor',
+        status: 'unchanged',
+        location: { path: 'sample.ts', line: 1 },
+      },
+    ],
+    edges: [{ from: 'caller', to: 'processor', label: 'request', evidence: 'code' }],
+  };
+  const afterGraph = {
+    groups: [
+      { id: 'api', label: 'Entry points' },
+      { id: 'processing', label: 'Processing' },
+    ],
+    nodes: [
+      { id: 'caller', label: 'Caller', status: 'unchanged', group: 'api' },
+      { id: 'environment', label: 'Environment', status: 'added', group: 'processing' },
+      {
+        id: 'processor',
+        label: 'Module runner',
+        status: 'changed',
+        group: 'processing',
+        location: { path: 'sample.ts', line: 1 },
+      },
+    ],
+    edges: [
+      { from: 'caller', to: 'environment', label: 'request', evidence: 'code' },
+      { from: 'environment', to: 'processor', label: 'execute', evidence: 'code' },
+    ],
+  };
+  largeReview.review.visuals = [
+    {
+      kind: 'components',
+      title: 'System responsibilities',
+      takeaway: 'Processing moves from shared state into an independent environment.',
+      scope: 'Source inspected.',
+      before: beforeGraph,
+      after: afterGraph,
+    },
+    {
+      kind: 'flowchart',
+      title: 'Request routing',
+      takeaway: 'Requests select an environment before execution.',
+      scope: 'Source inspected.',
+      before: beforeGraph,
+      after: afterGraph,
+    },
+    {
+      kind: 'sequence',
+      title: 'Module calls',
+      takeaway: 'The environment mediates the runner call.',
+      scope: 'Source inspected.',
+      before: beforeGraph,
+      after: afterGraph,
+    },
+  ];
+  writeFileSync(cacheFile, JSON.stringify(largeReview));
+  await reopenFixture();
+  await changeMap
+    .getByRole('img', { name: 'System responsibilities · After', exact: true })
+    .locator('rect')
+    .first()
+    .waitFor();
+  await changeMap
+    .getByRole('img', { name: 'Request routing · After', exact: true })
+    .locator('rect')
+    .first()
+    .waitFor();
+  await changeMap
+    .getByRole('img', { name: 'Module calls · After', exact: true })
+    .locator('svg')
+    .waitFor();
+  await changeMap.getByRole('button', { name: 'Enlarge diagrams' }).click();
+  const structure = changeMap.getByRole('region', { name: 'System responsibilities', exact: true });
+  await structure
+    .getByRole('img', { name: 'System responsibilities · Before', exact: true })
+    .waitFor();
+  await structure
+    .getByRole('img', { name: 'System responsibilities · After', exact: true })
+    .waitFor();
+  await page.screenshot({ path: join(root, 'dist/e2e-visual-comparison.png'), scale: 'css' });
+  await structure.getByRole('button', { name: 'Before', exact: true }).click();
+  assert.equal(await structure.locator('svg [role="button"]').count(), 0);
+  await structure.getByRole('button', { name: 'After', exact: true }).click();
+  await structure.locator('svg [role="button"]').filter({ hasText: 'Module runner' }).click();
+  await page.waitForFunction(() =>
+    document.querySelector('.editor.modified .view-lines')?.textContent?.includes('result'),
+  );
+  assert.equal(
+    readFileSync(join(scratch, 'generation-count'), 'utf8').trim().split('\n').length,
+    1,
+  );
+  pass(
+    'Render architecture, routing and sequence visuals and compare actual before/after graphs without another AI call',
+  );
+  pass(
+    'Navigate vector diagram nodes to current code while keeping the before side non-interactive',
+  );
   writeFileSync(cacheFile, savedReview);
   await reopenFixture();
   const changesCard = page

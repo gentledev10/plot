@@ -45,6 +45,7 @@ import {
 import { useReviewActions, useReviewStatus } from './queries';
 import styles from './ReviewPanel.module.css';
 import { useReviewPlan } from './ReviewPlanProvider';
+import { VisualWalkthrough } from './VisualWalkthrough';
 
 interface ReviewPanelProps {
   target?: PullRequestRef;
@@ -432,6 +433,16 @@ function ReviewMapView({ review, changedPaths, onOpenLocation, onExpandMap }: Re
             ))
           : null;
       case 'architecture':
+        if (review.visuals?.length)
+          return (
+            <VisualWalkthrough
+              visuals={review.visuals}
+              changedPaths={changedPaths}
+              onOpenLocation={onOpenLocation}
+              link={link}
+              onExpand={onExpandMap}
+            />
+          );
         return review.architecture.nodes.length > 0
           ? graph(review.architecture, undefined, true)
           : null;

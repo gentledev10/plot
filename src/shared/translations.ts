@@ -1,6 +1,13 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  After: '변경 후',
+  'Enlarge diagrams': '그림 크게 보기',
+  'Architecture diagram': '구조도',
+  'Side by side': '나란히 비교',
+  'Compare diagrams: {title}': '그림 전후 비교: {title}',
+  'Diagram evidence and scope': '그림의 근거와 분석 범위',
+  'Drawing diagram…': '그림 그리는 중…',
   'Map detail': '지도 상세 수준',
   'System overview': '전체 구조',
   'Components ({count})': '구성 요소 ({count})',
