@@ -12,6 +12,7 @@ extraResources:
   - from: out/renderer/THIRD_PARTY_LICENSES.txt
     to: THIRD_PARTY_LICENSES.txt
 mac:
+  icon: build/icon.icns
   category: public.app-category.developer-tools
   hardenedRuntime: true
   target:

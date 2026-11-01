@@ -279,6 +279,13 @@ try {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.getByRole('heading', { name: 'Open changes', exact: true }).waitFor();
+  assert.equal(await app.evaluate(({ app }) => app.name), 'Plot');
+  assert.equal(await page.title(), 'Plot');
+  assert.equal(
+    await app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.items[0]?.label),
+    'Plot',
+  );
+  pass('Use Plot consistently for the application, window and app menu');
   await page.screenshot({ path: join(root, 'dist/e2e-start.png'), scale: 'css' });
   await page.getByRole('button', { name: 'Open a local folder…', exact: true }).click();
   await page.getByRole('treeitem').filter({ hasText: 'item.txt' }).click();

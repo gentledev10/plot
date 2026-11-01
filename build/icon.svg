@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">Plot</title>
+  <desc id="description">Three events joined by one continuous story, with an early turning point. Follow the plot.</desc>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0.7" y2="1">
+      <stop stop-color="#304d6c"/>
+      <stop offset="0.5" stop-color="#20364f"/>
+      <stop offset="1" stop-color="#122035"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0.5" y2="1">
+      <stop stop-color="#a9c7e8" stop-opacity="0.45"/>
+      <stop offset="0.45" stop-color="#a9c7e8" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#020914" stop-opacity="0.4"/>
+    </linearGradient>
+    <linearGradient id="line" gradientUnits="userSpaceOnUse" x1="380" y1="376" x2="400" y2="610">
+      <stop stop-color="#c0ddff"/>
+      <stop offset="0.45" stop-color="#87b5f6"/>
+      <stop offset="1" stop-color="#548bdb"/>
+    </linearGradient>
+    <linearGradient id="node" x1="0" y1="0" x2="0.65" y2="1">
+      <stop stop-color="#fffefa"/>
+      <stop offset="0.5" stop-color="#f2f2ed"/>
+      <stop offset="1" stop-color="#cbd3dd"/>
+    </linearGradient>
+    <linearGradient id="node-rim" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#748398" stop-opacity="0.5"/>
+    </linearGradient>
+    <filter id="tile-shadow" x="-0.2" y="-0.2" width="1.4" height="1.4">
+      <feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#000916" flood-opacity="0.25"/>
+    </filter>
+    <filter id="symbol-shadow" x="-0.5" y="-0.5" width="2" height="2">
+      <feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#000916" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#tile)" stroke="url(#rim)" stroke-width="2" filter="url(#tile-shadow)"/>
+  <path d="M 236 566 C 260 488 304 414 380 414 C 528 414 644 566 784 566" transform="translate(0 5)" fill="none" stroke="#315b92" stroke-width="48" stroke-linecap="round" filter="url(#symbol-shadow)"/>
+  <path d="M 236 566 C 260 488 304 414 380 414 C 528 414 644 566 784 566" fill="none" stroke="url(#line)" stroke-width="48" stroke-linecap="round"/>
+  <g fill="#aebaca" transform="translate(0 5)" filter="url(#symbol-shadow)">
+    <circle cx="236" cy="566" r="62"/>
+    <circle cx="380" cy="414" r="62"/>
+    <circle cx="784" cy="566" r="62"/>
+  </g>
+  <g fill="url(#node)" stroke="url(#node-rim)" stroke-width="2">
+    <circle cx="236" cy="566" r="62"/>
+    <circle cx="380" cy="414" r="62"/>
+    <circle cx="784" cy="566" r="62"/>
+  </g>
+</svg>

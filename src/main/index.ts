@@ -269,6 +269,9 @@ function openWindow(): void {
 }
 
 app.whenReady().then(async () => {
+  if (!app.isPackaged) {
+    app.dock?.setIcon(join(__dirname, '../../build/icon.png'));
+  }
   if (app.isPackaged) {
     await adoptLoginShellPath();
   }

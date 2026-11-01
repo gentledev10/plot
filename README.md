@@ -113,6 +113,8 @@ npm run dev
 
 For a deterministic check in the real Electron app on macOS, run `npm run test:e2e`. It uses a temporary profile, real temporary Git repositories, and fixture GitHub/AI responses. It never signs in to GitHub or calls an AI provider. It also checks narrow-window layout, automatic refresh, diagrams, sanitizer versions, notices, and accessibility.
 
+The Plot icon connects three events into one storyline: follow the plot. Its navy tile, blue connection, and ivory nodes have subtle gradients, edges, and contact shadows. SVG, PNG, and macOS ICNS assets live in `build/`. Run `npm run icons` on macOS with the Swift command-line tools to regenerate all sizes from `build/generate-icon.swift`, or `npm run icons -- --compare` to preview flat, soft, and satin finishes in `dist/`. Packaged apps use the satin ICNS asset; development runs use the same icon in the Dock.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the app is structured. Report security issues as described in [SECURITY.md](SECURITY.md).
