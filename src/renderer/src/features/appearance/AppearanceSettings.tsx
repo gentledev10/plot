@@ -27,7 +27,7 @@ const SUGGESTED_FONTS = [
 ];
 
 const CHOICES: readonly { id: ThemeChoice; name: string }[] = [
-  { id: 'system', name: 'Match macOS' },
+  { id: 'system', name: 'System' },
   ...THEMES.map(({ id, name }) => ({ id, name })),
 ];
 

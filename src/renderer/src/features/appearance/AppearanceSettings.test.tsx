@@ -15,7 +15,7 @@ const variable = (name: string) => document.documentElement.style.getPropertyVal
 describe('AppearanceSettings', () => {
   it('switches the theme and tells the main process whether it is light or dark', async () => {
     const { api } = renderWithApi(<AppearanceSettings />);
-    expect(screen.getByRole('radio', { name: 'Match macOS' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'System' })).toBeChecked();
 
     await userEvent.click(screen.getByRole('radio', { name: 'Darcula' }));
 
