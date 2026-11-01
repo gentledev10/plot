@@ -50,13 +50,20 @@ export function useAccountActions() {
 export type BrowserSignInState =
   | { step: 'idle' }
   | { step: 'starting' }
-  | { step: 'waiting'; signIn: BrowserSignIn }
+  | { step: 'waiting'; signIn: BrowserSignIn; codeCopied: boolean }
   | { step: 'failed'; message: string };
 
-export function devicePageUrl(signIn: Pick<BrowserSignIn, 'userCode' | 'verificationUri'>): string {
-  const url = new URL(signIn.verificationUri);
-  url.searchParams.set('user_code', signIn.userCode);
-  return url.toString();
+export function signInPageUrl(signIn: BrowserSignIn): string {
+  return signIn.flow === 'web' ? signIn.authorizeUrl : signIn.verificationUri;
+}
+
+export function copyText(text: string): Promise<boolean> {
+  return (
+    navigator.clipboard?.writeText(text).then(
+      () => true,
+      () => false,
+    ) ?? Promise.resolve(false)
+  );
 }
 
 export function useBrowserSignIn(onSignedIn?: (account: Account) => void) {
@@ -83,8 +90,12 @@ export function useBrowserSignIn(onSignedIn?: (account: Account) => void) {
       const signIn = await api.startBrowserSignIn();
       id = signIn.id;
       active.current = id;
-      setState({ step: 'waiting', signIn });
-      window.open(devicePageUrl(signIn), '_blank', 'noreferrer');
+      const codeCopied = signIn.flow === 'device' && (await copyText(signIn.userCode));
+      if (active.current !== id) {
+        return;
+      }
+      setState({ step: 'waiting', signIn, codeCopied });
+      window.open(signInPageUrl(signIn), '_blank', 'noreferrer');
       const account = await api.finishBrowserSignIn(id);
       if (active.current !== id) {
         return;

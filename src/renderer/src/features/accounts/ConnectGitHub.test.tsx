@@ -1,4 +1,4 @@
-import type { Account } from '@shared/accounts';
+import type { Account, BrowserSignIn } from '@shared/accounts';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -17,8 +17,9 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-const signIn = {
+const signIn: BrowserSignIn = {
   id: '6f9619ff-8b86-d011-b42d-00c04fc964ff',
+  flow: 'device',
   userCode: 'WDJB-MJHT',
   verificationUri: 'https://github.com/login/device',
   expiresAt: '2026-10-31T00:15:00Z',
@@ -120,7 +121,31 @@ describe('ConnectGitHub', () => {
     );
   });
 
-  it('opens GitHub in the browser with the one-time code', async () => {
+  it('opens GitHub to approve Plot when the build signs in without a code', async () => {
+    const account = anAccount('mona');
+    const finish = deferred<Account>();
+    const authorizeUrl = 'https://github.com/login/oauth/authorize?client_id=Ov23test&state=abc';
+    const { onConnected, open } = setup({
+      startBrowserSignIn: vi.fn().mockResolvedValue({ id: signIn.id, flow: 'web', authorizeUrl }),
+      finishBrowserSignIn: vi.fn().mockReturnValue(finish.promise),
+    });
+
+    await userEvent.click(await screen.findByRole('button', { name: /Sign in with your browser/ }));
+
+    expect(
+      await screen.findByText('Approve Plot on the GitHub page that opened in your browser.'),
+    ).toBeInTheDocument();
+    expect(open).toHaveBeenCalledWith(authorizeUrl, '_blank', 'noreferrer');
+    expect(screen.queryByLabelText('Sign-in code')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Open GitHub again' }));
+    expect(open).toHaveBeenCalledTimes(2);
+
+    finish.resolve(account);
+    await vi.waitFor(() => expect(onConnected).toHaveBeenCalledWith(account));
+  });
+
+  it('copies the one-time code before opening GitHub when the build signs in with a code', async () => {
+    const user = userEvent.setup();
     const account = anAccount('mona');
     const finish = deferred<Account>();
     const finishBrowserSignIn = vi.fn().mockReturnValue(finish.promise);
@@ -128,16 +153,16 @@ describe('ConnectGitHub', () => {
       startBrowserSignIn: vi.fn().mockResolvedValue(signIn),
       finishBrowserSignIn,
     });
-    const devicePage = 'https://github.com/login/device?user_code=WDJB-MJHT';
 
-    await userEvent.click(await screen.findByRole('button', { name: /Sign in with your browser/ }));
+    await user.click(await screen.findByRole('button', { name: /Sign in with your browser/ }));
 
     expect(await screen.findByLabelText('Sign-in code')).toHaveTextContent('WDJB-MJHT');
-    expect(open).toHaveBeenCalledWith(devicePage, '_blank', 'noreferrer');
+    expect(screen.getByText(/It is already copied/)).toBeInTheDocument();
+    await expect(navigator.clipboard.readText()).resolves.toBe('WDJB-MJHT');
+    expect(open).toHaveBeenCalledWith('https://github.com/login/device', '_blank', 'noreferrer');
     expect(finishBrowserSignIn).toHaveBeenCalledWith(signIn.id);
-    await userEvent.click(screen.getByRole('button', { name: 'Copy code and open GitHub' }));
+    await user.click(screen.getByRole('button', { name: 'Copy code and open GitHub' }));
     expect(open).toHaveBeenCalledTimes(2);
-    expect(open).toHaveBeenLastCalledWith(devicePage, '_blank', 'noreferrer');
 
     finish.resolve(account);
     await vi.waitFor(() => expect(onConnected).toHaveBeenCalledWith(account));

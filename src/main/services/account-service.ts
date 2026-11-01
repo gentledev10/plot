@@ -14,6 +14,7 @@ import {
 } from '../github/device-flow';
 import type { OAuthClient, OAuthTokens } from '../github/oauth';
 import { cachedTokens, type TokenProvider } from '../github/token';
+import { startWebSignIn, type WebSignIn } from '../github/web-flow';
 
 export type AccountService = Pick<
   PlotApi,
@@ -43,10 +44,9 @@ interface AccountServiceOptions {
   createId?(): string;
 }
 
-interface PendingSignIn {
-  grant: DeviceCodeGrant;
-  controller: AbortController;
-}
+type PendingSignIn =
+  | { flow: 'web'; signIn: WebSignIn }
+  | { flow: 'device'; grant: DeviceCodeGrant; controller: AbortController };
 
 export function createAccountService({
   store,
@@ -117,11 +117,24 @@ export function createAccountService({
           'This build of Plot cannot sign in with a browser. Use a token or the GitHub CLI.',
         );
       }
-      const grant = await requestDeviceCode(browserSignIn, BROWSER_SIGN_IN_SCOPES);
       const id = createId();
-      pending.set(id, { grant, controller: new AbortController() });
+      const { clientSecret } = browserSignIn;
+      if (clientSecret) {
+        const signIn = await startWebSignIn(
+          { ...browserSignIn, clientSecret },
+          BROWSER_SIGN_IN_SCOPES,
+          {
+            now: () => now().getTime(),
+          },
+        );
+        pending.set(id, { flow: 'web', signIn });
+        return { id, flow: 'web', authorizeUrl: signIn.authorizeUrl };
+      }
+      const grant = await requestDeviceCode(browserSignIn, BROWSER_SIGN_IN_SCOPES);
+      pending.set(id, { flow: 'device', grant, controller: new AbortController() });
       return {
         id,
+        flow: 'device',
         userCode: grant.userCode,
         verificationUri: grant.verificationUri,
         expiresAt: new Date(now().getTime() + grant.expiresInSeconds * 1_000).toISOString(),
@@ -134,11 +147,14 @@ export function createAccountService({
         throw new AppError('sign-in-failed', 'This sign-in is no longer in progress. Start again.');
       }
       try {
-        const tokens = await waitForAccessToken(browserSignIn, signIn.grant, {
-          signal: signIn.controller.signal,
-          sleep: browserSignIn.sleep,
-          now: () => now().getTime(),
-        });
+        const tokens =
+          signIn.flow === 'web'
+            ? await signIn.signIn.tokens
+            : await waitForAccessToken(browserSignIn, signIn.grant, {
+                signal: signIn.controller.signal,
+                sleep: browserSignIn.sleep,
+                now: () => now().getTime(),
+              });
         return await add(
           await identify(
             GITHUB_HOST,
@@ -153,7 +169,12 @@ export function createAccountService({
     },
 
     async cancelBrowserSignIn(id) {
-      pending.get(id)?.controller.abort();
+      const signIn = pending.get(id);
+      if (signIn?.flow === 'web') {
+        signIn.signIn.cancel();
+      } else {
+        signIn?.controller.abort();
+      }
       pending.delete(id);
     },
   };

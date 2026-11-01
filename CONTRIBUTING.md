@@ -13,7 +13,16 @@ npm install
 npm run dev
 ```
 
-The app starts without an account. Browser sign-in uses Plot's GitHub OAuth app and works without setup, and a personal access token or the GitHub CLI work too. To sign in through your own OAuth app instead, for example in a fork, [create one](https://github.com/settings/applications/new) with any callback URL, enable Device Flow, and put its client ID in `.env.local` as `MAIN_VITE_GITHUB_CLIENT_ID=<client id>`. The client ID is not a secret, but keep your own out of commits.
+The app starts without an account. Browser sign-in uses Plot's GitHub OAuth app. Only release builds carry the app's client secret, so a development build asks you to paste a one-time code on github.com instead of returning to the app by itself. A personal access token or the GitHub CLI work too.
+
+To try the full browser sign-in, or to use your own OAuth app in a fork, [register one](https://github.com/settings/applications/new) with the redirect URI `http://127.0.0.1/callback`, enable Device Flow, and put its values in `.env.local`:
+
+```sh
+MAIN_VITE_GITHUB_CLIENT_ID=<client id>
+MAIN_VITE_GITHUB_CLIENT_SECRET=<client secret>
+```
+
+Git ignores `.env.local`. Keep these values out of commits.
 
 ## Before you open a pull request
 

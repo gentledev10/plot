@@ -178,13 +178,13 @@
   user-select: text;
 }
 
-.deviceCode {
+.browserSignIn {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.deviceCode p {
+.browserSignIn p {
   margin: 0;
 }
 

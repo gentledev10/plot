@@ -26,7 +26,7 @@ import { createRepositoryCache } from './git/repository-cache';
 import { createGitHubClient } from './github/client';
 import { createConnections } from './github/connections';
 import { type OAuthClient, refreshTokens } from './github/oauth';
-import { GITHUB_OAUTH_CLIENT_ID } from './github/oauth-app';
+import { GITHUB_OAUTH_CLIENT_ID, GITHUB_OAUTH_CLIENT_SECRET } from './github/oauth-app';
 import { createGhTokenProvider, storedTokens, type TokenProvider } from './github/token';
 import { argumentParsers } from './ipc/arguments';
 import { registerIpcHandlers } from './ipc/register';
@@ -59,7 +59,12 @@ function createApi(): PlotApi {
   const clientFor = (host: string, tokens: TokenProvider) =>
     createGitHubClient({ fetch, tokens, userAgent, host });
   const oauthApp: OAuthClient | undefined = GITHUB_OAUTH_CLIENT_ID
-    ? { fetch, clientId: GITHUB_OAUTH_CLIENT_ID, userAgent }
+    ? {
+        fetch,
+        clientId: GITHUB_OAUTH_CLIENT_ID,
+        clientSecret: GITHUB_OAUTH_CLIENT_SECRET,
+        userAgent,
+      }
     : undefined;
 
   const accounts = createAccountStore({

@@ -1,9 +1,15 @@
-import type { Account } from '@shared/accounts';
+import type { Account, BrowserSignIn } from '@shared/accounts';
 import { GITHUB_HOST, normalizeHost } from '@shared/hosts';
 import { Globe, KeyRound, LoaderCircle, Terminal } from 'lucide-react';
 import { type FormEvent, type ReactNode, useId, useState } from 'react';
 import styles from './ConnectGitHub.module.css';
-import { devicePageUrl, useAccountActions, useAccounts, useBrowserSignIn } from './queries';
+import {
+  copyText,
+  signInPageUrl,
+  useAccountActions,
+  useAccounts,
+  useBrowserSignIn,
+} from './queries';
 
 interface ConnectGitHubProps {
   onConnected?(account: Account): void;
@@ -54,7 +60,13 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
   }
 
   if (browser.state.step === 'waiting') {
-    return <DeviceCode signIn={browser.state.signIn} onCancel={browser.cancel} />;
+    return (
+      <BrowserSignInWaiting
+        signIn={browser.state.signIn}
+        codeCopied={browser.state.codeCopied}
+        onCancel={browser.cancel}
+      />
+    );
   }
 
   return (
@@ -268,34 +280,41 @@ function Method({ icon, title, detail, busy, disabled, expanded, onClick }: Meth
   );
 }
 
-interface DeviceCodeProps {
-  signIn: { userCode: string; verificationUri: string };
+interface BrowserSignInWaitingProps {
+  signIn: BrowserSignIn;
+  codeCopied: boolean;
   onCancel(): void;
 }
 
-function DeviceCode({ signIn, onCancel }: DeviceCodeProps) {
-  const [copied, setCopied] = useState(false);
+function BrowserSignInWaiting({ signIn, codeCopied, onCancel }: BrowserSignInWaitingProps) {
+  const [copied, setCopied] = useState(codeCopied);
 
-  function copyAndOpen() {
-    navigator.clipboard?.writeText(signIn.userCode).then(
-      () => setCopied(true),
-      () => setCopied(false),
-    );
-    window.open(devicePageUrl(signIn), '_blank', 'noreferrer');
+  async function openAgain() {
+    if (signIn.flow === 'device') {
+      setCopied(await copyText(signIn.userCode));
+    }
+    window.open(signInPageUrl(signIn), '_blank', 'noreferrer');
   }
 
   return (
-    <div className={styles.deviceCode}>
-      <p>
-        Approve Plot on the GitHub page that opened in your browser. If GitHub asks for a code,
-        enter this one.
-      </p>
-      <output className={styles.code} aria-label="Sign-in code">
-        {signIn.userCode}
-      </output>
+    <div className={styles.browserSignIn}>
+      {signIn.flow === 'web' ? (
+        <p>Approve Plot on the GitHub page that opened in your browser.</p>
+      ) : (
+        <>
+          <p>
+            {copied
+              ? 'Paste this code on the GitHub page that opened in your browser. It is already copied.'
+              : 'Enter this code on the GitHub page that opened in your browser.'}
+          </p>
+          <output className={styles.code} aria-label="Sign-in code">
+            {signIn.userCode}
+          </output>
+        </>
+      )}
       <div className={styles.actions}>
-        <button type="button" className={styles.primary} onClick={copyAndOpen}>
-          Copy code and open GitHub
+        <button type="button" className={styles.secondary} onClick={() => void openAgain()}>
+          {signIn.flow === 'web' ? 'Open GitHub again' : 'Copy code and open GitHub'}
         </button>
         <button type="button" className={styles.secondary} onClick={onCancel}>
           Cancel
@@ -303,9 +322,7 @@ function DeviceCode({ signIn, onCancel }: DeviceCodeProps) {
       </div>
       <p className={styles.waiting} role="status">
         <LoaderCircle size={14} className={styles.spinner} />
-        {copied
-          ? 'Code copied. Waiting for you to approve on GitHub…'
-          : 'Waiting for you to approve on GitHub…'}
+        Waiting for you to approve on GitHub…
       </p>
     </div>
   );

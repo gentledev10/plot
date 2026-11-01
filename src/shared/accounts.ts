@@ -16,12 +16,9 @@ export interface AccountList {
   browserSignIn: boolean;
 }
 
-export interface BrowserSignIn {
-  id: string;
-  userCode: string;
-  verificationUri: string;
-  expiresAt: string;
-}
+export type BrowserSignIn =
+  | { id: string; flow: 'web'; authorizeUrl: string }
+  | { id: string; flow: 'device'; userCode: string; verificationUri: string; expiresAt: string };
 
 export interface TokenSignIn {
   host: string;

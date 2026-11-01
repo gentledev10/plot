@@ -37,7 +37,15 @@ function memoryStore(): AccountStore & { tokens: Map<string, OAuthTokens> } {
 
 const users: Record<string, string> = { ghp_mona: 'Mona', gho_browser: 'Mona', gh_cli: 'hubot' };
 
-function setup({ browser = true, fetch = vi.fn<Fetch>() } = {}) {
+function setup({
+  browser = true,
+  fetch = vi.fn<Fetch>(),
+  secret,
+}: {
+  browser?: boolean;
+  fetch?: Fetch;
+  secret?: string;
+} = {}) {
   const store = memoryStore();
   const connections = { forget: vi.fn() };
   const clientFor = vi.fn((_host: string, tokens: TokenProvider) => {
@@ -56,7 +64,13 @@ function setup({ browser = true, fetch = vi.fn<Fetch>() } = {}) {
     clientFor,
     gitHubCliTokens: () => ({ getToken: async () => 'gh_cli', invalidate: () => {} }),
     browserSignIn: browser
-      ? { fetch, clientId: 'Iv1.test', userAgent: 'Plot/test', sleep: async () => {} }
+      ? {
+          fetch,
+          clientId: 'Iv1.test',
+          clientSecret: secret,
+          userAgent: 'Plot/test',
+          sleep: async () => {},
+        }
       : undefined,
     now: () => new Date('2026-10-31T00:00:00Z'),
     createId: () => 'sign-in-1',
@@ -130,6 +144,7 @@ describe('createAccountService', () => {
 
     await expect(service.startBrowserSignIn()).resolves.toEqual({
       id: 'sign-in-1',
+      flow: 'device',
       userCode: 'WDJB-MJHT',
       verificationUri: 'https://github.com/login/device',
       expiresAt: '2026-10-31T00:15:00.000Z',
@@ -148,6 +163,42 @@ describe('createAccountService', () => {
     await expect(service.finishBrowserSignIn('sign-in-1')).rejects.toMatchObject({
       code: 'sign-in-failed',
     });
+  });
+
+  it('signs in through GitHub and back to this Mac when the build has the client secret', async () => {
+    const fetch = vi
+      .fn<Fetch>()
+      .mockResolvedValueOnce(json({ access_token: 'gho_browser', refresh_token: 'ghr_browser' }));
+    const { service, store } = setup({ fetch, secret: 'shh' });
+
+    const signIn = await service.startBrowserSignIn();
+    if (signIn.flow !== 'web') {
+      throw new Error(`expected the web flow, got ${signIn.flow}`);
+    }
+    const authorize = new URL(signIn.authorizeUrl);
+    const finished = service.finishBrowserSignIn(signIn.id);
+    await globalThis.fetch(
+      `${authorize.searchParams.get('redirect_uri')}?${new URLSearchParams({
+        code: 'code-1',
+        state: authorize.searchParams.get('state') ?? '',
+      })}`,
+    );
+
+    await expect(finished).resolves.toMatchObject({ id: 'github.com/mona', method: 'browser' });
+    expect(store.tokens.get('github.com/mona')).toEqual({
+      accessToken: 'gho_browser',
+      refreshToken: 'ghr_browser',
+    });
+  });
+
+  it('stops waiting for GitHub to send the person back when the sign-in is cancelled', async () => {
+    const { service } = setup({ secret: 'shh' });
+    const signIn = await service.startBrowserSignIn();
+    const finished = service.finishBrowserSignIn(signIn.id);
+
+    await service.cancelBrowserSignIn(signIn.id);
+
+    await expect(finished).rejects.toMatchObject({ code: 'sign-in-cancelled' });
   });
 
   it('stops waiting for the browser when the sign-in is cancelled', async () => {
