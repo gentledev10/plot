@@ -9,6 +9,7 @@ export type LocalService = Pick<
   | 'openLocalRepository'
   | 'listLocalRepositories'
   | 'removeLocalRepository'
+  | 'getLocalStatus'
   | 'getLocalDiff'
   | 'getLocalSignature'
   | 'readLocalBlob'
@@ -41,6 +42,10 @@ export function createLocalService({
 
     removeLocalRepository(id) {
       return repositories.remove(id);
+    },
+
+    async getLocalStatus(repositoryId) {
+      return git.status(await repositories.root(repositoryId));
     },
 
     async getLocalDiff({ repositoryId, compare }) {

@@ -49,6 +49,7 @@ export const argumentParsers: ArgumentParsers = {
   openLocalRepository: () => [],
   listLocalRepositories: () => [],
   removeLocalRepository: ([id]) => [localRepositoryId(id)],
+  getLocalStatus: ([id]) => [localRepositoryId(id)],
   getLocalDiff: ([target]) => [localTarget(target)],
   getLocalSignature: ([target]) => [localTarget(target)],
   readLocalBlob: ([id, blob]) => [localRepositoryId(id), objectId(blob)],

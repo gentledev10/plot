@@ -106,6 +106,14 @@ describe('createLocalGit', () => {
     });
   });
 
+  it('counts the files a branch diff lists, with the branch name', async () => {
+    const diff = await local.diff(repo, 'branch');
+    await expect(local.status(repo)).resolves.toEqual({
+      branch: 'feature',
+      changedFiles: diff.files.length,
+    });
+  });
+
   it('shows only uncommitted work when asked', async () => {
     const diff = await local.diff(repo, 'uncommitted');
     expect(diff.base?.name).toBe('HEAD');
@@ -161,6 +169,7 @@ describe('createLocalGit', () => {
     const diff = await local.diff(empty, 'branch');
     expect(diff.base).toBeNull();
     expect(summary(diff.files)).toEqual(['added first.txt']);
+    expect((await local.status(empty)).changedFiles).toBe(1);
   });
 });
 

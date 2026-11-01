@@ -88,7 +88,7 @@ export const COMMANDS = [
     keys: ['Meta+O'],
   },
   { id: 'navigation.back', title: 'Back to the list', group: 'Navigation', keys: ['Meta+['] },
-  { id: 'pullRequest.refresh', title: 'Refresh', group: 'Navigation', keys: ['Meta+R'] },
+  { id: 'navigation.refresh', title: 'Refresh', group: 'Navigation', keys: ['Meta+R'] },
   { id: 'pullRequest.openOnGitHub', title: 'Open on GitHub', group: 'Navigation', keys: [] },
   { id: 'local.open', title: 'Open a local repository', group: 'Navigation', keys: [] },
   { id: 'review.generate', title: 'Explain this change', group: 'AI overview', keys: [] },

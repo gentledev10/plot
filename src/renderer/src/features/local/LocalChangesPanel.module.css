@@ -21,6 +21,11 @@
   font-weight: 600;
 }
 
+.actions {
+  display: flex;
+  gap: 2px;
+}
+
 .content {
   flex: 1;
   min-height: 0;
@@ -42,7 +47,7 @@
   align-items: flex-start;
   gap: 8px;
   width: 100%;
-  padding: 6px 30px 6px 8px;
+  padding: 6px 8px;
   border: none;
   border-radius: var(--radius);
   background: transparent;
@@ -51,6 +56,11 @@
 
 .item:hover {
   background: var(--color-bg-hover);
+}
+
+.row:hover .item,
+.row:focus-within .item {
+  padding-right: 30px;
 }
 
 .item[aria-current="true"] {
@@ -65,6 +75,7 @@
 
 .text {
   display: flex;
+  flex: 1;
   flex-direction: column;
   min-width: 0;
 }
@@ -73,14 +84,36 @@
   font-weight: 600;
 }
 
-.path {
-  overflow: hidden;
+.branch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
   color: var(--color-text-muted);
+  font-family: var(--font-code);
   font-size: var(--font-size-small);
+}
+
+.branch svg {
+  flex: none;
+}
+
+.branchName {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  direction: rtl;
-  text-align: left;
+}
+
+.unreadable {
+  color: var(--color-danger);
+  font-size: var(--font-size-small);
+}
+
+.changed {
+  flex: none;
+  padding-top: 1px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
 }
 
 .remove {

@@ -138,7 +138,7 @@ export function DiffWorkspace({
   useCommand('diff.toggleSideBySide', () => toggleSetting('sideBySide'));
   useCommand('diff.toggleCollapseUnchanged', () => toggleSetting('collapseUnchanged'));
   useCommand('diff.toggleIgnoreWhitespace', () => toggleSetting('ignoreWhitespace'));
-  useCommand('pullRequest.refresh', onRefresh);
+  useCommand('navigation.refresh', onRefresh);
 
   return (
     <section className={styles.workspace}>

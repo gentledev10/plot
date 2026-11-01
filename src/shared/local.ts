@@ -15,6 +15,11 @@ export interface LocalTarget {
   compare: LocalCompare;
 }
 
+export interface LocalStatus {
+  branch: string | null;
+  changedFiles: number;
+}
+
 export interface LocalDiff {
   branch: string | null;
   base: { name: string; commit: string } | null;

@@ -253,6 +253,7 @@ export function App() {
           ) : (
             <LocalChangesPanel
               selectedId={lastOpened?.kind === 'local' ? lastOpened.repositoryId : undefined}
+              active={layout.sidebar && !maximized && toolWindow === 'local-changes'}
               onOpen={openLocalRepository}
             />
           )}

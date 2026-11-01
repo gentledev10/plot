@@ -6,17 +6,30 @@ import { diffKeys } from '../diff/queries';
 
 export const localKeys = {
   repositories: ['local-repositories'] as const,
+  statuses: ['local-status'] as const,
+  status: (repositoryId: string) => ['local-status', repositoryId] as const,
   signature: ({ repositoryId, compare }: LocalTarget) =>
     ['local-signature', repositoryId, compare] as const,
 };
 
 export const LOCAL_REFRESH_MS = 2_000;
 
+export const LOCAL_STATUS_REFRESH_MS = 5_000;
+
 export function useLocalRepositories() {
   const api = useApi();
   return useQuery({
     queryKey: localKeys.repositories,
     queryFn: () => api.listLocalRepositories(),
+  });
+}
+
+export function useLocalStatus(repositoryId: string, live: boolean) {
+  const api = useApi();
+  return useQuery({
+    queryKey: localKeys.status(repositoryId),
+    queryFn: () => api.getLocalStatus(repositoryId),
+    refetchInterval: live ? LOCAL_STATUS_REFRESH_MS : false,
   });
 }
 

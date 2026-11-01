@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { lstat, readFile, readlink, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, relative, sep } from 'node:path';
 import type { BlobContent, ChangedFile } from '@shared/diff';
-import type { LocalCompare, LocalDiff } from '@shared/local';
+import type { LocalCompare, LocalDiff, LocalStatus } from '@shared/local';
 import { AppError } from '../errors';
 import { classifyBlob, parseNumstat, parseRawDiff, toChangedFiles } from '../git/parse';
 import { type BufferCommandRunner, CommandError, type CommandRunner } from '../system/process';
@@ -15,6 +15,7 @@ const LINE_COUNT_LIMIT = 1024 * 1024;
 
 export interface LocalGit {
   topLevel(path: string): Promise<string>;
+  status(root: string): Promise<LocalStatus>;
   diff(root: string, compare: LocalCompare): Promise<LocalDiff>;
   signature(root: string, compare: LocalCompare): Promise<string>;
   readBlob(root: string, blob: string, maxBytes: number): Promise<BlobContent>;
@@ -110,6 +111,17 @@ export function createLocalGit({ run, runForBuffer, env }: LocalGitOptions): Loc
         throw new AppError('not-a-repository', 'That folder is not inside a git repository.');
       }
       return top;
+    },
+
+    // Counts the files a branch diff lists without comparing their lines.
+    async status(root) {
+      const [branch, from, added] = await Promise.all([
+        optional(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']),
+        base(root, 'branch'),
+        untracked(root),
+      ]);
+      const changed = await git(root, [...DIFF_OPTIONS, '--name-only', from?.commit ?? EMPTY_TREE]);
+      return { branch, changedFiles: changed.split('\0').filter(Boolean).length + added.length };
     },
 
     async diff(root, compare) {

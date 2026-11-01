@@ -39,6 +39,7 @@ function setup(api: Partial<PlotApi> = {}) {
     removeLocalRepository: vi.fn(),
     getLocalDiff: vi.fn(),
     getLocalSignature: vi.fn(),
+    getLocalStatus: vi.fn(),
     readLocalBlob: vi.fn(),
     readLocalFile: vi.fn(),
     ...api,

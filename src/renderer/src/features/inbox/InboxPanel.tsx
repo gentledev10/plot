@@ -65,7 +65,7 @@ export function InboxPanel({
     );
   }
 
-  useCommand('pullRequest.refresh', refresh);
+  useCommand('navigation.refresh', refresh);
 
   return (
     <aside className={styles.panel} aria-label="Pull requests">

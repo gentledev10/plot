@@ -4,7 +4,7 @@ import type { ThemeSource } from './appearance';
 import type { BlobContent, PullRequestDiff } from './diff';
 import type { ErrorPayload } from './errors';
 import type { Inbox, PullRequestDetail, PullRequestRef } from './github';
-import type { LocalDiff, LocalRepository, LocalTarget } from './local';
+import type { LocalDiff, LocalRepository, LocalStatus, LocalTarget } from './local';
 import type { ReviewStatus } from './review';
 
 export interface PlotApi {
@@ -34,6 +34,7 @@ export interface PlotApi {
   openLocalRepository(): Promise<LocalRepository | null>;
   listLocalRepositories(): Promise<LocalRepository[]>;
   removeLocalRepository(id: string): Promise<void>;
+  getLocalStatus(repositoryId: string): Promise<LocalStatus>;
   getLocalDiff(target: LocalTarget): Promise<LocalDiff>;
   getLocalSignature(target: LocalTarget): Promise<string>;
   readLocalBlob(repositoryId: string, blob: string): Promise<BlobContent>;
@@ -69,6 +70,7 @@ const METHODS: Record<IpcMethod, true> = {
   openLocalRepository: true,
   listLocalRepositories: true,
   removeLocalRepository: true,
+  getLocalStatus: true,
   getLocalDiff: true,
   getLocalSignature: true,
   readLocalBlob: true,

@@ -36,6 +36,7 @@ function bridge(overrides: Partial<PlotBridge> = {}): PlotBridge {
     removeLocalRepository: vi.fn(),
     getLocalDiff: vi.fn(),
     getLocalSignature: vi.fn(),
+    getLocalStatus: vi.fn(),
     readLocalBlob: vi.fn(),
     readLocalFile: vi.fn(),
     ...overrides,
