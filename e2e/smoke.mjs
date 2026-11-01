@@ -27,6 +27,10 @@ const pass = (name) => {
   console.log(`PASS ${name}`);
 };
 for (const path of [profile, repository, bin]) mkdirSync(path, { recursive: true });
+writeFileSync(
+  join(profile, 'preferences.json'),
+  JSON.stringify({ languages: { app: 'en', review: 'app' } }),
+);
 const git = (dir, ...args) =>
   execFileSync('git', ['-C', dir, ...args], {
     encoding: 'utf8',
@@ -90,6 +94,41 @@ const overview = {
   impacts: [],
   readingOrder: [{ path: 'sample.ts', reason: 'Defines the result.' }],
 };
+const koreanOverview = {
+  ...overview,
+  summary: '결과 값이 1에서 2로 변경됩니다.',
+  changes: [
+    {
+      ...overview.changes[0],
+      title: '결과 값 변경',
+      before: '1을 사용합니다.',
+      after: '2를 사용합니다.',
+    },
+  ],
+  flows: [
+    {
+      title: '결과 읽기',
+      before: [{ from: '호출부', to: '모듈', label: '기존 값 읽기', location: null }],
+      after: [
+        {
+          from: '호출부',
+          to: '모듈',
+          label: '새 값 읽기',
+          location: { path: 'sample.ts', line: 1 },
+        },
+      ],
+    },
+  ],
+  architecture: {
+    ...overview.architecture,
+    edges: overview.architecture.edges.map((edge) => ({ ...edge, label: '읽기' })),
+    nodes: overview.architecture.nodes.map((node, i) => ({
+      ...node,
+      label: i === 0 ? '호출부' : '모듈',
+    })),
+  },
+  readingOrder: [{ path: 'sample.ts', reason: '결과 값을 정의합니다.' }],
+};
 writeFileSync(
   join(bin, 'claude'),
   `#!${process.execPath}\nconsole.log(process.argv.includes('--version') ? '2.1.76 (Claude Code)' : JSON.stringify({loggedIn:true}));\n`,
@@ -99,12 +138,12 @@ writeFileSync(
   join(bin, 'codex'),
   `#!${process.execPath}
 import {createInterface} from 'node:readline';
-import {writeFileSync} from 'node:fs';
+import {writeFileSync,appendFileSync} from 'node:fs';
 const args=process.argv.slice(2);
 if(args.includes('--version'))console.log('codex-cli fixture');
 else if(args[0]==='login')console.log('Logged in');
 else if(args[0]==='app-server')createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(!r.id)return;let result={};if(r.method==='account/read')result={account:{type:'chatgpt'}};if(r.method==='model/list')result={data:[{model:'fixture-model',displayName:'Fixture model',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'high'}]}],nextCursor:null};console.log(JSON.stringify({id:r.id,result}))});
-else if(args[0]==='exec'){writeFileSync(args[args.indexOf('--output-last-message')+1],JSON.stringify(${JSON.stringify(overview)}));console.log(JSON.stringify({type:'turn.completed'}))}
+else if(args[0]==='exec'){const korean=args.at(-1).includes('Write all prose in Korean.');appendFileSync(${JSON.stringify(join(scratch, 'generation-count'))},(korean?'ko':'en')+String.fromCharCode(10));writeFileSync(args[args.indexOf('--output-last-message')+1],JSON.stringify(korean?${JSON.stringify(koreanOverview)}:${JSON.stringify(overview)}));console.log(JSON.stringify({type:'turn.completed'}))}
 `,
   { mode: 0o700 },
 );
@@ -244,7 +283,7 @@ try {
     BrowserWindow.getAllWindows()[0].setBounds({ width: 1440, height: 900 }),
   );
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  const settings = page.getByRole('dialog', { name: 'Settings' });
+  const settings = page.getByRole('dialog');
   await settings.getByRole('button', { name: 'AI overview', exact: true }).click();
   await settings.getByText(/Update to Claude Code 2.1.248/).waitFor();
   assert.equal(await settings.getByRole('radio', { name: /^Codex CLI/ }).isChecked(), true);
@@ -347,6 +386,49 @@ try {
     document.querySelector('.editor.modified .view-lines')?.textContent?.includes('result'),
   );
   pass('Navigate from AI evidence to the actual diff');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await settings.getByRole('button', { name: 'Language', exact: true }).click();
+  await settings.getByLabel('AI review language', { exact: true }).selectOption('ko');
+  await settings.getByRole('button', { name: 'Close settings' }).click();
+  await page.getByRole('button', { name: 'Explain this change', exact: true }).waitFor();
+  assert.equal(await page.getByText(overview.summary, { exact: true }).count(), 0);
+  await page.getByRole('button', { name: 'Explain this change', exact: true }).click();
+  await page.getByText(koreanOverview.summary, { exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Summary', exact: true }).waitFor();
+  pass('Generate Korean explanations with an English app without reusing an English review');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await settings.getByRole('button', { name: 'Language', exact: true }).click();
+  await settings.getByLabel('App language', { exact: true }).selectOption('ko');
+  await settings.getByLabel('앱 표시 언어', { exact: true }).waitFor();
+  await page.screenshot({ path: join(root, 'dist/e2e-language-settings.png'), scale: 'css' });
+  await settings.getByRole('button', { name: '설정 닫기' }).click();
+  await page.getByRole('heading', { name: '요약', exact: true }).waitFor();
+  assert.ok(
+    (
+      await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.map((item) => item.label))
+    ).includes('파일'),
+  );
+  await page.getByRole('button', { name: '설정', exact: true }).click();
+  await settings.getByRole('button', { name: '언어', exact: true }).click();
+  await settings.getByLabel('AI 리뷰 언어', { exact: true }).selectOption('en');
+  await settings.getByRole('button', { name: '설정 닫기' }).click();
+  await page.getByText(overview.summary, { exact: true }).waitFor();
+  assert.equal(
+    readFileSync(join(scratch, 'generation-count'), 'utf8').trim().split('\n').length,
+    2,
+  );
+  await page.getByRole('button', { name: '설정', exact: true }).click();
+  await settings.getByRole('button', { name: '언어', exact: true }).click();
+  await settings.getByLabel('AI 리뷰 언어', { exact: true }).selectOption('app');
+  await settings.getByRole('button', { name: '설정 닫기' }).click();
+  await page.getByText(koreanOverview.summary, { exact: true }).waitFor();
+  assert.equal(
+    readFileSync(join(scratch, 'generation-count'), 'utf8').trim().split('\n').length,
+    2,
+  );
+  pass(
+    'Switch app and review languages independently and reuse each language without extra AI calls',
+  );
   const scripts = readdirSync(join(root, 'out/renderer/assets'))
     .filter((name) => name.endsWith('.js'))
     .map((name) => readFileSync(join(root, 'out/renderer/assets', name), 'utf8'))

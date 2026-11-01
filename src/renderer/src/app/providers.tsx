@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 import { AppearanceProvider } from '../features/appearance/AppearanceProvider';
 import { KeymapProvider } from '../features/keymap/KeymapProvider';
+import { LanguageProvider } from '../features/language/LanguageProvider';
 import { isRetryable } from '../lib/api';
 
 type SubscribeToMenu = (listener: MenuCommandListener) => () => void;
@@ -78,7 +79,9 @@ export function AppProviders({
       <ApiContext.Provider value={api}>
         <ShellContext.Provider value={shell}>
           <AppearanceProvider onThemeSource={(source) => void api.setThemeSource(source)}>
-            <KeymapProvider platform={platform}>{children}</KeymapProvider>
+            <LanguageProvider api={api}>
+              <KeymapProvider platform={platform}>{children}</KeymapProvider>
+            </LanguageProvider>
           </AppearanceProvider>
         </ShellContext.Provider>
       </ApiContext.Provider>

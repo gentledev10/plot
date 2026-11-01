@@ -1,6 +1,7 @@
 import type { ChangedFile } from '@shared/diff';
 import { ChevronDown, ChevronRight, FileText, Folder } from 'lucide-react';
 import { type KeyboardEvent, useMemo, useRef, useState } from 'react';
+import { useT } from '../language/LanguageProvider';
 import styles from './FileTree.module.css';
 import { type TreeNode, type TreeRow, visibleRows } from './file-tree';
 
@@ -9,10 +10,9 @@ interface FileTreeProps {
   selectedPath?: string;
   onSelect(path: string): void;
 }
-
 const INDENT = 14;
-
 export function FileTree({ nodes, selectedPath, onSelect }: FileTreeProps) {
+  const t = useT();
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [focusedId, setFocusedId] = useState<string>();
   const rows = useMemo(() => visibleRows(nodes, collapsed), [nodes, collapsed]);
@@ -21,7 +21,6 @@ export function FileTree({ nodes, selectedPath, onSelect }: FileTreeProps) {
   const activeId = rows.some((row) => row.id === focusedId)
     ? focusedId
     : (rows.find((row) => row.id === selectedId) ?? rows[0])?.id;
-
   function setExpanded(path: string, expanded: boolean) {
     const next = new Set(collapsed);
     if (expanded) {
@@ -31,7 +30,6 @@ export function FileTree({ nodes, selectedPath, onSelect }: FileTreeProps) {
     }
     setCollapsed(next);
   }
-
   function focusRow(row: TreeRow | undefined) {
     if (!row) {
       return;
@@ -42,7 +40,6 @@ export function FileTree({ nodes, selectedPath, onSelect }: FileTreeProps) {
       onSelect(row.node.file.path);
     }
   }
-
   function activate(row: TreeRow) {
     if (row.node.kind === 'directory') {
       setExpanded(row.node.path, collapsed.has(row.node.path));
@@ -51,7 +48,6 @@ export function FileTree({ nodes, selectedPath, onSelect }: FileTreeProps) {
       focusRow(row);
     }
   }
-
   function onKeyDown(event: KeyboardEvent, row: TreeRow, index: number) {
     const { node } = row;
     const isOpenDirectory = node.kind === 'directory' && !collapsed.has(node.path);
@@ -91,9 +87,8 @@ export function FileTree({ nodes, selectedPath, onSelect }: FileTreeProps) {
     }
     event.preventDefault();
   }
-
   return (
-    <div className={styles.tree} role="tree" aria-label="Changed files">
+    <div className={styles.tree} role="tree" aria-label={t('Changed files')}>
       {rows.map((row, index) => {
         const { node } = row;
         const isDirectory = node.kind === 'directory';
@@ -115,7 +110,9 @@ export function FileTree({ nodes, selectedPath, onSelect }: FileTreeProps) {
             aria-selected={selected}
             tabIndex={row.id === activeId ? 0 : -1}
             className={styles.row}
-            style={{ paddingLeft: 8 + row.depth * INDENT + (isDirectory ? 0 : 12) }}
+            style={{
+              paddingLeft: 8 + row.depth * INDENT + (isDirectory ? 0 : 12),
+            }}
             data-status={isDirectory ? undefined : node.file.status}
             title={isDirectory ? node.path : fileTitle(node.file)}
             onClick={() => activate(row)}
@@ -135,14 +132,13 @@ export function FileTree({ nodes, selectedPath, onSelect }: FileTreeProps) {
     </div>
   );
 }
-
 function fileTitle(file: ChangedFile): string {
   return file.previousPath ? `${file.path}\nRenamed from ${file.previousPath}` : file.path;
 }
-
 function LineCounts({ file }: { file: ChangedFile }) {
+  const t = useT();
   if (file.additions === null || file.deletions === null) {
-    return <span className={styles.counts}>binary</span>;
+    return <span className={styles.counts}>{t('binary')}</span>;
   }
   return (
     <span className={styles.counts}>

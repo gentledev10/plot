@@ -2,6 +2,7 @@ import type { Account, BrowserSignIn } from '@shared/accounts';
 import { GITHUB_HOST, normalizeHost } from '@shared/hosts';
 import { Globe, KeyRound, LoaderCircle, Terminal } from 'lucide-react';
 import { type FormEvent, type ReactNode, useId, useState } from 'react';
+import { useT } from '../language/LanguageProvider';
 import styles from './ConnectGitHub.module.css';
 import {
   copyText,
@@ -14,8 +15,8 @@ import {
 interface ConnectGitHubProps {
   onConnected?(account: Account): void;
 }
-
 export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
+  const t = useT();
   const accounts = useAccounts();
   const { signInWithToken, signInWithGitHubCli } = useAccountActions();
   const browser = useBrowserSignIn(onConnected);
@@ -30,25 +31,27 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
     browser.state.step === 'failed'
       ? browser.state.message
       : (signInWithToken.error ?? signInWithGitHubCli.error)?.message;
-
   function resetErrors() {
     signInWithToken.reset();
     signInWithGitHubCli.reset();
   }
-
   function connectWithGitHubCli() {
     if (host) {
       resetErrors();
-      signInWithGitHubCli.mutate(host, { onSuccess: onConnected });
+      signInWithGitHubCli.mutate(host, {
+        onSuccess: onConnected,
+      });
     }
   }
-
   function submitToken(event: FormEvent) {
     event.preventDefault();
     if (host && token.trim() !== '') {
       resetErrors();
       signInWithToken.mutate(
-        { host, token: token.trim() },
+        {
+          host,
+          token: token.trim(),
+        },
         {
           onSuccess: (account) => {
             setToken('');
@@ -58,7 +61,6 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
       );
     }
   }
-
   if (browser.state.step === 'waiting') {
     return (
       <BrowserSignInWaiting
@@ -68,21 +70,20 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
       />
     );
   }
-
   return (
     <div className={styles.connect}>
       <fieldset className={styles.server}>
-        <legend className={styles.legend}>GitHub server</legend>
+        <legend className={styles.legend}>{t('GitHub server')}</legend>
         <ServerChoice
           name={serverName}
-          title="GitHub.com"
+          title={t('GitHub.com')}
           detail="Including GitHub Enterprise Cloud"
           checked={!companyServer}
           onChange={() => setCompanyServer(false)}
         />
         <ServerChoice
           name={serverName}
-          title="Company server"
+          title={t('Company server')}
           detail="GitHub Enterprise Server or GHE.com"
           checked={companyServer}
           onChange={() => setCompanyServer(true)}
@@ -90,8 +91,8 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
         {companyServer && (
           <input
             className={styles.input}
-            aria-label="Server address"
-            placeholder="github.example.com"
+            aria-label={t('Server address')}
+            placeholder={t('github.example.com')}
             spellCheck={false}
             value={hostText}
             aria-invalid={hostText !== '' && host === undefined}
@@ -106,7 +107,7 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
         {!companyServer && accounts.data?.browserSignIn && (
           <Method
             icon={<Globe size={16} />}
-            title="Sign in with your browser"
+            title={t('Sign in with your browser')}
             detail="Approve Plot on github.com. Works with single sign-on."
             busy={browser.state.step === 'starting'}
             disabled={busy}
@@ -118,7 +119,7 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
         )}
         <Method
           icon={<Terminal size={16} />}
-          title="Use the GitHub CLI"
+          title={t('Use the GitHub CLI')}
           detail="Uses the account you signed in to with gh auth login."
           busy={signInWithGitHubCli.isPending}
           disabled={host === undefined || busy}
@@ -126,7 +127,7 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
         />
         <Method
           icon={<KeyRound size={16} />}
-          title="Use a personal access token"
+          title={t('Use a personal access token')}
           detail="Paste a token you created on GitHub."
           expanded={tokenOpen}
           disabled={host === undefined}
@@ -138,8 +139,8 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
               <input
                 className={styles.input}
                 type="password"
-                aria-label="Personal access token"
-                placeholder="ghp_…"
+                aria-label={t('Personal access token')}
+                placeholder={t('ghp_…')}
                 autoComplete="off"
                 spellCheck={false}
                 value={token}
@@ -150,7 +151,7 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
                 className={styles.primary}
                 disabled={token.trim() === '' || busy}
               >
-                Connect
+                {t('Connect')}
               </button>
             </div>
             <p className={styles.hint}>
@@ -159,10 +160,13 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
                 target="_blank"
                 rel="noreferrer"
               >
-                Create a classic token
+                {t('Create a classic token')}
               </a>{' '}
-              with the <code>repo</code> scope to read private repositories, or a fine-grained token
-              with read access to contents and pull requests.
+              {t('with the ')}
+              <code>{t('repo')}</code>
+              {t(
+                ' scope to read private repositories, or a fine-grained token with read access to contents and pull requests.',
+              )}
             </p>
           </form>
         )}
@@ -174,12 +178,12 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
         </p>
       )}
       <p className={styles.hint}>
-        Tokens are encrypted with your macOS keychain and only sent to {host ?? 'your server'}.
+        {t('Tokens are encrypted with your macOS keychain and only sent to ')}
+        {host ?? 'your server'}.
       </p>
     </div>
   );
 }
-
 interface ServerChoiceProps {
   name: string;
   title: string;
@@ -187,8 +191,8 @@ interface ServerChoiceProps {
   checked: boolean;
   onChange(): void;
 }
-
 function ServerChoice({ name, title, detail, checked, onChange }: ServerChoiceProps) {
+  const t = useT();
   const titleId = useId();
   const detailId = useId();
   return (
@@ -204,47 +208,43 @@ function ServerChoice({ name, title, detail, checked, onChange }: ServerChoicePr
       <span className={styles.choiceText}>
         <span id={titleId}>{title}</span>
         <span id={detailId} className={styles.choiceDetail}>
-          {detail}
+          {t(detail)}
         </span>
       </span>
     </label>
   );
 }
-
 interface GitHubCliHintProps {
   host: string | undefined;
 }
-
 function GitHubCliHint({ host }: GitHubCliHintProps) {
+  const t = useT();
   const [copiedCommand, setCopiedCommand] = useState<string>();
   const command = `gh auth login --hostname ${host ?? '<server address>'} --web`;
-
   function copy() {
     navigator.clipboard?.writeText(command).then(
       () => setCopiedCommand(command),
       () => setCopiedCommand(undefined),
     );
   }
-
   return (
     <div className={styles.cliHint}>
       <p className={styles.hint}>
-        To connect without a token, sign in once with the{' '}
+        {t('To connect without a token, sign in once with the')}{' '}
         <a href="https://cli.github.com" target="_blank" rel="noreferrer">
-          GitHub CLI
+          {t('GitHub CLI')}
         </a>{' '}
-        in Terminal, then choose Use the GitHub CLI.
+        {t('in Terminal, then choose Use the GitHub CLI.')}
       </p>
       <div className={styles.commandRow}>
         <code className={styles.command}>{command}</code>
         <button type="button" className={styles.secondary} disabled={!host} onClick={copy}>
-          {copiedCommand === command ? 'Copied' : 'Copy'}
+          {copiedCommand === command ? t('Copied') : t('Copy')}
         </button>
       </div>
     </div>
   );
 }
-
 interface MethodProps {
   icon: ReactNode;
   title: string;
@@ -254,8 +254,8 @@ interface MethodProps {
   expanded?: boolean;
   onClick(): void;
 }
-
 function Method({ icon, title, detail, busy, disabled, expanded, onClick }: MethodProps) {
+  const t = useT();
   const detailId = useId();
   return (
     <button
@@ -273,56 +273,55 @@ function Method({ icon, title, detail, busy, disabled, expanded, onClick }: Meth
       <span className={styles.methodText}>
         <span className={styles.methodTitle}>{title}</span>
         <span id={detailId} className={styles.methodDetail}>
-          {detail}
+          {t(detail)}
         </span>
       </span>
     </button>
   );
 }
-
 interface BrowserSignInWaitingProps {
   signIn: BrowserSignIn;
   codeCopied: boolean;
   onCancel(): void;
 }
-
 function BrowserSignInWaiting({ signIn, codeCopied, onCancel }: BrowserSignInWaitingProps) {
+  const t = useT();
   const [copied, setCopied] = useState(codeCopied);
-
   async function openAgain() {
     if (signIn.flow === 'device') {
       setCopied(await copyText(signIn.userCode));
     }
     window.open(signInPageUrl(signIn), '_blank', 'noreferrer');
   }
-
   return (
     <div className={styles.browserSignIn}>
       {signIn.flow === 'web' ? (
-        <p>Approve Plot on the GitHub page that opened in your browser.</p>
+        <p>{t('Approve Plot on the GitHub page that opened in your browser.')}</p>
       ) : (
         <>
           <p>
             {copied
-              ? 'Paste this code on the GitHub page that opened in your browser. It is already copied.'
-              : 'Enter this code on the GitHub page that opened in your browser.'}
+              ? t(
+                  'Paste this code on the GitHub page that opened in your browser. It is already copied.',
+                )
+              : t('Enter this code on the GitHub page that opened in your browser.')}
           </p>
-          <output className={styles.code} aria-label="Sign-in code">
+          <output className={styles.code} aria-label={t('Sign-in code')}>
             {signIn.userCode}
           </output>
         </>
       )}
       <div className={styles.actions}>
         <button type="button" className={styles.secondary} onClick={() => void openAgain()}>
-          {signIn.flow === 'web' ? 'Open GitHub again' : 'Copy code and open GitHub'}
+          {signIn.flow === 'web' ? t('Open GitHub again') : t('Copy code and open GitHub')}
         </button>
         <button type="button" className={styles.secondary} onClick={onCancel}>
-          Cancel
+          {t('Cancel')}
         </button>
       </div>
       <p className={styles.waiting} role="status">
         <LoaderCircle size={14} className={styles.spinner} />
-        Waiting for you to approve on GitHub…
+        {t('Waiting for you to approve on GitHub…')}
       </p>
     </div>
   );

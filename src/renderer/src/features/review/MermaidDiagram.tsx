@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useAppearance } from '../appearance/AppearanceProvider';
+import { useT } from '../language/LanguageProvider';
 import styles from './ReviewPanel.module.css';
 
 interface MermaidDiagramProps {
@@ -7,15 +8,14 @@ interface MermaidDiagramProps {
   label: string;
   onElementClick?(elementId: string): void;
 }
-
 export function MermaidDiagram({ source, label, onElementClick }: MermaidDiagramProps) {
+  const t = useT();
   const container = useRef<HTMLDivElement>(null);
   const scheme = useAppearance().theme.kind;
   const id = `diagram-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const [failed, setFailed] = useState(false);
   const latestClick = useRef(onElementClick);
   latestClick.current = onElementClick;
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -25,7 +25,9 @@ export function MermaidDiagram({ source, label, onElementClick }: MermaidDiagram
         securityLevel: 'strict',
         theme: scheme === 'dark' ? 'dark' : 'default',
         fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-        flowchart: { htmlLabels: false },
+        flowchart: {
+          htmlLabels: false,
+        },
       });
       const { svg } = await mermaid.render(id, source);
       if (!cancelled && container.current) {
@@ -41,9 +43,8 @@ export function MermaidDiagram({ source, label, onElementClick }: MermaidDiagram
       cancelled = true;
     };
   }, [id, source, scheme]);
-
   if (failed) {
-    return <p className={styles.muted}>This diagram could not be drawn.</p>;
+    return <p className={styles.muted}>{t('This diagram could not be drawn.')}</p>;
   }
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: every clickable node also appears in the keyboard-accessible list below the diagram

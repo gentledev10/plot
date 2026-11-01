@@ -3,6 +3,7 @@ import { type ReactNode, useMemo } from 'react';
 import { StatusMessage } from '../../components/StatusMessage';
 import { useTargetDiff } from '../diff/queries';
 import type { DiffTarget } from '../diff/target';
+import { useT } from '../language/LanguageProvider';
 import styles from './FilesPanel.module.css';
 import { FileTree } from './FileTree';
 import { buildFileTree, filesInTreeOrder } from './file-tree';
@@ -16,7 +17,6 @@ interface FilesPanelProps {
   onSelectFile(path: string): void;
   onBack(): void;
 }
-
 export function FilesPanel({
   target,
   title,
@@ -26,6 +26,7 @@ export function FilesPanel({
   onSelectFile,
   onBack,
 }: FilesPanelProps) {
+  const t = useT();
   const diff = useTargetDiff(target);
   const tree = useMemo(() => (diff.data ? buildFileTree(diff.data.files) : []), [diff.data]);
   const current = selectedPath ?? filesInTreeOrder(tree)[0]?.path;
@@ -36,12 +37,11 @@ export function FilesPanel({
       deletions: files.reduce((sum, file) => sum + (file.deletions ?? 0), 0),
     };
   }, [diff.data]);
-
   return (
-    <aside className={styles.panel} aria-label="Changed files">
+    <aside className={styles.panel} aria-label={t('Changed files')}>
       <header className={styles.header}>
         <button type="button" className={styles.back} onClick={onBack}>
-          <ChevronLeft size={14} /> {backLabel}
+          <ChevronLeft size={14} /> {t(backLabel)}
         </button>
       </header>
       <p className={styles.target}>{title}</p>
@@ -50,7 +50,7 @@ export function FilesPanel({
       {diff.data && (
         <footer className={styles.footer}>
           <span>
-            {diff.data.files.length} {diff.data.files.length === 1 ? 'file' : 'files'}
+            {diff.data.files.length} {diff.data.files.length === 1 ? t('file') : t('files')}
           </span>
           <span className={styles.additions}>+{totals.additions}</span>
           <span className={styles.deletions}>−{totals.deletions}</span>
@@ -58,15 +58,14 @@ export function FilesPanel({
       )}
     </aside>
   );
-
   function renderContent() {
     if (diff.isPending) {
-      return <StatusMessage>Fetching changes…</StatusMessage>;
+      return <StatusMessage>{t('Fetching changes…')}</StatusMessage>;
     }
     if (diff.isError) {
       return (
         <StatusMessage
-          title="Could not load the changes"
+          title={t('Could not load the changes')}
           tone="error"
           onRetry={() => void diff.refetch()}
         >

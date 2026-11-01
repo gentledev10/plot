@@ -1,8 +1,8 @@
 import { type KeyboardEvent, type PointerEvent, useRef, useState } from 'react';
+import { useT } from '../features/language/LanguageProvider';
 import styles from './ResizeHandle.module.css';
 
 const KEYBOARD_STEP = 16;
-
 interface ResizeHandleProps {
   label: string;
   edge: 'left' | 'right';
@@ -13,7 +13,6 @@ interface ResizeHandleProps {
   onResize(width: number): void;
   onReset(): void;
 }
-
 export function ResizeHandle({
   label,
   edge,
@@ -24,21 +23,31 @@ export function ResizeHandle({
   onResize,
   onReset,
 }: ResizeHandleProps) {
-  const drag = useRef<{ x: number; width: number; last: number } | undefined>(undefined);
+  const t = useT();
+  const drag = useRef<
+    | {
+        x: number;
+        width: number;
+        last: number;
+      }
+    | undefined
+  >(undefined);
   const [dragging, setDragging] = useState(false);
   const grow = edge === 'right' ? 1 : -1;
   const clamp = (value: number) => Math.round(Math.min(max, Math.max(min, value)));
-
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) {
       return;
     }
     event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    drag.current = { x: event.clientX, width, last: width };
+    drag.current = {
+      x: event.clientX,
+      width,
+      last: width,
+    };
     setDragging(true);
   }
-
   function onPointerMove(event: PointerEvent<HTMLDivElement>) {
     const current = drag.current;
     if (!current) {
@@ -47,7 +56,6 @@ export function ResizeHandle({
     current.last = clamp(current.width + (event.clientX - current.x) * grow);
     onPreview(current.last);
   }
-
   function onPointerUp() {
     const current = drag.current;
     drag.current = undefined;
@@ -56,7 +64,6 @@ export function ResizeHandle({
       onResize(current.last);
     }
   }
-
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const steps: Record<string, number> = {
       ArrowLeft: -KEYBOARD_STEP * grow,
@@ -73,7 +80,6 @@ export function ResizeHandle({
       onReset();
     }
   }
-
   return (
     <>
       {/* biome-ignore lint/a11y/useSemanticElements: a focusable separator is the ARIA pattern for a resizable splitter; <hr> cannot take focus */}
@@ -88,7 +94,9 @@ export function ResizeHandle({
         aria-valuenow={width}
         aria-valuemin={min}
         aria-valuemax={max}
-        title={`${label}. Double-click to reset.`}
+        title={t('{value0}. Double-click to reset.', {
+          value0: label,
+        })}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

@@ -14,6 +14,7 @@ import { type FormEvent, useId, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { Select } from '../../components/Select';
 import { StatusMessage } from '../../components/StatusMessage';
+import { useT } from '../language/LanguageProvider';
 import styles from './AiReviewSettings.module.css';
 import {
   useAiModels,
@@ -30,46 +31,43 @@ const ACCESS: Record<AiProviderId, string> = {
   codex:
     'Runs in the read-only sandbox of Codex: it can run commands that read files, but cannot change files or use the network. Web search, your Codex config, and its MCP servers are turned off.',
 };
-
 export function AiReviewSettings() {
+  const t = useT();
   const settings = useAiSettings();
   const providers = useAiProviders();
   const update = useUpdateAiSettings();
   const groupName = useId();
-
   function refreshTools() {
     return Promise.all([providers.refetch(), settings.refetch()]);
   }
-
   if (settings.isPending) {
-    return <StatusMessage>Loading AI settings…</StatusMessage>;
+    return <StatusMessage>{t('Loading AI settings…')}</StatusMessage>;
   }
   if (settings.isError) {
     return (
       <StatusMessage
         tone="error"
-        title="Could not load the AI settings"
+        title={t('Could not load the AI settings')}
         onRetry={() => void settings.refetch()}
       >
         {settings.error.message}
       </StatusMessage>
     );
   }
-
   const current = settings.data;
   const statusOf = (id: AiProviderId) => providers.data?.find((status) => status.id === id);
-
   return (
     <div className={styles.settings}>
       <p className={styles.intro}>
-        Overviews are made by an AI coding tool on this Mac, with the sign-in you choose below. Plot
-        has no server and no API key of its own.
+        {t(
+          'Overviews are made by an AI coding tool on this Mac, with the sign-in you choose below. Plot has no server and no API key of its own.',
+        )}
       </p>
       <fieldset className={styles.providers}>
         <legend className={styles.legend}>
-          AI tool
+          {t('AI tool')}
           <IconButton
-            label="Check the installed tools again"
+            label={t('Check the installed tools again')}
             busy={providers.isFetching}
             onClick={() => void refreshTools()}
           >
@@ -80,14 +78,24 @@ export function AiReviewSettings() {
           <input
             type="checkbox"
             checked={current.autoSelect === true}
-            onChange={(event) => update.mutate({ ...current, autoSelect: event.target.checked })}
+            onChange={(event) =>
+              update.mutate({
+                ...current,
+                autoSelect: event.target.checked,
+              })
+            }
           />
-          Choose an available tool automatically
+          {t('Choose an available tool automatically')}
         </label>
         <span className={styles.hint}>
           {current.autoSelect
-            ? `Automatic selection checks installation, sign-in and compatibility. Current tool: ${AI_PROVIDERS[current.provider].name}. If neither tool is ready, finish setup below.`
-            : 'Your saved tool stays selected. Choose automatically to check this Mac instead.'}
+            ? t(
+                'Automatic selection checks installation, sign-in and compatibility. Current tool: {value0}. If neither tool is ready, finish setup below.',
+                {
+                  value0: AI_PROVIDERS[current.provider].name,
+                },
+              )
+            : t('Your saved tool stays selected. Choose automatically to check this Mac instead.')}
         </span>
         {AI_PROVIDER_IDS.map((id) => (
           <label key={id} className={styles.provider}>
@@ -99,7 +107,11 @@ export function AiReviewSettings() {
                 update.mutate({
                   ...current,
                   provider: id,
-                  ...(current.autoSelect !== undefined ? { autoSelect: false } : {}),
+                  ...(current.autoSelect !== undefined
+                    ? {
+                        autoSelect: false,
+                      }
+                    : {}),
                 })
               }
             />
@@ -111,7 +123,7 @@ export function AiReviewSettings() {
                 status={statusOf(id)}
                 checking={providers.isPending}
               />
-              <span className={styles.access}>{ACCESS[id]}</span>
+              <span className={styles.access}>{t(ACCESS[id])}</span>
             </span>
           </label>
         ))}
@@ -121,7 +133,14 @@ export function AiReviewSettings() {
         settings={current}
         status={statusOf(current.provider)}
         onChange={(next) =>
-          update.mutate({ ...next, ...(next.autoSelect ? { autoSelect: false } : {}) })
+          update.mutate({
+            ...next,
+            ...(next.autoSelect
+              ? {
+                  autoSelect: false,
+                }
+              : {}),
+          })
         }
       />
       <ModelFields
@@ -132,33 +151,32 @@ export function AiReviewSettings() {
       />
       {update.isError && (
         <p className={styles.error} role="alert">
-          {update.error.message}
+          {t(update.error.message)}
         </p>
       )}
     </div>
   );
 }
-
 interface ProviderStatusLineProps {
   id: AiProviderId;
   auth: AiAuth;
   status?: AiProviderStatus;
   checking: boolean;
 }
-
 function ProviderStatusLine({ id, auth, status, checking }: ProviderStatusLineProps) {
+  const t = useT();
   const { installUrl, signInCommand } = AI_PROVIDERS[id];
   if (!status) {
-    return <span className={styles.status}>{checking ? 'Checking…' : ''}</span>;
+    return <span className={styles.status}>{checking ? t('Checking…') : ''}</span>;
   }
   if (!status.installed) {
     return (
       <span className={styles.status} data-state="missing">
-        Not installed.{' '}
+        {t('Not installed.')}{' '}
         <a href={installUrl} target="_blank" rel="noreferrer">
-          Install it
+          {t('Install it')}
         </a>
-        {auth === 'cli' ? ', then sign in.' : '.'}
+        {auth === 'cli' ? t(', then sign in.') : '.'}
       </span>
     );
   }
@@ -167,43 +185,47 @@ function ProviderStatusLine({ id, auth, status, checking }: ProviderStatusLinePr
     return (
       <span className={styles.status} data-state="signed-out">
         {version}
-        {status.compatibilityIssue}
+        {t(status.compatibilityIssue)}
       </span>
     );
   }
   if (auth === 'api-key') {
     return status.apiKeySaved ? (
       <span className={styles.status} data-state="ready">
-        {version}Uses your API key.
+        {version}
+        {t('Uses your API key.')}
       </span>
     ) : (
       <span className={styles.status} data-state="signed-out">
-        {version}Needs an API key.
+        {version}
+        {t('Needs an API key.')}
       </span>
     );
   }
   if (status.signedIn === false) {
     return (
       <span className={styles.status} data-state="signed-out">
-        {version}Not signed in. Run <code>{signInCommand}</code> in a terminal.
+        {version}
+        {t('Not signed in. Run ')}
+        <code>{signInCommand}</code>
+        {t(' in a terminal.')}
       </span>
     );
   }
   return (
     <span className={styles.status} data-state="ready">
       {version}
-      {status.signedIn ? 'Signed in.' : 'Installed.'}
+      {status.signedIn ? t('Signed in.') : t('Installed.')}
     </span>
   );
 }
-
 interface SignInFieldProps {
   settings: AiSettings;
   status?: AiProviderStatus;
   onChange(settings: AiSettings): void;
 }
-
 function SignInField({ settings, status, onChange }: SignInFieldProps) {
+  const t = useT();
   const id = settings.provider;
   const { name, apiKeyVendor, apiKeyUrl } = AI_PROVIDERS[id];
   const auth = authOf(settings, id);
@@ -214,21 +236,35 @@ function SignInField({ settings, status, onChange }: SignInFieldProps) {
   const trimmed = key.trim();
   const valid = isApiKey(trimmed);
   const failure = save.error ?? remove.error;
-
   function choose(next: AiAuth) {
-    onChange({ ...settings, auth: { ...settings.auth, [id]: next } });
+    onChange({
+      ...settings,
+      auth: {
+        ...settings.auth,
+        [id]: next,
+      },
+    });
   }
-
   function submit(event: FormEvent) {
     event.preventDefault();
     if (valid) {
-      save.mutate({ provider: id, key: trimmed }, { onSuccess: () => setKey('') });
+      save.mutate(
+        {
+          provider: id,
+          key: trimmed,
+        },
+        {
+          onSuccess: () => setKey(''),
+        },
+      );
     }
   }
-
   return (
     <fieldset className={styles.signIn}>
-      <legend className={styles.legend}>Sign-in for {name}</legend>
+      <legend className={styles.legend}>
+        {t('Sign-in for ')}
+        {name}
+      </legend>
       <label className={styles.choice}>
         <input
           type="radio"
@@ -237,8 +273,16 @@ function SignInField({ settings, status, onChange }: SignInFieldProps) {
           onChange={() => choose('cli')}
         />
         <span className={styles.choiceText}>
-          <span>Use the {name} sign-in</span>
-          <span className={styles.hint}>Whatever you set up in {name}: a plan or an API key.</span>
+          <span>
+            {t('Use the ')}
+            {name}
+            {t(' sign-in')}
+          </span>
+          <span className={styles.hint}>
+            {t('Whatever you set up in ')}
+            {name}
+            {t(': a plan or an API key.')}
+          </span>
         </span>
       </label>
       <label className={styles.choice}>
@@ -249,10 +293,14 @@ function SignInField({ settings, status, onChange }: SignInFieldProps) {
           onChange={() => choose('api-key')}
         />
         <span className={styles.choiceText}>
-          <span>Use an API key</span>
+          <span>{t('Use an API key')}</span>
           <span className={styles.hint}>
-            {apiKeyVendor} bills your account for each overview. The key stays in your macOS
-            keychain and is given only to {name} while it makes an overview.
+            {apiKeyVendor}
+            {t(
+              ' bills your account for each overview. The key stays in your macOS keychain and is given only to ',
+            )}
+            {name}
+            {t(' while it makes an overview.')}
           </span>
         </span>
       </label>
@@ -262,9 +310,13 @@ function SignInField({ settings, status, onChange }: SignInFieldProps) {
             <input
               type="password"
               className={styles.input}
-              aria-label={`${apiKeyVendor} API key`}
+              aria-label={t('{value0} API key', {
+                value0: apiKeyVendor,
+              })}
               placeholder={
-                status?.apiKeySaved ? 'Saved. Paste a new key to replace it.' : 'Paste an API key'
+                status?.apiKeySaved
+                  ? t('Saved. Paste a new key to replace it.')
+                  : t('Paste an API key')
               }
               autoComplete="off"
               spellCheck={false}
@@ -273,7 +325,7 @@ function SignInField({ settings, status, onChange }: SignInFieldProps) {
               onChange={(event) => setKey(event.target.value)}
             />
             <button type="submit" className={styles.button} disabled={!valid || save.isPending}>
-              Save
+              {t('Save')}
             </button>
             {status?.apiKeySaved && (
               <button
@@ -282,20 +334,22 @@ function SignInField({ settings, status, onChange }: SignInFieldProps) {
                 disabled={remove.isPending}
                 onClick={() => remove.mutate(id)}
               >
-                Remove
+                {t('Remove')}
               </button>
             )}
           </div>
           <span className={styles.hint}>
-            {status?.apiKeySaved ? 'A key is saved. ' : 'No key is saved yet. '}
+            {status?.apiKeySaved ? t('A key is saved. ') : t('No key is saved yet. ')}
             <a href={apiKeyUrl} target="_blank" rel="noreferrer">
-              Create a key
+              {t('Create a key')}
             </a>{' '}
-            in your {apiKeyVendor} account.
+            {t('in your ')}
+            {apiKeyVendor}
+            {t(' account.')}
           </span>
           {failure && (
             <p className={styles.error} role="alert">
-              {failure.message}
+              {t(failure.message)}
             </p>
           )}
         </form>
@@ -303,9 +357,7 @@ function SignInField({ settings, status, onChange }: SignInFieldProps) {
     </fieldset>
   );
 }
-
 const OTHER = '__other';
-
 const EFFORT_NAMES: Record<string, string> = {
   none: 'None',
   minimal: 'Minimal',
@@ -317,14 +369,13 @@ const EFFORT_NAMES: Record<string, string> = {
   ultra: 'Ultra',
   persistent: 'Persistent',
 };
-
 interface ModelFieldsProps {
   settings: AiSettings;
   onSave(settings: AiSettings): void;
   onReloadTools(): Promise<unknown>;
 }
-
 function ModelFields({ settings, onSave, onReloadTools }: ModelFieldsProps) {
+  const t = useT();
   const { provider } = settings;
   const tool = AI_PROVIDERS[provider];
   const models = useAiModels(provider);
@@ -347,22 +398,30 @@ function ModelFields({ settings, onSave, onReloadTools }: ModelFieldsProps) {
       aria-busy={models.isFetching}
       onClick={() => void Promise.all([models.refetch(), onReloadTools()])}
     >
-      Reload models
+      {t('Reload models')}
     </button>
   );
-
   function save(next: { model?: string; effort?: string }) {
-    const nextModels = { ...settings.models, [provider]: next.model };
-    const nextEfforts = { ...settings.efforts, [provider]: next.effort };
+    const nextModels = {
+      ...settings.models,
+      [provider]: next.model,
+    };
+    const nextEfforts = {
+      ...settings.efforts,
+      [provider]: next.effort,
+    };
     if (next.model === undefined) {
       delete nextModels[provider];
     }
     if (next.effort === undefined) {
       delete nextEfforts[provider];
     }
-    onSave({ ...settings, models: nextModels, efforts: nextEfforts });
+    onSave({
+      ...settings,
+      models: nextModels,
+      efforts: nextEfforts,
+    });
   }
-
   function chooseModel(value: string) {
     if (value === OTHER) {
       setTyping(true);
@@ -372,43 +431,59 @@ function ModelFields({ settings, onSave, onReloadTools }: ModelFieldsProps) {
     const next = value === '' ? undefined : value;
     const selected = next ? options.find((option) => option.id === next) : defaultModel;
     const supported = selected?.efforts ?? tool.efforts;
-    save({ model: next, effort: effort && supported.includes(effort) ? effort : undefined });
+    save({
+      model: next,
+      effort: effort && supported.includes(effort) ? effort : undefined,
+    });
   }
-
   return (
     <fieldset className={styles.model}>
-      <legend className={styles.legend}>Model for {tool.name}</legend>
+      <legend className={styles.legend}>
+        {t('Model for ')}
+        {tool.name}
+      </legend>
       <div className={styles.modelRow}>
         <label className={styles.field} htmlFor={modelId}>
-          <span>Model</span>
+          <span>{t('Model')}</span>
           <Select
             id={modelId}
             className={styles.select}
             value={typing ? OTHER : (model ?? '')}
             onChange={(event) => chooseModel(event.target.value)}
           >
-            <option value="">{defaultModel ? `Default (${defaultModel.name})` : 'Default'}</option>
+            <option value="">
+              {defaultModel
+                ? t('Default ({value0})', {
+                    value0: defaultModel.name,
+                  })
+                : t('Default')}
+            </option>
             {options.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.name}
               </option>
             ))}
             {model && !listed && <option value={model}>{model}</option>}
-            <option value={OTHER}>Other…</option>
+            <option value={OTHER}>{t('Other…')}</option>
           </Select>
         </label>
         <label className={styles.field} htmlFor={effortId}>
-          <span>Reasoning effort</span>
+          <span>{t('Reasoning effort')}</span>
           <Select
             id={effortId}
             className={styles.select}
             value={effort ?? ''}
-            onChange={(event) => save({ model, effort: event.target.value || undefined })}
+            onChange={(event) =>
+              save({
+                model,
+                effort: event.target.value || undefined,
+              })
+            }
           >
-            <option value="">Default</option>
+            <option value="">{t('Default')}</option>
             {efforts.map((level) => (
               <option key={level} value={level}>
-                {EFFORT_NAMES[level] ?? level}
+                {t(EFFORT_NAMES[level] ?? level)}
               </option>
             ))}
             {effort && !efforts.includes(effort) && <option value={effort}>{effort}</option>}
@@ -421,43 +496,48 @@ function ModelFields({ settings, onSave, onReloadTools }: ModelFieldsProps) {
           initial={listed ? '' : (model ?? '')}
           onSave={(name) => {
             setTyping(false);
-            save({ model: name, effort });
+            save({
+              model: name,
+              effort,
+            });
           }}
         />
       )}
       {models.isError && (
         <p className={styles.error} role="alert">
-          {models.error.message}
+          {t(models.error.message)}
         </p>
       )}
       {provider === 'codex' && model && !listed && models.isSuccess && (
         <p className={styles.error} role="alert">
-          This saved model is not available for the selected sign-in. Choose a model from the
-          updated list.
+          {t(
+            'This saved model is not available for the selected sign-in. Choose a model from the updated list.',
+          )}
         </p>
       )}
       <span className={styles.hint}>
         {provider === 'claude-code'
-          ? 'Each name uses the newest version of that model.'
+          ? t('Each name uses the newest version of that model.')
           : options.length > 0
-            ? 'Available for the selected sign-in.'
-            : 'Check your Codex sign-in to load available models.'}{' '}
+            ? t('Available for the selected sign-in.')
+            : t('Check your Codex sign-in to load available models.')}{' '}
         {provider === 'codex'
-          ? 'Default uses the recommended available model with isolated settings.'
-          : 'Default uses the Claude Code default model.'}{' '}
-        Higher effort thinks longer and costs more.
+          ? t('Default uses the recommended available model with isolated settings.')
+          : t('Default uses the Claude Code default model.')}{' '}
+        {t('Higher effort thinks longer and costs more.')}
       </span>
       <div className={styles.modelHelp}>
         <p className={styles.hint}>
-          Missing a newer model? Try updating {tool.name}, then reload the list. Model availability
-          also depends on your account.
+          {t(
+            'Missing a newer model? Try updating {tool}, then reload the list. Model availability also depends on your account.',
+            { tool: tool.name },
+          )}
         </p>
         {reloadButton}
       </div>
     </fieldset>
   );
 }
-
 function OtherModelField({
   provider,
   initial,
@@ -467,30 +547,29 @@ function OtherModelField({
   initial: string;
   onSave(name: string): void;
 }) {
+  const t = useT();
   const [value, setValue] = useState(initial);
   const inputId = useId();
   const trimmed = value.trim();
   const invalid = trimmed !== '' && !isModelName(trimmed);
-
   function submit(event?: FormEvent) {
     event?.preventDefault();
     if (trimmed !== '' && !invalid) {
       onSave(trimmed);
     }
   }
-
   return (
     <form className={styles.other} onSubmit={submit}>
       <label className={styles.hidden} htmlFor={inputId}>
-        Model name
+        {t('Model name')}
       </label>
       <input
         id={inputId}
         className={styles.input}
         placeholder={
           provider === 'codex'
-            ? 'Model ID from your Codex model list'
-            : 'Model ID or alias, such as opus'
+            ? t('Model ID from your Codex model list')
+            : t('Model ID or alias, such as opus')
         }
         spellCheck={false}
         // biome-ignore lint/a11y/noAutofocus: the field appears because Other was just chosen
@@ -501,7 +580,7 @@ function OtherModelField({
         onBlur={() => submit()}
       />
       {invalid && (
-        <span className={styles.hint}>Use a model name the tool lists, without spaces.</span>
+        <span className={styles.hint}>{t('Use a model name the tool lists, without spaces.')}</span>
       )}
     </form>
   );

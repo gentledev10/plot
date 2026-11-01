@@ -2,6 +2,7 @@ import type { RepositoryRef } from '@shared/github';
 import { GITHUB_HOST } from '@shared/hosts';
 import { formatRepositoryRef, repositoryKey } from '@shared/repository-ref';
 import { type FormEvent, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import { useT } from '../language/LanguageProvider';
 import styles from './AddRepositoryPopover.module.css';
 import { useFindRepository, useRepositoryChoices } from './queries';
 import { hasRepository, repositoryOptions } from './repository-list';
@@ -14,7 +15,6 @@ interface AddRepositoryPopoverProps {
   onAdd(ref: RepositoryRef): void;
   onClose(): void;
 }
-
 export function AddRepositoryPopover({
   anchor,
   existing,
@@ -23,6 +23,7 @@ export function AddRepositoryPopover({
   onAdd,
   onClose,
 }: AddRepositoryPopoverProps) {
+  const t = useT();
   const popover = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const close = useRef(onClose);
@@ -37,7 +38,6 @@ export function AddRepositoryPopover({
   const { typed, suggestions } = repositoryOptions(text, choices.data ?? [], defaultHost);
   const options = typed ? [typed, ...suggestions] : suggestions;
   const active = Math.min(highlight, options.length - 1);
-
   useEffect(() => {
     const element = popover.current;
     if (!element) {
@@ -49,11 +49,12 @@ export function AddRepositoryPopover({
       }
     };
     element.addEventListener('toggle', onToggle);
-    element.showPopover({ source: anchor ?? undefined } as ShowPopoverOptions);
+    element.showPopover({
+      source: anchor ?? undefined,
+    } as ShowPopoverOptions);
     input.current?.focus();
     return () => element.removeEventListener('toggle', onToggle);
   }, [anchor]);
-
   function choose(ref: RepositoryRef | undefined) {
     if (!ref) {
       setError('Type owner/repo, or paste a repository URL.');
@@ -72,12 +73,10 @@ export function AddRepositoryPopover({
       onError: (failure) => setError(failure.message),
     });
   }
-
   function submit(event: FormEvent) {
     event.preventDefault();
     choose(options[active]);
   }
-
   function onKeyDown(event: KeyboardEvent) {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
@@ -87,17 +86,15 @@ export function AddRepositoryPopover({
       onClose();
     }
   }
-
   function hint(): string {
     if (error) {
       return error;
     }
     if (find.isPending && find.variables) {
-      return `Checking ${formatRepositoryRef(find.variables)}…`;
+      return t('Checking {value0}…', { value0: formatRepositoryRef(find.variables) });
     }
-    return 'Type owner/repo, or paste a repository URL.';
+    return t('Type owner/repo, or paste a repository URL.');
   }
-
   function option(ref: RepositoryRef, index: number, label: string) {
     const added = hasRepository(existing, ref);
     return (
@@ -110,17 +107,16 @@ export function AddRepositoryPopover({
           onClick={() => choose(ref)}
         >
           <span className={styles.name}>{label}</span>
-          {added && <span className={styles.added}>Added</span>}
+          {added && <span className={styles.added}>{t('Added')}</span>}
         </button>
       </li>
     );
   }
-
   return (
     <div ref={popover} popover="auto" className={styles.popover}>
       <form onSubmit={submit}>
         <label className={styles.hidden} htmlFor={inputId}>
-          Repository to add
+          {t('Repository to add')}
         </label>
         <input
           ref={input}
@@ -128,7 +124,7 @@ export function AddRepositoryPopover({
           className={styles.input}
           type="text"
           value={text}
-          placeholder="owner/repo"
+          placeholder={t('owner/repo')}
           autoComplete="off"
           spellCheck={false}
           aria-describedby={hintId}
@@ -149,11 +145,15 @@ export function AddRepositoryPopover({
       </ul>
       <p className={styles.label}>
         {choices.isError
-          ? `Could not load your repositories. ${choices.error.message}`
-          : `Your repositories on ${defaultHost === GITHUB_HOST ? 'GitHub' : defaultHost}`}
+          ? t('Could not load your repositories. {value0}', {
+              value0: choices.error.message,
+            })
+          : t('Your repositories on {value0}', {
+              value0: defaultHost === GITHUB_HOST ? t('GitHub') : defaultHost,
+            })}
       </p>
       {choices.isPending ? (
-        <p className={styles.loading}>Loading…</p>
+        <p className={styles.loading}>{t('Loading…')}</p>
       ) : (
         <ul className={styles.options}>
           {suggestions.map((ref, index) =>

@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { useT } from '../language/LanguageProvider';
 import styles from './AppearancePreview.module.css';
 import { type CodeFont, type CustomColor, codeFontStack } from './appearance';
 import type { Theme } from './themes';
@@ -30,6 +31,7 @@ interface AppearancePreviewProps {
 }
 
 export function AppearancePreview({ theme, font, highlight }: AppearancePreviewProps) {
+  const t = useT();
   const active = (part: CustomColor | undefined) => part !== undefined && part === highlight;
   const token = (kind: Token, text: string) => (
     <span style={{ color: `#${theme.syntax.find((rule) => rule.token === kind)?.foreground}` }}>
@@ -102,16 +104,16 @@ export function AppearancePreview({ theme, font, highlight }: AppearancePreviewP
   ];
 
   return (
-    <figure className={styles.preview} aria-label="Preview">
+    <figure className={styles.preview} aria-label={t('Preview')}>
       <div className={styles.window}>
         <div className={styles.sidebar}>
-          <p className={styles.heading}>Changed files</p>
+          <p className={styles.heading}>{t('Changed files')}</p>
           <p className={styles.file} data-selected="true">
             retry.ts
           </p>
           <p className={styles.file}>backoff.ts</p>
           <p className={styles.link} data-active={active('color-accent')}>
-            Pull request #412
+            {t('Pull request #')}412
           </p>
         </div>
         <div

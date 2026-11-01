@@ -5,6 +5,7 @@ import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
 import { Badge } from '../inbox/PullRequestItem';
 import { useCommand } from '../keymap/KeymapProvider';
+import { useT } from '../language/LanguageProvider';
 import styles from './LocalChangesPanel.module.css';
 import {
   localKeys,
@@ -19,13 +20,12 @@ interface LocalChangesPanelProps {
   active?: boolean;
   onOpen(repository: LocalRepository): void;
 }
-
 export function LocalChangesPanel({ selectedId, active = true, onOpen }: LocalChangesPanelProps) {
+  const t = useT();
   const queryClient = useQueryClient();
   const repositories = useLocalRepositories();
   const { open, remove } = useLocalRepositoryActions();
   const failure = open.error ?? remove.error;
-
   function openFolder() {
     open.mutate(undefined, {
       onSuccess: (repository) => {
@@ -35,23 +35,28 @@ export function LocalChangesPanel({ selectedId, active = true, onOpen }: LocalCh
       },
     });
   }
-
   function refresh() {
-    void queryClient.invalidateQueries({ queryKey: localKeys.repositories });
-    void queryClient.invalidateQueries({ queryKey: localKeys.statuses });
+    void queryClient.invalidateQueries({
+      queryKey: localKeys.repositories,
+    });
+    void queryClient.invalidateQueries({
+      queryKey: localKeys.statuses,
+    });
   }
-
   useCommand('navigation.refresh', refresh, active);
-
   return (
-    <aside className={styles.panel} aria-label="Local changes">
+    <aside className={styles.panel} aria-label={t('Local changes')}>
       <header className={styles.header}>
-        <h2 className={styles.title}>Local changes</h2>
+        <h2 className={styles.title}>{t('Local changes')}</h2>
         <span className={styles.actions}>
-          <IconButton label="Open a local repository" onClick={openFolder} busy={open.isPending}>
+          <IconButton
+            label={t('Open a local repository')}
+            onClick={openFolder}
+            busy={open.isPending}
+          >
             <FolderPlus size={14} />
           </IconButton>
-          <IconButton label="Refresh" onClick={refresh} busy={repositories.isFetching}>
+          <IconButton label={t('Refresh')} onClick={refresh} busy={repositories.isFetching}>
             <RefreshCw size={14} />
           </IconButton>
         </span>
@@ -66,12 +71,11 @@ export function LocalChangesPanel({ selectedId, active = true, onOpen }: LocalCh
       </div>
     </aside>
   );
-
   function renderRepositories() {
     if (repositories.isError) {
       return (
         <StatusMessage
-          title="Could not load your folders"
+          title={t('Could not load your folders')}
           tone="error"
           onRetry={() => void repositories.refetch()}
         >
@@ -84,8 +88,13 @@ export function LocalChangesPanel({ selectedId, active = true, onOpen }: LocalCh
     }
     if (repositories.data.length === 0) {
       return (
-        <StatusMessage action={{ label: 'Choose a folder…', run: openFolder }}>
-          Open a git folder to see what changed in it, including work you have not committed.
+        <StatusMessage
+          action={{
+            label: 'Choose a folder…',
+            run: openFolder,
+          }}
+        >
+          {t('Open a git folder to see what changed in it, including work you have not committed.')}
         </StatusMessage>
       );
     }
@@ -105,7 +114,6 @@ export function LocalChangesPanel({ selectedId, active = true, onOpen }: LocalCh
     );
   }
 }
-
 interface RepositoryRowProps {
   repository: LocalRepository;
   selected: boolean;
@@ -113,11 +121,10 @@ interface RepositoryRowProps {
   onOpen(): void;
   onRemove(): void;
 }
-
 function RepositoryRow({ repository, selected, live, onOpen, onRemove }: RepositoryRowProps) {
+  const t = useT();
   const status = useLocalStatus(repository.id, live);
   const pull = useLocalPullRequest(repository.id, status.data?.branch).data;
-
   return (
     <li className={styles.row}>
       <button
@@ -132,7 +139,13 @@ function RepositoryRow({ repository, selected, live, onOpen, onRemove }: Reposit
           <span className={styles.top}>
             <span className={styles.name}>{repository.name}</span>
             {pull && (
-              <Badge tone="accent" title={`Pull request #${pull.ref.number}: ${pull.title}`}>
+              <Badge
+                tone="accent"
+                title={t('Pull request #{value0}: {value1}', {
+                  value0: pull.ref.number,
+                  value1: pull.title,
+                })}
+              >
                 #{pull.ref.number}
               </Badge>
             )}
@@ -140,23 +153,30 @@ function RepositoryRow({ repository, selected, live, onOpen, onRemove }: Reposit
           {status.data && (
             <span className={styles.branch}>
               <GitBranch size={11} />
-              <span className={styles.branchName}>{status.data.branch ?? 'Detached HEAD'}</span>
+              <span className={styles.branchName}>{status.data.branch ?? t('Detached HEAD')}</span>
             </span>
           )}
           {status.isError && (
             <span className={styles.unreadable} title={status.error.message}>
-              Could not read this folder
+              {t('Could not read this folder')}
             </span>
           )}
         </span>
         {status.data && (
           <span className={styles.changed}>
-            {status.data.changedFiles === 0 ? 'No changes' : `${status.data.changedFiles} changed`}
+            {status.data.changedFiles === 0
+              ? t('No changes')
+              : t('{count} changed', { count: status.data.changedFiles })}
           </span>
         )}
       </button>
       <span className={styles.remove}>
-        <IconButton label={`Remove ${repository.name} from the list`} onClick={onRemove}>
+        <IconButton
+          label={t('Remove {value0} from the list', {
+            value0: repository.name,
+          })}
+          onClick={onRemove}
+        >
           <X size={12} />
         </IconButton>
       </span>

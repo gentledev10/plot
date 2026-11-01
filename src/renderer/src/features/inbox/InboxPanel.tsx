@@ -9,6 +9,7 @@ import { usePreference } from '../../lib/preferences';
 import { ConnectGitHub } from '../accounts/ConnectGitHub';
 import { useAccounts } from '../accounts/queries';
 import { useCommand } from '../keymap/KeymapProvider';
+import { useT } from '../language/LanguageProvider';
 import { useLocalPullRequestKeys } from '../local/queries';
 import { RepositorySection } from '../repositories/RepositorySection';
 import { filterPullRequests, newestFirst } from './grouping';
@@ -18,7 +19,6 @@ import { PullRequestSearch } from './PullRequestSearch';
 import { useInbox } from './queries';
 
 type Section = 'review-requested' | 'authored';
-
 interface InboxPanelProps {
   selected?: PullRequestRef;
   onSelect(ref: PullRequestRef): void;
@@ -27,7 +27,6 @@ interface InboxPanelProps {
   onManageAccounts?(): void;
   onOpenRepository?(ref: RepositoryRef): void;
 }
-
 export function InboxPanel({
   selected,
   onSelect,
@@ -36,6 +35,7 @@ export function InboxPanel({
   onManageAccounts,
   onOpenRepository = () => {},
 }: InboxPanelProps) {
+  const t = useT();
   const accounts = useAccounts();
   const current = accounts.data?.accounts.find((account) => account.id === accounts.data.currentId);
   const inbox = useInbox(current?.id);
@@ -48,36 +48,31 @@ export function InboxPanel({
   const firstMatch = filtering
     ? (newestFirst(reviewRequested)[0] ?? newestFirst(authored)[0])?.ref
     : undefined;
-
   function refresh() {
     void accounts.refetch();
     if (current) {
       void inbox.refetch();
     }
   }
-
   function collapsedIn(section: Section): ReadonlySet<string> {
     const prefix = `${section}/`;
     return new Set(
       collapsed.filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length)),
     );
   }
-
   function toggleGroup(section: Section, group: string) {
     const key = `${section}/${group}`;
     setCollapsed(
       collapsed.includes(key) ? collapsed.filter((item) => item !== key) : [...collapsed, key],
     );
   }
-
   useCommand('navigation.refresh', refresh);
-
   return (
-    <aside className={styles.panel} aria-label="Pull requests">
+    <aside className={styles.panel} aria-label={t('Pull requests')}>
       <header className={styles.header}>
-        <h2 className={styles.title}>Pull requests</h2>
+        <h2 className={styles.title}>{t('Pull requests')}</h2>
         <IconButton
-          label="Refresh"
+          label={t('Refresh')}
           onClick={refresh}
           busy={accounts.isFetching || inbox.isFetching}
         >
@@ -111,7 +106,7 @@ export function InboxPanel({
           <button
             type="button"
             className={styles.account}
-            title="Switch or add accounts"
+            title={t('Switch or add accounts')}
             onClick={onManageAccounts}
           >
             <Avatar user={current} size={18} />
@@ -125,14 +120,13 @@ export function InboxPanel({
       )}
     </aside>
   );
-
   function renderContent() {
     if (accounts.isPending) {
-      return <StatusMessage>Loading your accounts…</StatusMessage>;
+      return <StatusMessage>{t('Loading your accounts…')}</StatusMessage>;
     }
     if (accounts.isError) {
       return (
-        <StatusMessage title="Could not load your accounts" tone="error" onRetry={refresh}>
+        <StatusMessage title={t('Could not load your accounts')} tone="error" onRetry={refresh}>
           {accounts.error.message}
         </StatusMessage>
       );
@@ -140,21 +134,22 @@ export function InboxPanel({
     if (!current) {
       return (
         <div className={styles.onboarding}>
-          <h3 className={styles.onboardingTitle}>Connect GitHub</h3>
+          <h3 className={styles.onboardingTitle}>{t('Connect GitHub')}</h3>
           <p className={styles.onboardingText}>
-            Plot lists the pull requests waiting for your review and opens any pull request you can
-            read.
+            {t(
+              'Plot lists the pull requests waiting for your review and opens any pull request you can read.',
+            )}
           </p>
           <ConnectGitHub />
         </div>
       );
     }
     if (inbox.isPending) {
-      return <StatusMessage>Loading pull requests…</StatusMessage>;
+      return <StatusMessage>{t('Loading pull requests…')}</StatusMessage>;
     }
     if (inbox.isError) {
       return (
-        <StatusMessage title="Could not load pull requests" tone="error" onRetry={refresh}>
+        <StatusMessage title={t('Could not load pull requests')} tone="error" onRetry={refresh}>
           {inbox.error.message}
         </StatusMessage>
       );
@@ -162,7 +157,7 @@ export function InboxPanel({
     return (
       <>
         <PullRequestList
-          title="Review requested"
+          title={t('Review requested')}
           pulls={reviewRequested}
           emptyText={filtering ? 'No pull requests match.' : 'Nothing is waiting for your review.'}
           selected={selected}
@@ -173,7 +168,7 @@ export function InboxPanel({
           onSelect={onSelect}
         />
         <PullRequestList
-          title="Your pull requests"
+          title={t('Your pull requests')}
           pulls={authored}
           emptyText={filtering ? 'No pull requests match.' : 'You have no open pull requests.'}
           selected={selected}
@@ -187,9 +182,7 @@ export function InboxPanel({
     );
   }
 }
-
 const NONE: ReadonlySet<string> = new Set();
-
 function parseStringList(stored: unknown): string[] | undefined {
   return Array.isArray(stored) && stored.every((item) => typeof item === 'string')
     ? stored

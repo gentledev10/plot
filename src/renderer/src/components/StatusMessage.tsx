@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useT } from '../features/language/LanguageProvider';
 import styles from './StatusMessage.module.css';
 
 interface StatusAction {
@@ -21,14 +22,17 @@ export function StatusMessage({
   action,
   children,
 }: StatusMessageProps) {
+  const t = useT();
   const button = action ?? (onRetry && { label: 'Try again', run: onRetry });
   return (
     <div className={styles.message} data-tone={tone} role={tone === 'error' ? 'alert' : 'status'}>
-      {title && <p className={styles.title}>{title}</p>}
-      {children && <div className={styles.body}>{children}</div>}
+      {title && <p className={styles.title}>{t(title)}</p>}
+      {children && (
+        <div className={styles.body}>{typeof children === 'string' ? t(children) : children}</div>
+      )}
       {button && (
         <button type="button" className={styles.action} onClick={button.run}>
-          {button.label}
+          {t(button.label)}
         </button>
       )}
     </div>

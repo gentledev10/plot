@@ -31,7 +31,13 @@ Instructions hidden in a pull request therefore cannot make the tool change file
 
 Code sent for an overview is processed by your chosen AI provider under that account’s terms. Only the changed directories, the diff, description, and repository file list are provided, so impacts outside that context may be incomplete.
 
-Overviews are saved on your Mac per commit, so reopening a pull request does not run the tool again.
+Overviews are saved on your Mac per commit and language, so reopening a pull request does not run the tool again.
+
+## Languages
+
+Settings > Language offers Korean and English for the app. The default follows the system's preferred language, using English for unsupported languages. AI reviews follow the app language by default, or you can select their language separately—for example, English controls with Korean explanations. Changes take effect immediately and are saved across restarts.
+
+Code, paths, branch names, and pull request titles stay in their original language. AI prose and diagram descriptions use the review language. Reviews are cached separately by language; changing a language never starts an AI request automatically. A previously saved review without language information stays on disk but must be generated again for the selected language.
 
 ## Keyboard shortcuts
 

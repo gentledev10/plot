@@ -1,6 +1,7 @@
 import type { PullRequestRef } from '@shared/github';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../app/providers';
+import { useLanguage } from '../language/LanguageProvider';
 import { pullRequestKeys } from '../pull-request/queries';
 
 export const reviewKeys = {
@@ -9,8 +10,9 @@ export const reviewKeys = {
 
 export function useReviewStatus(ref: PullRequestRef) {
   const api = useApi();
+  const { reviewLanguage } = useLanguage();
   return useQuery({
-    queryKey: reviewKeys.status(ref),
+    queryKey: [...reviewKeys.status(ref), reviewLanguage],
     queryFn: () => api.getReviewStatus(ref),
     refetchInterval: (query) => (query.state.data?.state === 'running' ? 1_000 : false),
   });

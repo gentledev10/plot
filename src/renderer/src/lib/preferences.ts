@@ -27,6 +27,10 @@ export function writePreference<T>(key: string, value: T): void {
   save(key, value);
 }
 
+export function cachePreference(key: string, value: unknown): void {
+  values.set(key, value);
+}
+
 export function usePreference<T>(
   key: string,
   fallback: T,

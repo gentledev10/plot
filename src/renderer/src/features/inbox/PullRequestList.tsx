@@ -2,6 +2,7 @@ import type { PullRequestRef, PullRequestSummary } from '@shared/github';
 import { pullRequestKey } from '@shared/pull-request-ref';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useId } from 'react';
+import { useT } from '../language/LanguageProvider';
 import { groupByRepository, type RepositoryGroup } from './grouping';
 import styles from './InboxPanel.module.css';
 import { PullRequestItem } from './PullRequestItem';
@@ -29,6 +30,7 @@ export function PullRequestList({
   onToggleGroup,
   onSelect,
 }: PullRequestListProps) {
+  const t = useT();
   const headingId = useId();
   const groups = groupByRepository(pulls);
   return (
@@ -38,7 +40,7 @@ export function PullRequestList({
         <span className={styles.count}>{pulls.length}</span>
       </h3>
       {groups.length === 0 ? (
-        <p className={styles.emptyText}>{emptyText}</p>
+        <p className={styles.emptyText}>{t(emptyText)}</p>
       ) : (
         <ul className={styles.groups}>
           {groups.map((group) => (

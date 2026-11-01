@@ -12,6 +12,7 @@ import { FilesPanel } from '../features/files/FilesPanel';
 import { InboxPanel } from '../features/inbox/InboxPanel';
 import { useCommand, useShortcutLabel } from '../features/keymap/KeymapProvider';
 import { formatStroke } from '../features/keymap/keystroke';
+import { useT } from '../features/language/LanguageProvider';
 import { LocalChangesPanel } from '../features/local/LocalChangesPanel';
 import { LocalPullRequestLink } from '../features/local/LocalPullRequestLink';
 import { LocalWorkspace } from '../features/local/LocalWorkspace';
@@ -41,8 +42,8 @@ import {
 import { useMenuCommand, usePlatform } from './providers';
 import { ResizeHandle } from './ResizeHandle';
 import { ToolWindowBar, ToolWindowButton } from './ToolWindowBar';
-
 export function App() {
+  const t = useT();
   const platform = usePlatform();
   const [open, setOpen] = useState<DiffTarget>();
   const [lastOpened, setLastOpened] = useState<DiffTarget>();
@@ -81,7 +82,6 @@ export function App() {
   const pullRequestsShortcut = useShortcutLabel('view.togglePullRequests');
   const localChangesShortcut = useShortcutLabel('view.toggleLocalChanges');
   const reviewShortcut = useShortcutLabel('view.toggleReview');
-
   function show(target: DiffTarget) {
     setContextReview(false);
     setOpen(target);
@@ -90,15 +90,19 @@ export function App() {
     setSelectedPath(undefined);
     setReveal(undefined);
   }
-
   function openPullRequest(ref: PullRequestRef) {
-    show({ kind: 'pull-request', ref });
+    show({
+      kind: 'pull-request',
+      ref,
+    });
   }
-
   function openLocalRepository(repository: LocalRepository) {
-    show({ kind: 'local', repositoryId: repository.id, compare: 'branch' });
+    show({
+      kind: 'local',
+      repositoryId: repository.id,
+      compare: 'branch',
+    });
   }
-
   function chooseAndOpenLocalRepository() {
     chooseLocalRepository.mutate(undefined, {
       onSuccess: (repository) => {
@@ -108,7 +112,6 @@ export function App() {
       },
     });
   }
-
   function titleOf(target: DiffTarget): string {
     if (target.kind === 'pull-request') {
       return formatPullRequestRef(target.ref);
@@ -116,7 +119,6 @@ export function App() {
     const repository = localRepositories.data?.find((item) => item.id === target.repositoryId);
     return repository?.name ?? 'Local repository';
   }
-
   function backToList() {
     setContextReview(false);
     setMaximized(false);
@@ -124,34 +126,49 @@ export function App() {
     setSelectedPath(undefined);
     setReveal(undefined);
   }
-
   function openLocation(location: CodeLocation) {
     setMaximized(false);
     setSelectedPath(location.path);
-    setReveal({ path: location.path, line: location.line, key: Date.now() });
+    setReveal({
+      path: location.path,
+      line: location.line,
+      key: Date.now(),
+    });
   }
-
   function toggle(panel: PanelId) {
     setMaximized(false);
     setPanelPriority(panel);
     if (panel === 'review' && open?.kind !== 'pull-request') setContextReview(!reviewShown);
-    else setLayout(togglePanel({ ...layout, [panel]: fitted.layout[panel] }, panel));
+    else
+      setLayout(
+        togglePanel(
+          {
+            ...layout,
+            [panel]: fitted.layout[panel],
+          },
+          panel,
+        ),
+      );
     setRestore(undefined);
   }
-
   function toggleWindow(id: ToolWindowId) {
     setMaximized(false);
     setPanelPriority('sidebar');
-    setLayout({ ...layout, sidebar: !(sidebarShown && toolWindow === id) });
+    setLayout({
+      ...layout,
+      sidebar: !(sidebarShown && toolWindow === id),
+    });
     setToolWindow(id);
     setRestore(undefined);
   }
-
   function toggleAll() {
     setMaximized(false);
     if (sidebarShown || reviewShown) {
       setRestore(requestedLayout);
-      setLayout({ sidebar: false, review: false });
+      setLayout({
+        sidebar: false,
+        review: false,
+      });
       setContextReview(false);
     } else {
       const next = restore ?? DEFAULT_LAYOUT;
@@ -160,20 +177,17 @@ export function App() {
       setRestore(undefined);
     }
   }
-
   function maxPanelWidth(panel: PanelId) {
     const other = panel === 'sidebar' ? 'review' : 'sidebar';
     const available = viewportWidth - TOOL_BARS_WIDTH - MIN_WORKSPACE_WIDTH - fitted.sizes[other];
     return Math.max(SIZE_LIMITS[panel].min, Math.min(SIZE_LIMITS[panel].max, available));
   }
-
   function previewSize(panel: PanelId, width: number) {
     shell.current?.style.setProperty(
       `--${panel}-width`,
       `${Math.min(width, maxPanelWidth(panel))}px`,
     );
   }
-
   function resizeHandle(panel: PanelId, label: string, edge: 'left' | 'right') {
     return (
       <ResizeHandle
@@ -185,13 +199,20 @@ export function App() {
         onPreview={(width) => previewSize(panel, width)}
         onResize={(width) => {
           setPanelPriority(panel);
-          setSizes({ ...sizes, [panel]: Math.min(width, maxPanelWidth(panel)) });
+          setSizes({
+            ...sizes,
+            [panel]: Math.min(width, maxPanelWidth(panel)),
+          });
         }}
-        onReset={() => setSizes({ ...sizes, [panel]: DEFAULT_SIZES[panel] })}
+        onReset={() =>
+          setSizes({
+            ...sizes,
+            [panel]: DEFAULT_SIZES[panel],
+          })
+        }
       />
     );
   }
-
   function goBack() {
     if (open) {
       backToList();
@@ -199,18 +220,19 @@ export function App() {
       setBrowsing(undefined);
     }
   }
-
   function startOpeningPullRequest() {
     backToList();
     setBrowsing(undefined);
     setPanelPriority('sidebar');
     if (!sidebarShown) {
-      setLayout({ ...layout, sidebar: true });
+      setLayout({
+        ...layout,
+        sidebar: true,
+      });
     }
     setToolWindow('pull-requests');
     setFocusOpenField(true);
   }
-
   useCommand('view.togglePullRequests', () => toggleWindow('pull-requests'));
   useCommand('view.toggleLocalChanges', () => toggleWindow('local-changes'));
   useCommand('view.toggleReview', () => toggle('review'));
@@ -226,7 +248,6 @@ export function App() {
   useMenuCommand('open-local-repository', chooseAndOpenLocalRepository);
   useMenuCommand('open-settings', () => setSettings('accounts'));
   useMenuCommand('open-keymap', () => setSettings('keymap'));
-
   return (
     <div
       ref={shell}
@@ -245,10 +266,10 @@ export function App() {
       <div className={styles.leftBar}>
         <ToolWindowBar
           side="left"
-          label="Left tool windows"
+          label={t('Left tool windows')}
           footer={
             <ToolWindowButton
-              label="Settings"
+              label={t('Settings')}
               shortcut={formatStroke('Meta+,', platform)}
               onClick={() => setSettings('accounts')}
             >
@@ -257,7 +278,7 @@ export function App() {
           }
         >
           <ToolWindowButton
-            label="Pull requests"
+            label={t('Pull requests')}
             shortcut={pullRequestsShortcut}
             pressed={sidebarShown && toolWindow === 'pull-requests'}
             onClick={() => toggleWindow('pull-requests')}
@@ -265,7 +286,7 @@ export function App() {
             <GitPullRequest size={16} />
           </ToolWindowButton>
           <ToolWindowButton
-            label="Local changes"
+            label={t('Local changes')}
             shortcut={localChangesShortcut}
             pressed={sidebarShown && toolWindow === 'local-changes'}
             onClick={() => toggleWindow('local-changes')}
@@ -341,7 +362,12 @@ export function App() {
             key={targetKey(open)}
             repositoryId={open.repositoryId}
             compare={open.compare}
-            onCompareChange={(compare) => show({ ...open, compare })}
+            onCompareChange={(compare) =>
+              show({
+                ...open,
+                compare,
+              })
+            }
             selectedPath={selectedPath}
             reveal={reveal}
             onSelectPath={setSelectedPath}
@@ -349,24 +375,27 @@ export function App() {
         )}
         {!open && (
           <div className={styles.placeholder}>
-            <h1>Understand your changes.</h1>
+            <h1>{t('Understand your changes.')}</h1>
             <div className={styles.startActions}>
               <button type="button" onClick={chooseAndOpenLocalRepository}>
-                Open a local folder…
+                {t('Open a local folder…')}
               </button>
               <button type="button" onClick={() => setSettings('accounts')}>
-                Connect GitHub…
+                {t('Connect GitHub…')}
               </button>
             </div>
-            <p className={styles.startHint}>Local changes work without a GitHub account.</p>
+            <p className={styles.startHint}>{t('Local changes work without a GitHub account.')}</p>
             <StatusMessage
               action={
                 sidebarShown
                   ? undefined
-                  : { label: 'Show pull requests', run: () => toggleWindow('pull-requests') }
+                  : {
+                      label: 'Show pull requests',
+                      run: () => toggleWindow('pull-requests'),
+                    }
               }
             >
-              Select a pull request or a local repository to see what changed.
+              {t('Select a pull request or a local repository to see what changed.')}
             </StatusMessage>
           </div>
         )}
@@ -377,7 +406,9 @@ export function App() {
           target={open?.kind === 'pull-request' ? open.ref : undefined}
           notice={
             open?.kind === 'local'
-              ? 'AI overviews work on pull requests for now. Push the branch and open its pull request to get one.'
+              ? t(
+                  'AI overviews work on pull requests for now. Push the branch and open its pull request to get one.',
+                )
               : undefined
           }
           onOpenLocation={openLocation}
@@ -387,9 +418,9 @@ export function App() {
         />
       </div>
       <div className={styles.rightBar}>
-        <ToolWindowBar side="right" label="Right tool windows">
+        <ToolWindowBar side="right" label={t('Right tool windows')}>
           <ToolWindowButton
-            label="AI overview"
+            label={t('AI overview')}
             shortcut={reviewShortcut}
             pressed={reviewShown}
             onClick={() => toggle('review')}

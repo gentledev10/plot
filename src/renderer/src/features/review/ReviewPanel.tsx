@@ -10,6 +10,7 @@ import { useAiSettings } from '../ai/queries';
 import { useAppearance } from '../appearance/AppearanceProvider';
 import { usePullRequestDiff } from '../diff/queries';
 import { useCommand, useShortcutLabel, withShortcut } from '../keymap/KeymapProvider';
+import { useLanguage, useT } from '../language/LanguageProvider';
 import { MermaidDiagram } from './MermaidDiagram';
 import {
   architectureToMermaid,
@@ -28,12 +29,10 @@ interface ReviewPanelProps {
   onToggleMaximize?(): void;
   notice?: string;
 }
-
 interface Maximizing {
   maximized?: boolean;
   onToggleMaximize?(): void;
 }
-
 export function ReviewPanel({
   target,
   onOpenLocation,
@@ -42,9 +41,13 @@ export function ReviewPanel({
   onToggleMaximize,
   notice = 'Open a pull request to get an overview of its changes.',
 }: ReviewPanelProps) {
-  const maximizing = { maximized, onToggleMaximize };
+  const t = useT();
+  const maximizing = {
+    maximized,
+    onToggleMaximize,
+  };
   return (
-    <aside className={styles.panel} aria-label="AI overview" data-maximized={maximized}>
+    <aside className={styles.panel} aria-label={t('AI overview')} data-maximized={maximized}>
       {target ? (
         <PullRequestReview
           target={target}
@@ -61,25 +64,27 @@ export function ReviewPanel({
     </aside>
   );
 }
-
 function PanelHeader({
   onRegenerate,
   maximized,
   onToggleMaximize,
-}: Maximizing & { onRegenerate?(): void }) {
+}: Maximizing & {
+  onRegenerate?(): void;
+}) {
+  const t = useT();
   const shortcut = useShortcutLabel('view.maximizeReview');
   return (
     <header className={styles.header}>
-      <h2 className={styles.title}>AI overview</h2>
+      <h2 className={styles.title}>{t('AI overview')}</h2>
       <span className={styles.headerActions}>
         {onRegenerate && (
-          <IconButton label="Generate again" onClick={onRegenerate}>
+          <IconButton label={t('Generate again')} onClick={onRegenerate}>
             <RotateCw size={14} />
           </IconButton>
         )}
         {onToggleMaximize && (
           <IconButton
-            label={withShortcut(maximized ? 'Restore' : 'Maximize', shortcut)}
+            label={withShortcut(maximized ? t('Restore') : t('Maximize'), shortcut)}
             onClick={onToggleMaximize}
           >
             {maximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
@@ -89,19 +94,19 @@ function PanelHeader({
     </header>
   );
 }
-
 interface PullRequestReviewProps extends Maximizing {
   target: PullRequestRef;
   onOpenLocation(location: CodeLocation): void;
   onConfigureAi?(): void;
 }
-
 function PullRequestReview({
   target,
   onOpenLocation,
   onConfigureAi,
   ...maximizing
 }: PullRequestReviewProps) {
+  const t = useT();
+  const { language } = useLanguage();
   const status = useReviewStatus(target);
   const ai = useAiSettings();
   const { start, cancel } = useReviewActions(target);
@@ -117,23 +122,21 @@ function PullRequestReview({
     generate,
     status.data !== undefined && status.data.state !== 'running' && !start.isPending,
   );
-
   return (
     <>
       <PanelHeader onRegenerate={done ? generate : undefined} {...maximizing} />
       <div className={styles.content}>{renderBody()}</div>
     </>
   );
-
   function renderBody() {
     if (status.isPending) {
-      return <StatusMessage>Checking for a saved overview…</StatusMessage>;
+      return <StatusMessage>{t('Checking for a saved overview…')}</StatusMessage>;
     }
     if (status.isError) {
       return (
         <StatusMessage
           tone="error"
-          title="Could not load the overview"
+          title={t('Could not load the overview')}
           onRetry={() => void status.refetch()}
         >
           {status.error.message}
@@ -161,11 +164,11 @@ function PullRequestReview({
         );
       case 'failed':
         return (
-          <StatusMessage tone="error" title="Could not make the overview" onRetry={generate}>
-            <p>{current.error.message}</p>
+          <StatusMessage tone="error" title={t('Could not make the overview')} onRetry={generate}>
+            <p>{t(current.error.message)}</p>
             {onConfigureAi && (
               <button type="button" className={styles.link} onClick={onConfigureAi}>
-                Open AI settings
+                {t('Open AI settings')}
               </button>
             )}
           </StatusMessage>
@@ -179,43 +182,57 @@ function PullRequestReview({
               onOpenLocation={onOpenLocation}
             />
             <p className={styles.footnote}>
-              Generated
-              {current.provider && ` by ${AI_PROVIDERS[current.provider].name}`}
-              {current.model && ` (${current.model})`} {formatAge(current.createdAt)}
-              {current.costUsd !== undefined && <span>, cost ${current.costUsd.toFixed(2)}</span>}
+              {t('Generated')}
+              {current.provider &&
+                t(' by {value0}', {
+                  value0: AI_PROVIDERS[current.provider].name,
+                })}
+              {current.model && ` (${current.model})`}{' '}
+              {formatAge(current.createdAt, undefined, language)}
+              {current.costUsd !== undefined && (
+                <span>
+                  {t(', cost $')}
+                  {current.costUsd.toFixed(2)}
+                </span>
+              )}
             </p>
           </>
         );
     }
   }
 }
-
 interface IntroductionProps {
   provider?: AiProviderId;
   onGenerate(): void;
   onConfigure?(): void;
   busy: boolean;
 }
-
 function Introduction({ provider, onGenerate, onConfigure, busy }: IntroductionProps) {
+  const t = useT();
   const name = provider ? AI_PROVIDERS[provider].name : 'Your AI tool';
   return (
     <div className={styles.intro}>
       <p>
-        Understand this change before reading the diff: what it changes, how the flow differs from
-        before, and the architecture around it. Every item links to the code.
+        {t(
+          'Understand this change before reading the diff: what it changes, how the flow differs from before, and the architecture around it. Every item links to the code.',
+        )}
       </p>
       <button type="button" className={styles.primary} onClick={onGenerate} disabled={busy}>
-        <Sparkles size={14} /> Explain this change
+        <Sparkles size={14} />
+        {t(' Explain this change')}
       </button>
       <p className={styles.muted}>
-        {name} reads this pull request and the directories it touches on this Mac, with read-only
-        access. It takes a minute or two and counts toward your {name} usage.
+        {name}
+        {t(
+          ' reads this pull request and the directories it touches on this Mac, with read-only access. It takes a minute or two and counts toward your ',
+        )}
+        {name}
+        {t(' usage.')}
         {onConfigure && (
           <>
             {' '}
             <button type="button" className={styles.link} onClick={onConfigure}>
-              Choose another AI tool
+              {t('Choose another AI tool')}
             </button>
           </>
         )}
@@ -223,7 +240,6 @@ function Introduction({ provider, onGenerate, onConfigure, busy }: IntroductionP
     </div>
   );
 }
-
 function Progress({
   startedAt,
   activity,
@@ -233,26 +249,29 @@ function Progress({
   activity: string[];
   onCancel(): void;
 }) {
+  const t = useT();
   const elapsed = useElapsed(startedAt);
   return (
     <div className={styles.progress} role="status">
       <div className={styles.progressHeader}>
         <LoaderCircle size={14} className={styles.spinner} />
-        <span>Reading the change… {elapsed}</span>
+        <span>
+          {t('Reading the change… ')}
+          {elapsed}
+        </span>
         <button type="button" className={styles.secondary} onClick={onCancel}>
-          Cancel
+          {t('Cancel')}
         </button>
       </div>
       <ol className={styles.activity}>
         {activity.slice(-8).map((item, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: activity entries repeat and only ever append
-          <li key={`${index}-${item}`}>{item}</li>
+          <li key={`${index}-${item}`}>{t(item)}</li>
         ))}
       </ol>
     </div>
   );
 }
-
 function useElapsed(startedAt: string): string {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -262,14 +281,13 @@ function useElapsed(startedAt: string): string {
   const seconds = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1_000));
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
-
 interface ReviewMapViewProps {
   review: ReviewMap;
   changedPaths: ReadonlySet<string>;
   onOpenLocation(location: CodeLocation): void;
 }
-
 function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewProps) {
+  const t = useT();
   const scheme = useAppearance().theme.kind;
   const architecture = useMemo(
     () => architectureToMermaid(review.architecture, scheme),
@@ -279,17 +297,16 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
     location && (
       <LocationLink location={location} changedPaths={changedPaths} onOpen={onOpenLocation} />
     );
-
   return (
     <div className={styles.review}>
       <section aria-labelledby="overview-summary">
-        <h3 id="overview-summary">Summary</h3>
+        <h3 id="overview-summary">{t('Summary')}</h3>
         <p className={styles.text}>{review.summary}</p>
       </section>
 
       {review.changes.length > 0 && (
         <section aria-labelledby="overview-changes">
-          <h3 id="overview-changes">What changed</h3>
+          <h3 id="overview-changes">{t('What changed')}</h3>
           <ul className={styles.changes}>
             {review.changes.map((change, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: a stored overview never changes order, and titles can repeat
@@ -299,13 +316,13 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
                 <dl className={styles.beforeAfter}>
                   {change.before && (
                     <>
-                      <dt>Before</dt>
+                      <dt>{t('Before')}</dt>
                       <dd>{change.before}</dd>
                     </>
                   )}
                   {change.after && (
                     <>
-                      <dt>Now</dt>
+                      <dt>{t('Now')}</dt>
                       <dd>{change.after}</dd>
                     </>
                   )}
@@ -323,10 +340,10 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
 
       {review.architecture.nodes.length > 0 && (
         <section aria-labelledby="overview-architecture">
-          <h3 id="overview-architecture">Architecture</h3>
+          <h3 id="overview-architecture">{t('Architecture')}</h3>
           <MermaidDiagram
             source={architecture.source}
-            label="Components around this change"
+            label={t('Components around this change')}
             onElementClick={(elementId) => {
               const index = nodeIndexFromElementId(elementId);
               const location =
@@ -341,8 +358,8 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
               <li key={node.id}>
                 <span>{node.label}</span>
                 {node.status !== 'unchanged' && (
-                  <span className={styles.status} data-status={node.status}>
-                    {node.status}
+                  <span className={styles.status} data-status={t(node.status)}>
+                    {t(node.status)}
                   </span>
                 )}
                 {link(node.location)}
@@ -354,7 +371,7 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
 
       {review.impacts.length > 0 && (
         <section aria-labelledby="overview-impacts">
-          <h3 id="overview-impacts">What else it affects</h3>
+          <h3 id="overview-impacts">{t('What else it affects')}</h3>
           <ul className={styles.list}>
             {review.impacts.map((impact, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: a stored overview never changes order, and areas can repeat
@@ -370,11 +387,15 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
 
       {review.readingOrder.length > 0 && (
         <section aria-labelledby="overview-reading-order">
-          <h3 id="overview-reading-order">Where to start reading</h3>
+          <h3 id="overview-reading-order">{t('Where to start reading')}</h3>
           <ol className={styles.list}>
             {review.readingOrder.map((step) => (
               <li key={step.path}>
-                {link({ path: step.path, line: 1, verified: true })}
+                {link({
+                  path: step.path,
+                  line: 1,
+                  verified: true,
+                })}
                 <span className={styles.reason}>{step.reason}</span>
               </li>
             ))}
@@ -384,49 +405,57 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
     </div>
   );
 }
-
 interface FlowViewProps {
   flow: Flow;
   link(location: CodeLocation | undefined): ReactNode;
 }
-
 function FlowView({ flow, link }: FlowViewProps) {
+  const t = useT();
   const comparison = useMemo(() => compareFlow(flow), [flow]);
   const both = flow.before.length > 0 && flow.after.length > 0;
   return (
-    <section aria-label={`Flow: ${flow.title}`}>
+    <section
+      aria-label={t('Flow: {value0}', {
+        value0: flow.title,
+      })}
+    >
       <h3>{flow.title}</h3>
       {!both && (
         <p className={styles.muted}>
           {flow.before.length === 0
-            ? 'A new flow added by this change.'
-            : 'A flow this change removes.'}
+            ? t('A new flow added by this change.')
+            : t('A flow this change removes.')}
         </p>
       )}
       <div className={styles.flowPair}>
         {flow.before.length > 0 && (
           <div>
-            {both && <h4 className={styles.side}>Before</h4>}
+            {both && <h4 className={styles.side}>{t('Before')}</h4>}
             <MermaidDiagram
               source={sequenceToMermaid(flow.before, comparison.removed, 'removed')}
-              label={`How ${flow.title} worked before`}
+              label={t('How {value0} worked before', {
+                value0: flow.title,
+              })}
             />
           </div>
         )}
         {flow.after.length > 0 && (
           <div>
-            {both && <h4 className={styles.side}>Now</h4>}
+            {both && <h4 className={styles.side}>{t('Now')}</h4>}
             <MermaidDiagram
               source={sequenceToMermaid(flow.after, comparison.added, 'added')}
-              label={`How ${flow.title} works now`}
+              label={t('How {value0} works now', {
+                value0: flow.title,
+              })}
             />
           </div>
         )}
       </div>
       {both && (comparison.added.size > 0 || comparison.removed.size > 0) && (
         <p className={styles.legend}>
-          <span className={styles.swatch} data-highlight="removed" /> Removed{' '}
-          <span className={styles.swatch} data-highlight="added" /> Added
+          <span className={styles.swatch} data-highlight="removed" />
+          {t(' Removed')} <span className={styles.swatch} data-highlight="added" />
+          {t(' Added')}
         </p>
       )}
       {flow.after.length > 0 && (
@@ -445,26 +474,26 @@ function FlowView({ flow, link }: FlowViewProps) {
     </section>
   );
 }
-
 interface LocationLinkProps {
   location: CodeLocation;
   changedPaths: ReadonlySet<string>;
   onOpen(location: CodeLocation): void;
 }
-
 function LocationLink({ location, changedPaths, onOpen }: LocationLinkProps) {
+  const t = useT();
   const text = location.line > 1 ? `${location.path}:${location.line}` : location.path;
   const unverified = location.verified === false && (
     <span
       className={styles.unverified}
-      title="The AI pointed at a line that does not exist in this pull request."
+      title={t('The AI pointed at a line that does not exist in this pull request.')}
     >
-      <CircleAlert size={12} /> unverified
+      <CircleAlert size={12} />
+      {t(' unverified')}
     </span>
   );
   if (!changedPaths.has(location.path)) {
     return (
-      <span className={styles.location} title="This file is not changed in this pull request.">
+      <span className={styles.location} title={t('This file is not changed in this pull request.')}>
         {text}
         {unverified}
       </span>
