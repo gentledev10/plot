@@ -64,7 +64,7 @@ export function VectorDiagram({
           aria-label={label}
           viewBox={`0 0 ${layout.width} ${layout.height}`}
           style={{
-            width: `${layout.width * (readable ? 1 : Math.min(1, width / layout.width, 380 / layout.height))}px`,
+            width: `${layout.width * (readable ? 1 : Math.min(1, width / layout.width, 640 / layout.height))}px`,
           }}
         >
           <title>{label}</title>

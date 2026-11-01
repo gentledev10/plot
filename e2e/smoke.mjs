@@ -675,6 +675,13 @@ try {
     .waitFor();
   await changeMap.getByRole('button', { name: 'Enlarge diagrams' }).click();
   const structure = changeMap.getByRole('region', { name: 'System responsibilities', exact: true });
+  assert.equal(
+    await structure
+      .getByRole('img', { name: 'System responsibilities · Before', exact: true })
+      .count(),
+    0,
+  );
+  await structure.getByRole('button', { name: 'Side by side', exact: true }).click();
   await structure
     .getByRole('img', { name: 'System responsibilities · Before', exact: true })
     .waitFor();

@@ -1,5 +1,5 @@
 import type { Architecture, CodeLocation, ReviewVisual } from '@shared/review';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { useT } from '../language/LanguageProvider';
 import { MermaidDiagram } from './MermaidDiagram';
 import { sequenceToMermaid } from './mermaid-source';
@@ -52,19 +52,9 @@ function Visual({
   link(location: CodeLocation | undefined): ReactNode;
 }) {
   const t = useT();
-  const host = useRef<HTMLElement>(null);
-  const [wide, setWide] = useState(false);
   const [selected, setSelected] = useState<'before' | 'after' | 'both'>();
-  useEffect(() => {
-    if (!host.current || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(([entry]) =>
-      setWide((entry?.contentRect.width ?? 0) >= 760),
-    );
-    observer.observe(host.current);
-    return () => observer.disconnect();
-  }, []);
   const both = !!visual.before && !!visual.after;
-  const view = both ? (selected ?? (wide ? 'both' : 'after')) : visual.after ? 'after' : 'before';
+  const view = both ? (selected ?? 'after') : visual.after ? 'after' : 'before';
   const graphs = [
     ...(visual.before && view !== 'after'
       ? [{ side: 'before' as const, graph: visual.before }]
@@ -72,7 +62,7 @@ function Visual({
     ...(visual.after && view !== 'before' ? [{ side: 'after' as const, graph: visual.after }] : []),
   ];
   return (
-    <section ref={host} className={styles.visual} aria-label={visual.title}>
+    <section className={styles.visual} aria-label={visual.title}>
       <div className={styles.heading}>
         <span className={styles.kind}>
           {t(

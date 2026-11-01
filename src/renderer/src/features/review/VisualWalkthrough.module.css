@@ -73,7 +73,7 @@
 }
 .canvas {
   overflow: auto;
-  max-height: 420px;
+  max-height: 680px;
   min-width: 0;
 }
 .canvas svg {
