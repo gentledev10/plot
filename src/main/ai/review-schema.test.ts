@@ -80,6 +80,39 @@ describe('REVIEW_SCHEMA', () => {
 });
 
 describe('parseReviewMap', () => {
+  it('preserves grouped context and provenance, dropping invalid group references', () => {
+    const review = parseReviewMap(
+      output({
+        architecture: {
+          groups: [
+            { id: 'runtime', label: 'Runtime' },
+            { id: 'runtime', label: 'Duplicate' },
+          ],
+          summary: 'The change is in Runtime.',
+          scope: 'README and implementation inspected.',
+          nodes: [
+            { id: 'a', label: 'A', status: 'changed', group: 'runtime', evidence: 'code' },
+            { id: 'b', label: 'B', status: 'unchanged', group: 'missing', evidence: 'inferred' },
+          ],
+          edges: [{ from: 'a', to: 'b' }],
+        },
+        reviewPoints: [
+          {
+            title: 'Recovery',
+            reason: 'Stored data changes',
+            check: 'Inspect rollback coverage',
+            evidence: 'invented',
+            location: { path: 'src/app.ts', line: 1 },
+          },
+        ],
+      }),
+    );
+    expect(review.architecture.groups).toEqual([{ id: 'runtime', label: 'Runtime' }]);
+    expect(review.architecture.nodes[0]).toMatchObject({ group: 'runtime', evidence: 'code' });
+    expect(review.architecture.nodes[1]).not.toHaveProperty('group');
+    expect(review.architecture.scope).toContain('inspected');
+    expect(review.reviewPoints?.[0]?.evidence).toBe('inferred');
+  });
   it('accepts bounded custom content while rejecting unsafe ids, paths and disconnected edges', () => {
     const section = {
       id: 'custom_checks',

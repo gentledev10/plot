@@ -1,6 +1,17 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  'Areas are grouped by source file; additional architectural boundaries were not inferred.':
+    '영역을 소스 파일 기준으로 묶었습니다. 확인되지 않은 계층이나 서비스 구분을 추가하지 않았습니다.',
+  'Highlighted: this PR · Dashed: inferred': '강조: 이번 변경 · 점선: 추론한 맥락',
+  'Components and analysis scope': '구성 요소와 분석 범위',
+  'Enlarge map': '지도 크게 보기',
+  'Repository documentation': '저장소 문서',
+  'This saved map covers the inspected context. Generate again for a grouped change map.':
+    '확인한 범위를 바탕으로 저장한 그림입니다. 다시 생성하면 영역별 변경 지도로 볼 수 있습니다.',
+  'Based on code analysis. Tests were not run.':
+    '코드를 읽어 분석했습니다. 테스트는 실행하지 않았습니다.',
+  'Reading repository architecture context': '저장소의 구조 문서와 설정 확인 중',
   'At a glance': '한눈 요약',
   'Change map': '변경 지도',
   'Key changes': '핵심 변경',

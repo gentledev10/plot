@@ -37,6 +37,17 @@ const step = {
 const architectureSchema = {
   type: 'object',
   properties: {
+    groups: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { id: text, label: text },
+        required: ['id', 'label'],
+        additionalProperties: false,
+      },
+    },
+    summary: text,
+    scope: text,
     nodes: {
       type: 'array',
       items: {
@@ -45,9 +56,11 @@ const architectureSchema = {
           id: text,
           label: text,
           status: { type: 'string', enum: ['added', 'changed', 'removed', 'unchanged'] },
+          group: { type: ['string', 'null'] },
+          evidence: { type: 'string', enum: ['code', 'docs', 'inferred'] },
           location: optionalLocation,
         },
-        required: ['id', 'label', 'status', 'location'],
+        required: ['id', 'label', 'status', 'group', 'evidence', 'location'],
         additionalProperties: false,
       },
     },
@@ -55,13 +68,18 @@ const architectureSchema = {
       type: 'array',
       items: {
         type: 'object',
-        properties: { from: text, to: text, label: { type: ['string', 'null'] } },
-        required: ['from', 'to', 'label'],
+        properties: {
+          from: text,
+          to: text,
+          label: { type: ['string', 'null'] },
+          evidence: { type: 'string', enum: ['code', 'docs', 'inferred'] },
+        },
+        required: ['from', 'to', 'label', 'evidence'],
         additionalProperties: false,
       },
     },
   },
-  required: ['nodes', 'edges'],
+  required: ['groups', 'summary', 'scope', 'nodes', 'edges'],
   additionalProperties: false,
 } as const;
 
@@ -217,12 +235,28 @@ export function parseReviewMap(value: unknown): ReviewMap {
 
 function toArchitecture(value: unknown): Architecture {
   const graph = isObject(value) ? value : {};
+  const groups = list(graph.groups, 8, (group) =>
+    nonEmpty(group.id) && nonEmpty(group.label)
+      ? { id: clip(group.id, LIMITS.label), label: clip(group.label, LIMITS.label) }
+      : undefined,
+  ).filter((group, index, all) => all.findIndex((other) => other.id === group.id) === index);
+  const groupIds = new Set(groups.map((group) => group.id));
   const nodes = list(graph.nodes, LIMITS.nodes, toNode).filter(
     (node, index, all) => all.findIndex((other) => other.id === node.id) === index,
   );
   const ids = new Set(nodes.map((node) => node.id));
   return {
-    nodes,
+    ...(Array.isArray(graph.groups) ? { groups } : {}),
+    ...(graph.grouping === 'source-files' ? { grouping: 'source-files' as const } : {}),
+    ...(typeof graph.summary === 'string' ? { summary: clip(graph.summary, LIMITS.text) } : {}),
+    ...(typeof graph.scope === 'string' ? { scope: clip(graph.scope, LIMITS.text) } : {}),
+    nodes: nodes.map((node) => {
+      if (node.group && !groupIds.has(node.group)) {
+        const { group: _, ...rest } = node;
+        return rest;
+      }
+      return node;
+    }),
     edges: list(graph.edges, LIMITS.edges, toEdge).filter(
       (edge) => ids.has(edge.from) && ids.has(edge.to),
     ),
@@ -312,6 +346,10 @@ function toNode(item: Json): ArchitectureNode | undefined {
       id: clip(item.id, LIMITS.label),
       label: clip(item.label, LIMITS.label),
       status: item.status as ChangeStatus,
+      ...(nonEmpty(item.group) ? { group: clip(item.group, LIMITS.label) } : {}),
+      ...(['code', 'docs', 'inferred'].includes(String(item.evidence))
+        ? { evidence: item.evidence as ArchitectureNode['evidence'] }
+        : {}),
     },
     item.location,
   );
@@ -322,6 +360,8 @@ function toEdge(item: Json): ArchitectureEdge | undefined {
     return undefined;
   }
   const edge: ArchitectureEdge = { from: item.from, to: item.to };
+  if (['code', 'docs', 'inferred'].includes(String(item.evidence)))
+    edge.evidence = item.evidence as ArchitectureEdge['evidence'];
   if (typeof item.label === 'string' && item.label.trim() !== '') {
     edge.label = clip(item.label, LIMITS.label);
   }

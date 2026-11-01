@@ -42,6 +42,10 @@ git(repository, 'init', '-q', '-b', 'main');
 git(repository, 'config', 'user.name', 'Fixture');
 git(repository, 'config', 'user.email', 'fixture@example.com');
 writeFileSync(join(repository, 'sample.ts'), 'export const result = 1;\n');
+writeFileSync(
+  join(repository, 'README.md'),
+  '# Fixture system\nAn exported module provides the result to its consumers.\n',
+);
 git(repository, 'add', '.');
 git(repository, 'commit', '-qm', 'Base');
 const base = git(repository, 'rev-parse', 'HEAD');
@@ -85,16 +89,31 @@ const overview = {
     },
   ],
   architecture: {
+    groups: [
+      { id: 'consumers', label: 'Consumers' },
+      { id: 'runtime', label: 'Runtime' },
+    ],
+    summary: 'The changed module is in the runtime; callers provide surrounding context.',
+    scope: 'Source and README inspected; external callers are inferred.',
     nodes: [
-      { id: 'caller', label: 'Caller', status: 'unchanged', location: null },
+      {
+        id: 'caller',
+        label: 'Caller',
+        status: 'unchanged',
+        group: 'consumers',
+        evidence: 'inferred',
+        location: null,
+      },
       {
         id: 'module',
         label: 'Module',
         status: 'changed',
+        group: 'runtime',
+        evidence: 'code',
         location: { path: 'sample.ts', line: 1 },
       },
     ],
-    edges: [{ from: 'caller', to: 'module', label: 'reads' }],
+    edges: [{ from: 'caller', to: 'module', label: 'reads', evidence: 'inferred' }],
   },
   impacts: [],
   reviewPoints: [
@@ -133,8 +152,20 @@ const koreanOverview = {
       ],
     },
   ],
+  reviewPoints: overview.reviewPoints.map((point) => ({
+    ...point,
+    title: '호출부 확인',
+    reason: '공개된 값이 바뀝니다.',
+    check: 'result를 사용하는 코드를 확인하세요.',
+  })),
   architecture: {
     ...overview.architecture,
+    summary: '런타임 안의 모듈이 바뀌며, 호출부는 주변 맥락을 보여줍니다.',
+    scope: '소스와 README를 확인했습니다. 외부 호출부는 추론한 요소입니다.',
+    groups: overview.architecture.groups.map((group) => ({
+      ...group,
+      label: group.id === 'runtime' ? '런타임' : '사용하는 코드',
+    })),
     edges: overview.architecture.edges.map((edge) => ({ ...edge, label: '읽기' })),
     nodes: overview.architecture.nodes.map((node, i) => ({
       ...node,
@@ -152,12 +183,12 @@ writeFileSync(
   join(bin, 'codex'),
   `#!${process.execPath}
 import {createInterface} from 'node:readline';
-import {writeFileSync,appendFileSync} from 'node:fs';
+import {writeFileSync,appendFileSync,readFileSync} from 'node:fs';
 const args=process.argv.slice(2);
 if(args.includes('--version'))console.log('codex-cli fixture');
 else if(args[0]==='login')console.log('Logged in');
 else if(args[0]==='app-server')createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(!r.id)return;let result={};if(r.method==='account/read')result={account:{type:'chatgpt'}};if(r.method==='model/list')result={data:[{model:'fixture-model',displayName:'Fixture model',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'high'}]}],nextCursor:null};console.log(JSON.stringify({id:r.id,result}))});
-else if(args[0]==='exec'){const korean=args.at(-1).includes('Write all prose in Korean.');appendFileSync(${JSON.stringify(join(scratch, 'generation-count'))},(korean?'ko':'en')+String.fromCharCode(10));const output=korean?${JSON.stringify(koreanOverview)}:${JSON.stringify(overview)};const config=args.at(-1).split(String.fromCharCode(10)).find(line=>line.startsWith('REVIEW_STEPS_JSON:'));const steps=JSON.parse(config.slice('REVIEW_STEPS_JSON:'.length));output.customSections=steps.filter(step=>step.kind==='custom').map(step=>({id:step.id,body:korean?'추가 관점 분석입니다.':'Additional perspective.',items:step.format==='checklist'?[{area:korean?'호출부 확인':'Check callers',detail:step.instructions,location:{path:'sample.ts',line:1}}]:[],diagram:step.format==='diagram'?{...output.architecture,kind:step.instructions.includes('순서')?'sequence':'components'}:null}));writeFileSync(args[args.indexOf('--output-last-message')+1],JSON.stringify(output));console.log(JSON.stringify({type:'turn.completed'}))}
+else if(args[0]==='exec'){const architectureContext=JSON.parse(readFileSync(args[args.indexOf('--cd')+1]+'/../context/architecture-context.json','utf8'));if(!architectureContext.files.some(file=>file.path==='README.md'))throw new Error('Architecture README context missing');const korean=args.at(-1).includes('Write all prose in Korean.');appendFileSync(${JSON.stringify(join(scratch, 'generation-count'))},(korean?'ko':'en')+String.fromCharCode(10));const output=korean?${JSON.stringify(koreanOverview)}:${JSON.stringify(overview)};const config=args.at(-1).split(String.fromCharCode(10)).find(line=>line.startsWith('REVIEW_STEPS_JSON:'));const steps=JSON.parse(config.slice('REVIEW_STEPS_JSON:'.length));output.customSections=steps.filter(step=>step.kind==='custom').map(step=>({id:step.id,body:korean?'추가 관점 분석입니다.':'Additional perspective.',items:step.format==='checklist'?[{area:korean?'호출부 확인':'Check callers',detail:step.instructions,location:{path:'sample.ts',line:1}}]:[],diagram:step.format==='diagram'?{...output.architecture,kind:step.instructions.includes('순서')?'sequence':'components'}:null}));writeFileSync(args[args.indexOf('--output-last-message')+1],JSON.stringify(output));console.log(JSON.stringify({type:'turn.completed'}))}
 `,
   { mode: 0o700 },
 );
@@ -403,6 +434,38 @@ try {
   await page.getByRole('button', { name: 'Try again', exact: true }).click();
   await page.getByText(overview.summary, { exact: true }).waitFor();
   await page.getByRole('img', { name: 'Components around this change', exact: true }).waitFor();
+  assert.deepEqual(
+    await page
+      .getByRole('article')
+      .evaluateAll((cards) => cards.map((card) => card.dataset.stepId)),
+    ['summary', 'architecture', 'changes', 'reviewPoints', 'readingOrder'],
+  );
+  const changeMap = page
+    .getByRole('article')
+    .filter({ has: page.getByRole('heading', { name: /Change map/ }) });
+  const mapImage = changeMap.getByRole('img');
+  const mapFits = await mapImage.evaluate(
+    (host) => host.querySelector('svg').getBoundingClientRect().width <= host.clientWidth + 1,
+  );
+  assert.ok(mapFits);
+  await changeMap.getByText('Components and analysis scope', { exact: true }).click();
+  await changeMap.getByText(overview.architecture.scope, { exact: true }).waitFor();
+  await changeMap.getByText('Inference — check this', { exact: true }).waitFor();
+  await changeMap.getByText('Components and analysis scope', { exact: true }).click();
+  await page
+    .getByRole('treeitem')
+    .filter({ hasText: 'understandingCodeChangesAndNavigatingToTheCorrectSourceLocation.ts' })
+    .click();
+  await page.waitForFunction(() =>
+    document.querySelector('.editor.modified .view-lines')?.textContent?.includes('long-path'),
+  );
+  await mapImage.locator('g.node').filter({ hasText: 'Module' }).click();
+  await page.waitForFunction(() =>
+    document.querySelector('.editor.modified .view-lines')?.textContent?.includes('result'),
+  );
+  pass(
+    'Render a grouped change map with scope, provenance, fitted layout and working code navigation',
+  );
   pass('Recover from AI configuration errors and render an overview with diagrams');
   const changesCard = page
     .getByRole('article')

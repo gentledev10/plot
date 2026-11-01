@@ -365,6 +365,54 @@ describe('createReviewService', () => {
     expect(status.review.changes.map((change) => change.location?.verified)).toEqual([true, false]);
   });
 
+  it('supplies bounded architecture documentation in the same single AI analysis', async () => {
+    const { service, repositories, agent, settled } = setup(async (input) => {
+      const context = JSON.parse(
+        await readFile(join(input.contextDir, 'architecture-context.json'), 'utf8'),
+      );
+      expect(context.files).toEqual([
+        { path: 'README.md', text: '# System overview', truncated: false },
+      ]);
+      expect(input.prompt).toContain('architecture-context.json');
+      return {
+        output: {
+          ...reviewOutput,
+          architecture: {
+            groups: [],
+            summary: 'Runtime change',
+            scope: 'README and code inspected',
+            nodes: [
+              {
+                id: 'module',
+                label: 'Module',
+                status: 'changed',
+                evidence: 'code',
+                location: { path: 'src/app.ts', line: 2 },
+              },
+              {
+                id: 'docs',
+                label: 'Overview',
+                status: 'unchanged',
+                evidence: 'docs',
+                location: { path: 'README.md', line: 1 },
+              },
+            ],
+            edges: [{ from: 'docs', to: 'module', evidence: 'docs' }],
+          },
+        },
+      };
+    });
+    vi.mocked(repositories.readBlob).mockResolvedValue({ kind: 'text', text: '# System overview' });
+    await service.startReview(ref);
+    await settled();
+    expect(repositories.readBlob).toHaveBeenCalledWith(ref, `${HEAD}:README.md`, 16_000);
+    expect(agent.run).toHaveBeenCalledOnce();
+    const status = await service.getReviewStatus(ref);
+    if (status.state !== 'done') throw new Error('Expected generated map');
+    expect(status.review.architecture.grouping).toBe('source-files');
+    expect(status.review.architecture.groups).toHaveLength(2);
+    expect(status.review.architecture.nodes[1]?.location?.verified).toBe(true);
+  });
   it('gives the agent the changed directories and the context files', async () => {
     let seen: { cwd: string; files: string[]; diff: string; description: string } | undefined;
     const { service, repositories, settled } = setup(async (input) => {

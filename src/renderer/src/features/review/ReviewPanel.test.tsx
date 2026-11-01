@@ -114,6 +114,44 @@ function setup(statuses: ReviewStatus[], overrides = {}) {
 }
 
 describe('ReviewPanel', () => {
+  it('keeps map scope and evidence available on demand and can enlarge the map', async () => {
+    const enlarge = vi.fn();
+    renderWithApi(
+      <ReviewPanel target={target} onOpenLocation={() => {}} onToggleMaximize={enlarge} />,
+      {
+        getReviewStatus: vi.fn().mockResolvedValue({
+          ...done,
+          review: {
+            ...review,
+            architecture: {
+              ...review.architecture,
+              groups: [{ id: 'runtime', label: 'Runtime' }],
+              summary: 'The runtime changes.',
+              scope: 'README and runtime inspected.',
+              nodes: [
+                {
+                  id: 'app',
+                  label: 'App shell',
+                  status: 'changed',
+                  group: 'runtime',
+                  evidence: 'code',
+                  location: { path: 'src/app.ts', line: 2, verified: true },
+                },
+              ],
+            },
+          },
+        }),
+        getPullRequestDiff: vi.fn().mockResolvedValue(diff),
+      },
+    );
+    await screen.findByText('The runtime changes.');
+    expect(screen.getByText('README and runtime inspected.')).not.toBeVisible();
+    await userEvent.click(screen.getByText('Components and analysis scope'));
+    expect(screen.getByText('README and runtime inspected.')).toBeVisible();
+    expect(screen.getByText('Code reference')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Enlarge map' }));
+    expect(enlarge).toHaveBeenCalledOnce();
+  });
   it('shows the five-step flow, actionable checks and progressively disclosed changes', async () => {
     renderWithApi(<ReviewPanel target={target} onOpenLocation={() => {}} />, {
       getReviewStatus: vi.fn().mockResolvedValue({

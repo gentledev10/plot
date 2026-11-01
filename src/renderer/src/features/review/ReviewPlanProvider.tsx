@@ -25,13 +25,12 @@ const ReviewPlanContext = createContext({
 });
 
 export function ReviewPlanProvider({ api, children }: { api: PlotApi; children: ReactNode }) {
-  const [plan, setPlan] = useState(() =>
-    parseReviewPlan(readPreference(REVIEW_PLAN_PREFERENCE, undefined)),
-  );
+  const initial = useRef(readPreference(REVIEW_PLAN_PREFERENCE, undefined));
+  const [plan, setPlan] = useState(() => parseReviewPlan(initial.current));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const latest = useRef(plan);
-  const saved = useRef(JSON.stringify(plan));
+  const saved = useRef(JSON.stringify(initial.current ?? plan));
   const queue = useRef(Promise.resolve());
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const flush = useCallback(() => {
@@ -64,6 +63,10 @@ export function ReviewPlanProvider({ api, children }: { api: PlotApi; children: 
     queue.current = task;
     return task;
   }, [api]);
+  useEffect(() => {
+    if (initial.current !== undefined && saved.current !== JSON.stringify(latest.current))
+      void flush().catch(() => {});
+  }, [flush]);
   const change = (next: ReviewPlan) => {
     latest.current = parseReviewPlan({ ...next, version: 2 });
     setPlan(latest.current);

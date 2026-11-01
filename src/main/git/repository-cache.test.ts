@@ -42,6 +42,18 @@ function setup(overrides: Partial<RepositoryCacheOptions> = {}) {
 }
 
 describe('createRepositoryCache', () => {
+  it('reads a bounded architecture document at the exact head commit', async () => {
+    const { cache } = setup();
+    await cache.fetchCommits(repository, [fixture.head]);
+    await expect(cache.readBlob(repository, `${fixture.head}:README.md`, 16_000)).resolves.toEqual({
+      kind: 'text',
+      text: '# Fixture\n',
+    });
+    await expect(cache.readBlob(repository, `${fixture.head}:big.txt`, 16_000)).resolves.toEqual({
+      kind: 'too-large',
+      size: 20_000,
+    });
+  });
   it('diffs a pull request against its merge base', async () => {
     const { cache } = setup();
     await cache.fetchCommits(repository, [fixture.mergeBase, fixture.head]);

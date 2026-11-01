@@ -6,9 +6,15 @@ import styles from './ReviewPanel.module.css';
 interface MermaidDiagramProps {
   source: string;
   label: string;
+  fit?: boolean;
   onElementClick?(elementId: string): void;
 }
-export function MermaidDiagram({ source, label, onElementClick }: MermaidDiagramProps) {
+export function MermaidDiagram({
+  source,
+  label,
+  onElementClick,
+  fit = false,
+}: MermaidDiagramProps) {
   const t = useT();
   const container = useRef<HTMLDivElement>(null);
   const scheme = useAppearance().theme.kind;
@@ -51,6 +57,7 @@ export function MermaidDiagram({ source, label, onElementClick }: MermaidDiagram
     <div
       ref={container}
       className={styles.diagram}
+      data-fit={fit}
       role="img"
       aria-label={label}
       onClick={(event) => {

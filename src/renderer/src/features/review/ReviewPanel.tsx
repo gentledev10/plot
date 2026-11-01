@@ -259,6 +259,7 @@ function PullRequestReview({
               review={current.review}
               changedPaths={changedPaths}
               onOpenLocation={onOpenLocation}
+              onExpandMap={!maximizing.maximized ? maximizing.onToggleMaximize : undefined}
             />
             <p className={styles.footnote}>
               {t('Generated')}
@@ -274,6 +275,9 @@ function PullRequestReview({
                   {current.costUsd.toFixed(2)}
                 </span>
               )}
+              <span className={styles.analysisNote}>
+                {t('Based on code analysis. Tests were not run.')}
+              </span>
             </p>
           </>
         );
@@ -364,8 +368,9 @@ interface ReviewMapViewProps {
   review: ReviewMap;
   changedPaths: ReadonlySet<string>;
   onOpenLocation(location: CodeLocation): void;
+  onExpandMap?(): void;
 }
-function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewProps) {
+function ReviewMapView({ review, changedPaths, onOpenLocation, onExpandMap }: ReviewMapViewProps) {
   const t = useT();
   const { plan } = useReviewPlan();
   const link = (location: CodeLocation | undefined) =>
@@ -378,6 +383,7 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
       kind={kind}
       changedPaths={changedPaths}
       onOpenLocation={onOpenLocation}
+      onExpandMap={onExpandMap}
       link={link}
     />
   );
@@ -617,12 +623,14 @@ function ArchitectureView({
   changedPaths,
   onOpenLocation,
   link,
+  onExpandMap,
 }: {
   architecture: Architecture;
   kind?: ReviewDiagramKind;
   changedPaths: ReadonlySet<string>;
   onOpenLocation(location: CodeLocation): void;
   link(location: CodeLocation | undefined): ReactNode;
+  onExpandMap?(): void;
 }) {
   const t = useT();
   const scheme = useAppearance().theme.kind;
@@ -642,7 +650,19 @@ function ArchitectureView({
   }, [architecture, scheme, diagramKind]);
   return (
     <>
+      {architecture.summary && <p className={styles.mapSummary}>{architecture.summary}</p>}
+      {diagramKind !== 'sequence' && (
+        <div className={styles.mapToolbar}>
+          <span>{t('Highlighted: this PR · Dashed: inferred')}</span>
+          {onExpandMap && (
+            <button type="button" className={styles.link} onClick={onExpandMap}>
+              {t('Enlarge map')}
+            </button>
+          )}
+        </div>
+      )}
       <MermaidDiagram
+        fit
         source={source}
         label={t(
           diagramKind === 'sequence'
@@ -658,19 +678,48 @@ function ArchitectureView({
           if (location && changedPaths.has(location.path)) onOpenLocation(location);
         }}
       />
-      <ul className={styles.list}>
-        {architecture.nodes.map((node) => (
-          <li key={node.id}>
-            <span>{node.label}</span>
-            {node.status !== 'unchanged' && (
-              <span className={styles.status} data-status={node.status}>
-                {t(node.status)}
-              </span>
+      <details className={styles.mapDetails}>
+        <summary>{t('Components and analysis scope')}</summary>
+        {architecture.scope && <p className={styles.muted}>{architecture.scope}</p>}
+        {architecture.grouping === 'source-files' && (
+          <p className={styles.muted}>
+            {t(
+              'Areas are grouped by source file; additional architectural boundaries were not inferred.',
             )}
-            {link(node.location)}
-          </li>
-        ))}
-      </ul>
+          </p>
+        )}
+        {!architecture.scope && (
+          <p className={styles.muted}>
+            {t(
+              'This saved map covers the inspected context. Generate again for a grouped change map.',
+            )}
+          </p>
+        )}
+        <ul className={styles.list}>
+          {architecture.nodes.map((node) => (
+            <li key={node.id}>
+              <span>{node.label}</span>
+              {node.evidence && (
+                <span className={styles.evidence}>
+                  {t(
+                    node.evidence === 'code'
+                      ? 'Code reference'
+                      : node.evidence === 'docs'
+                        ? 'Repository documentation'
+                        : 'Inference — check this',
+                  )}
+                </span>
+              )}
+              {node.status !== 'unchanged' && (
+                <span className={styles.status} data-status={node.status}>
+                  {t(node.status)}
+                </span>
+              )}
+              {link(node.location)}
+            </li>
+          ))}
+        </ul>
+      </details>
     </>
   );
 }

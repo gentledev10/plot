@@ -45,6 +45,9 @@ describe('buildReviewPrompt', () => {
     expect(prompt).toContain('/tmp/review/context/pull-request.diff');
     expect(prompt).toContain('/tmp/review/context/repository-files.txt');
     expect(prompt).toContain('/tmp/review/context/pull-request.md');
+    expect(prompt).toContain('/tmp/review/context/architecture-context.json');
+    expect(prompt).toContain('Do not run tests or build commands');
+    expect(prompt).toContain('label inferred components explicitly');
   });
 
   it('lists the changed files with their size', () => {

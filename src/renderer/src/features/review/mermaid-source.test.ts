@@ -112,11 +112,36 @@ describe('architectureToMermaid', () => {
   it('uses darker colors in dark mode', () => {
     expect(architectureToMermaid(architecture, 'dark').source).toContain('fill:#2e436e');
   });
+  it('groups the wider system, highlights changed nodes and dashes inferred context safely', () => {
+    const source = architectureToMermaid(
+      {
+        ...architecture,
+        groups: [
+          { id: 'bad; click x', label: 'UI "layer"; click n0 evil()' },
+          { id: 'data', label: 'Data' },
+        ],
+        nodes: architecture.nodes.map((node, index) => ({
+          ...node,
+          group: index === 0 ? 'bad; click x' : 'data',
+          evidence: index === 1 ? ('inferred' as const) : ('code' as const),
+        })),
+      },
+      'dark',
+    ).source;
+    expect(source).toContain('subgraph g0["UI layer click n0 evil()"]');
+    expect(source).toContain('subgraph g1["Data"]');
+    expect(source).toContain('n0["API layer"]:::changed');
+    expect(source).toContain('class n1 inferred');
+    expect(source).toContain('stroke-dasharray:5 4');
+    expect(source).not.toContain('bad; click x');
+    expect(source).not.toContain('\nclick ');
+  });
 });
 
 describe('nodeIndexFromElementId', () => {
   it('reads the node index from the ids Mermaid gives flowchart nodes', () => {
     expect(nodeIndexFromElementId('flowchart-n3-12')).toBe(3);
+    expect(nodeIndexFromElementId('diagram-r1g-flowchart-n1-1')).toBe(1);
     expect(nodeIndexFromElementId('flowchart-other-1')).toBeUndefined();
   });
 });

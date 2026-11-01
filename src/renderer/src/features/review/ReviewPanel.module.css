@@ -195,6 +195,40 @@
   height: auto;
 }
 
+.diagram[data-fit="true"] svg {
+  width: 100%;
+  height: auto;
+}
+.mapSummary {
+  margin: 0 0 10px;
+  line-height: 1.6;
+}
+.mapToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+.mapDetails {
+  margin-top: 8px;
+}
+.mapDetails summary {
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+.mapDetails > p {
+  margin: 8px 0;
+}
+.mapDetails ul {
+  margin-top: 8px;
+}
+.analysisNote {
+  display: block;
+  margin-top: 4px;
+}
+
 .diagram :global(g.node) {
   cursor: pointer;
 }

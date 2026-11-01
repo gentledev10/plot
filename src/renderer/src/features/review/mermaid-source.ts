@@ -94,17 +94,47 @@ export function architectureToMermaid(
     (node, index) =>
       `  n${index}["${safeLabel(node.label)}"]${node.status === 'unchanged' ? '' : `:::${node.status}`}`,
   );
+  const groups = (architecture.groups ?? []).filter((group) =>
+    architecture.nodes.some((node) => node.group === group.id),
+  );
+  const groupedIds = new Set(groups.map((group) => group.id));
+  const groupedNodes =
+    groups.length === 0
+      ? nodes
+      : [
+          ...nodes.filter((_, index) => !groupedIds.has(architecture.nodes[index]?.group ?? '')),
+          ...groups.flatMap((group, groupIndex) => [
+            `  subgraph g${groupIndex}["${safeLabel(group.label)}"]`,
+            '    direction TB',
+            ...nodes
+              .filter((_, index) => architecture.nodes[index]?.group === group.id)
+              .map((node) => `  ${node}`),
+            '  end',
+          ]),
+        ];
   const edges = architecture.edges.map((edge) => {
     const label = edge.label ? `|"${safeLabel(edge.label)}"|` : '';
-    return `  ${idOf(edge.from)} -->${label} ${idOf(edge.to)}`;
+    return `  ${idOf(edge.from)} ${edge.evidence === 'inferred' ? '-.->' : '-->'}${label} ${idOf(edge.to)}`;
   });
   const classes = Object.entries(STATUS_STYLE[scheme]).map(
     ([status, style]) => `  classDef ${status} ${style}`,
   );
-  return { source: [`flowchart ${direction}`, ...nodes, ...edges, ...classes].join('\n'), nodeIds };
+  const inferred = architecture.nodes.flatMap((node, index) =>
+    node.evidence === 'inferred' ? [`  class n${index} inferred`] : [],
+  );
+  return {
+    source: [
+      `flowchart ${direction}`,
+      ...groupedNodes,
+      ...edges,
+      ...classes,
+      ...(inferred.length ? ['  classDef inferred stroke-dasharray:5 4', ...inferred] : []),
+    ].join('\n'),
+    nodeIds,
+  };
 }
 
 export function nodeIndexFromElementId(elementId: string): number | undefined {
-  const match = /^flowchart-n(\d+)-\d+$/.exec(elementId);
+  const match = /^(?:diagram-[a-zA-Z0-9]+-)?flowchart-n(\d+)-\d+$/.exec(elementId);
   return match?.[1] === undefined ? undefined : Number(match[1]);
 }

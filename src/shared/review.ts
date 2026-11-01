@@ -34,6 +34,8 @@ export interface ArchitectureNode {
   id: string;
   label: string;
   status: ChangeStatus;
+  group?: string;
+  evidence?: 'code' | 'docs' | 'inferred';
   location?: CodeLocation;
 }
 
@@ -41,6 +43,7 @@ export interface ArchitectureEdge {
   from: string;
   to: string;
   label?: string;
+  evidence?: 'code' | 'docs' | 'inferred';
 }
 
 export interface Impact {
@@ -63,6 +66,10 @@ export interface ReadingStep {
 }
 
 export interface Architecture {
+  grouping?: 'source-files';
+  groups?: { id: string; label: string }[];
+  summary?: string;
+  scope?: string;
   nodes: ArchitectureNode[];
   edges: ArchitectureEdge[];
 }

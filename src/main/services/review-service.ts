@@ -15,6 +15,8 @@ import {
   reviewContentKey,
 } from '@shared/review-plan';
 import type { ReviewAgent } from '../ai/agent';
+import { collectArchitectureContext } from '../ai/architecture-context';
+import { ensureArchitectureGroups } from '../ai/architecture-groups';
 import { verifyLocations } from '../ai/review-locations';
 import { buildReviewPrompt, CONTEXT_FILES } from '../ai/review-prompt';
 import { parseReviewMap, REVIEW_SCHEMA } from '../ai/review-schema';
@@ -113,10 +115,25 @@ export function createReviewService({
         join(contextDir, CONTEXT_FILES.diff),
         await repositories.unifiedDiff(ref, mergeBase, pull.head.sha),
       );
-      await writeFile(
-        join(contextDir, CONTEXT_FILES.files),
-        (await repositories.listFiles(ref, pull.head.sha)).join('\n'),
-      );
+      const repositoryFiles = await repositories.listFiles(ref, pull.head.sha);
+      await writeFile(join(contextDir, CONTEXT_FILES.files), repositoryFiles.join('\n'));
+      const contextLines = new Map<string, number>();
+      if (
+        reviewPlan.steps.some(
+          (step) =>
+            step.kind === 'architecture' || (step.kind === 'custom' && step.format === 'diagram'),
+        )
+      ) {
+        note('Reading repository architecture context');
+        const context = await collectArchitectureContext(
+          repositoryFiles,
+          files,
+          (path, limit) => repositories.readBlob(ref, `${pull.head.sha}:${path}`, limit),
+          checkpoint,
+        );
+        for (const file of context.files) contextLines.set(file.path, file.text.split('\n').length);
+        await writeFile(join(contextDir, CONTEXT_FILES.architecture), JSON.stringify(context));
+      }
       await writeFile(
         join(contextDir, CONTEXT_FILES.description),
         `# ${pull.title}\n\n${pull.body}\n`,
@@ -156,20 +173,23 @@ export function createReviewService({
           customIds.has(section.id),
         );
       const kinds = new Set(reviewPlan.steps.map((step) => step.kind));
+      const checkedOutLines = lineCounter(repoDir);
       const review = verifyLocations(
         {
           ...parsed,
           summary: kinds.has('summary') ? parsed.summary : '',
           changes: kinds.has('changes') ? parsed.changes : [],
           flows: kinds.has('flows') ? parsed.flows : [],
-          architecture: kinds.has('architecture') ? parsed.architecture : { nodes: [], edges: [] },
+          architecture: kinds.has('architecture')
+            ? ensureArchitectureGroups(parsed.architecture, language)
+            : { nodes: [], edges: [] },
           impacts: kinds.has('impacts') ? parsed.impacts : [],
           ...(parsed.reviewPoints
             ? { reviewPoints: kinds.has('reviewPoints') ? parsed.reviewPoints : [] }
             : {}),
           readingOrder: kinds.has('readingOrder') ? parsed.readingOrder : [],
         },
-        lineCounter(repoDir),
+        (path) => checkedOutLines(path) ?? contextLines.get(path),
       );
       await store.write(ref, {
         language,

@@ -47,6 +47,32 @@ function setup(setPreference = vi.fn().mockResolvedValue(undefined)) {
 }
 
 describe('review format', () => {
+  it('persists migration of untouched defaults without starting an AI request', async () => {
+    initializePreferences(
+      {
+        [REVIEW_PLAN_PREFERENCE]: {
+          steps: ['summary', 'changes', 'flows', 'architecture', 'impacts', 'readingOrder'].map(
+            (id) => ({
+              id,
+              kind: id,
+              title: '',
+              instructions: '',
+              detail: 'balanced',
+              format: 'text',
+              visible: true,
+            }),
+          ),
+        },
+      },
+      () => {},
+    );
+    const { api } = setup();
+    await waitFor(() =>
+      expect(api.setPreference).toHaveBeenCalledWith(REVIEW_PLAN_PREFERENCE, defaultReviewPlan()),
+    );
+    expect(screen.getAllByRole('checkbox')).toHaveLength(5);
+    expect(api.startReview).not.toHaveBeenCalled();
+  });
   it('removes built-in steps, persists the deletion and can remove every step', async () => {
     const first = setup();
     await screen.findByText('Saved overview');
