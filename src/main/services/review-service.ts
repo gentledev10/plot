@@ -6,6 +6,7 @@ import type { ChangedFile } from '@shared/diff';
 import type { ErrorPayload } from '@shared/errors';
 import type { PullRequestRef } from '@shared/github';
 import type { PlotApi } from '@shared/ipc';
+import { type Language, promptLanguage } from '@shared/language';
 import { pullRequestKey } from '@shared/pull-request-ref';
 import type { ReviewAgent } from '../ai/agent';
 import { verifyLocations } from '../ai/review-locations';
@@ -32,7 +33,7 @@ interface ReviewServiceOptions {
   resolveAgent(): Promise<SelectedAgent>;
   store: ReviewStore;
   workspaceRoot: string;
-  language: string;
+  language: Language | (() => Promise<Language>);
   now?(): Date;
   onUnexpectedError?(error: unknown): void;
 }
@@ -54,8 +55,14 @@ export function createReviewService({
   onUnexpectedError = () => {},
 }: ReviewServiceOptions): ReviewService {
   const jobs = new Map<string, Job>();
+  const currentLanguage = typeof language === 'function' ? language : async () => language;
 
-  async function execute(ref: PullRequestRef, key: string, controller: AbortController) {
+  async function execute(
+    ref: PullRequestRef,
+    key: string,
+    controller: AbortController,
+    language: Language,
+  ) {
     const job = jobs.get(key);
     const note = (activity: string) => {
       if (job?.state === 'running') {
@@ -110,7 +117,7 @@ export function createReviewService({
       const result = await agent.run({
         cwd: repoDir,
         contextDir,
-        prompt: buildReviewPrompt({ files, contextDir, language }),
+        prompt: buildReviewPrompt({ files, contextDir, language: promptLanguage(language) }),
         schema: REVIEW_SCHEMA,
         model,
         effort,
@@ -120,6 +127,7 @@ export function createReviewService({
       });
       const review = verifyLocations(parseReviewMap(result.output), lineCounter(repoDir));
       await store.write(ref, {
+        language,
         review,
         head: pull.head.sha,
         createdAt: now().toISOString(),
@@ -156,9 +164,10 @@ export function createReviewService({
       if (job?.state === 'failed') {
         return { state: 'failed', error: job.error };
       }
+      const requestedLanguage = await currentLanguage();
       const { client } = await connections.forHost(ref.host);
       const pull = await client.getPullRequest(ref);
-      const stored = await store.read(ref, pull.head.sha);
+      const stored = await store.read(ref, pull.head.sha, requestedLanguage);
       return stored ? { state: 'done', ...stored } : { state: 'idle' };
     },
 
@@ -167,9 +176,11 @@ export function createReviewService({
       if (jobs.get(key)?.state === 'running') {
         return;
       }
+      const language = await currentLanguage();
+      if (jobs.get(key)?.state === 'running') return;
       const controller = new AbortController();
       jobs.set(key, { state: 'running', startedAt: now().toISOString(), activity: [], controller });
-      void execute(ref, key, controller);
+      void execute(ref, key, controller, language);
     },
 
     async cancelReview(ref) {

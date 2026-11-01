@@ -33,6 +33,25 @@ afterEach(async () => {
 });
 
 describe('createFileReviewStore', () => {
+  it('keeps English and Korean reviews for the same commit without overwriting either', async () => {
+    const store = createFileReviewStore(root);
+    await store.write(ref, { ...stored, language: 'en' });
+    await store.write(ref, {
+      ...stored,
+      language: 'ko',
+      review: { ...stored.review, summary: '한국어 설명' },
+    });
+    expect((await store.read(ref, head, 'en'))?.review.summary).toBe(stored.review.summary);
+    expect((await store.read(ref, head, 'ko'))?.review.summary).toBe('한국어 설명');
+    expect(await store.read(ref, head)).toBeUndefined();
+  });
+
+  it('does not serve an old review of unknown language for a requested language', async () => {
+    const store = createFileReviewStore(root);
+    await store.write(ref, stored);
+    expect(await store.read(ref, head, 'ko')).toBeUndefined();
+    expect(await store.read(ref, head)).toEqual(stored);
+  });
   it('reads back what it wrote for the same head commit', async () => {
     const store = createFileReviewStore(root);
     await store.write(ref, stored);

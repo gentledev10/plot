@@ -1,6 +1,15 @@
 import { join } from 'node:path';
 import type { AiProviderId } from '@shared/ai';
 import { MENU_COMMAND_CHANNEL, type MenuCommand, type PlotApi } from '@shared/ipc';
+import {
+  appLanguage,
+  LANGUAGE_PREFERENCE,
+  type Language,
+  parseLanguages,
+  reviewLanguage,
+  SYSTEM_LOCALE_PREFERENCE,
+} from '@shared/language';
+import { createTranslator } from '@shared/translations';
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, shell } from 'electron';
 import { createAccountStore } from './accounts/account-store';
 import type { ReviewAgent } from './ai/agent';
@@ -10,7 +19,6 @@ import { createClaudeCodeAgent } from './ai/claude-code';
 import { createCodexAgent } from './ai/codex';
 import { requireRestrictedMode } from './ai/compatibility';
 import { detectProvider } from './ai/detect';
-import { languageName } from './ai/language';
 import { listAiModels } from './ai/models';
 import { createFileReviewStore } from './ai/review-store';
 import { keychainCipher } from './app/keychain';
@@ -161,7 +169,11 @@ function createApi(): PlotApi {
     },
     store: createFileReviewStore(join(userData, 'reviews')),
     workspaceRoot: join(userData, 'review-workspaces'),
-    language: languageName(app.getLocale()),
+    language: async () =>
+      reviewLanguage(
+        parseLanguages((await preferences.all())[LANGUAGE_PREFERENCE]),
+        systemLocale(),
+      ),
     onUnexpectedError: (error) => console.error('[review] failed', error),
   });
   return {
@@ -185,8 +197,15 @@ function createApi(): PlotApi {
       chooseFiles: chooseFontFiles,
       listInstalled: () => listInstalledFonts(runCommand),
     }),
-    getPreferences: () => preferences.all(),
-    setPreference: (key, value) => preferences.set(key, value),
+    getPreferences: async () => ({
+      ...(await preferences.all()),
+      [SYSTEM_LOCALE_PREFERENCE]: systemLocale(),
+    }),
+    setPreference: async (key, value) => {
+      await preferences.set(key, value);
+      if (key === LANGUAGE_PREFERENCE)
+        installMenu(appLanguage(parseLanguages(value), systemLocale()));
+    },
     ...createLocalService({
       repositories: createLocalRepositoryStore(join(userData, 'local-repositories.json')),
       git: createLocalGit({ run: runCommand, runForBuffer: runCommandForBuffer, env: process.env }),
@@ -194,6 +213,10 @@ function createApi(): PlotApi {
       findOpenPullRequest: openPullRequestFinder(connections),
     }),
   };
+}
+
+function systemLocale(): string {
+  return app.getPreferredSystemLanguages()[0] ?? app.getLocale();
 }
 
 async function choosePaths(options: Electron.OpenDialogOptions): Promise<string[]> {
@@ -206,8 +229,8 @@ async function choosePaths(options: Electron.OpenDialogOptions): Promise<string[
 
 async function chooseRepositoryFolder(): Promise<string | undefined> {
   const [folder] = await choosePaths({
-    title: 'Open a Local Repository',
-    buttonLabel: 'Open',
+    title: createTranslator(mainLanguage)('Open a Local Repository'),
+    buttonLabel: createTranslator(mainLanguage)('Open'),
     properties: ['openDirectory'],
   });
   return folder;
@@ -215,10 +238,10 @@ async function chooseRepositoryFolder(): Promise<string | undefined> {
 
 function chooseFontFiles(): Promise<string[]> {
   return choosePaths({
-    title: 'Add Fonts',
-    buttonLabel: 'Add',
+    title: createTranslator(mainLanguage)('Add Fonts'),
+    buttonLabel: createTranslator(mainLanguage)('Add'),
     properties: ['openFile', 'multiSelections'],
-    filters: [{ name: 'Fonts', extensions: ['ttf', 'otf'] }],
+    filters: [{ name: createTranslator(mainLanguage)('Fonts'), extensions: ['ttf', 'otf'] }],
   });
 }
 
@@ -249,24 +272,10 @@ app.whenReady().then(async () => {
   }
   denyPermissionRequests();
   nativeTheme.themeSource = await readThemeSource(appearanceFile());
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate(
-      applicationMenu({
-        appName: app.name,
-        isDevelopment: !app.isPackaged,
-        send: sendMenuCommand,
-        openExternal: (url) => void shell.openExternal(url),
-        resetZoom: () => BrowserWindow.getFocusedWindow()?.webContents.setZoomLevel(0),
-        openLicenses: () => {
-          void shell.openPath(
-            app.isPackaged
-              ? join(process.resourcesPath, 'THIRD_PARTY_LICENSES.txt')
-              : join(__dirname, '../renderer/THIRD_PARTY_LICENSES.txt'),
-          );
-        },
-      }),
-    ),
-  );
+  const savedPreferences = await createPreferencesStore(
+    join(app.getPath('userData'), 'preferences.json'),
+  ).all();
+  installMenu(appLanguage(parseLanguages(savedPreferences[LANGUAGE_PREFERENCE]), systemLocale()));
   serveRenderer(join(__dirname, '../renderer'));
   registerIpcHandlers(ipcMain, createApi(), {
     parsers: argumentParsers,
@@ -286,3 +295,27 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+let mainLanguage: Language = 'en';
+function installMenu(language: Language): void {
+  mainLanguage = language;
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      applicationMenu({
+        appName: app.name,
+        language,
+        isDevelopment: !app.isPackaged,
+        send: sendMenuCommand,
+        openExternal: (url) => void shell.openExternal(url),
+        resetZoom: () => BrowserWindow.getFocusedWindow()?.webContents.setZoomLevel(0),
+        openLicenses: () => {
+          void shell.openPath(
+            app.isPackaged
+              ? join(process.resourcesPath, 'THIRD_PARTY_LICENSES.txt')
+              : join(__dirname, '../renderer/THIRD_PARTY_LICENSES.txt'),
+          );
+        },
+      }),
+    ),
+  );
+}

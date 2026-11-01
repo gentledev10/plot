@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChangedFile } from '@shared/diff';
 import type { PullRequestDetail } from '@shared/github';
+import type { Language } from '@shared/language';
 import type { StoredReview } from '@shared/review';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentRunInput, ReviewAgent } from '../ai/agent';
@@ -70,7 +71,10 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-function setup(run: (input: AgentRunInput) => Promise<{ output: unknown; costUsd?: number }>) {
+function setup(
+  run: (input: AgentRunInput) => Promise<{ output: unknown; costUsd?: number }>,
+  language: Language | (() => Promise<Language>) = 'ko',
+) {
   const github = {
     getPullRequest: vi.fn().mockResolvedValue({
       title: 'Greet by name',
@@ -96,9 +100,9 @@ function setup(run: (input: AgentRunInput) => Promise<{ output: unknown; costUsd
 
   const saved = new Map<string, StoredReview>();
   const store: ReviewStore = {
-    read: vi.fn(async (_ref, head: string) => saved.get(head)),
+    read: vi.fn(async (_ref, head: string, language) => saved.get(`${head}:${language}`)),
     write: vi.fn(async (_ref, stored: StoredReview) => {
-      saved.set(stored.head, stored);
+      saved.set(`${stored.head}:${stored.language}`, stored);
     }),
   };
 
@@ -109,7 +113,7 @@ function setup(run: (input: AgentRunInput) => Promise<{ output: unknown; costUsd
     resolveAgent: async () => ({ provider: 'codex', model: 'gpt-test', agent }),
     store,
     workspaceRoot: root,
-    language: 'Korean',
+    language,
     now: () => new Date('2026-10-31T00:00:00Z'),
   });
   const settled = () =>
@@ -120,6 +124,65 @@ function setup(run: (input: AgentRunInput) => Promise<{ output: unknown; costUsd
 }
 
 describe('createReviewService', () => {
+  it('keeps the requested language when settings change during a running review', async () => {
+    let language: Language = 'en';
+    const done = deferred<{ output: unknown }>();
+    const { service, agent, store, settled } = setup(
+      async (input) => {
+        expect(input.prompt).toContain('Write all prose in English.');
+        return done.promise;
+      },
+      async () => language,
+    );
+    await service.startReview(ref);
+    await vi.waitFor(() => expect(agent.run).toHaveBeenCalledOnce());
+    language = 'ko';
+    expect((await service.getReviewStatus(ref)).state).toBe('running');
+    done.resolve({ output: reviewOutput });
+    await settled();
+    expect(store.write).toHaveBeenCalledWith(ref, expect.objectContaining({ language: 'en' }));
+    expect(await service.getReviewStatus(ref)).toEqual({ state: 'idle' });
+    language = 'en';
+    expect((await service.getReviewStatus(ref)).state).toBe('done');
+  });
+
+  it('uses the current language for new reviews and keeps cached languages separate', async () => {
+    let language: Language = 'en';
+    const { service, settled, agent } = setup(
+      async (input) => ({
+        output: {
+          ...reviewOutput,
+          summary: input.prompt.includes('Write all prose in Korean.')
+            ? '한국어 설명입니다.'
+            : 'English explanation.',
+        },
+      }),
+      async () => language,
+    );
+    await service.startReview(ref);
+    await settled();
+    expect(await service.getReviewStatus(ref)).toMatchObject({
+      state: 'done',
+      language: 'en',
+      review: { summary: 'English explanation.' },
+    });
+    language = 'ko';
+    expect(await service.getReviewStatus(ref)).toEqual({ state: 'idle' });
+    await service.startReview(ref);
+    await settled();
+    expect(await service.getReviewStatus(ref)).toMatchObject({
+      state: 'done',
+      language: 'ko',
+      review: { summary: '한국어 설명입니다.' },
+    });
+    language = 'en';
+    expect(await service.getReviewStatus(ref)).toMatchObject({
+      state: 'done',
+      review: { summary: 'English explanation.' },
+    });
+    expect(agent.run).toHaveBeenCalledTimes(2);
+  });
+
   it('is idle until a review is requested', async () => {
     const { service } = setup(async () => ({ output: reviewOutput }));
     await expect(service.getReviewStatus(ref)).resolves.toEqual({ state: 'idle' });

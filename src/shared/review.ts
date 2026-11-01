@@ -1,5 +1,6 @@
 import type { AiProviderId } from './ai';
 import type { ErrorPayload } from './errors';
+import type { Language } from './language';
 
 export interface CodeLocation {
   path: string;
@@ -63,6 +64,7 @@ export interface ReviewMap {
 }
 
 export interface StoredReview {
+  language?: Language;
   review: ReviewMap;
   head: string;
   createdAt: string;

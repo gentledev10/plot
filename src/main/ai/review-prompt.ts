@@ -40,7 +40,8 @@ Produce:
 - readingOrder: every changed file, in the order that makes the change easiest to follow, starting where it begins. One short reason each.
 
 Locations use paths relative to the repository root and 1-based line numbers in the pull request's version of the file. Only cite lines you have read, and use null where there is nothing to cite.
-Keep labels under six words. Write all prose in ${language}.`;
+Keep labels under six words. Write all prose in ${language}.
+This includes summaries, titles, before/after explanations, diagram labels, component descriptions, impacts and reading-order reasons. Keep code identifiers, file paths and API names unchanged. The language of the source code or pull request description must not override the requested response language.`;
 }
 
 function describeFile(file: ChangedFile): string {

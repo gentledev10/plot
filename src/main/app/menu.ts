@@ -1,4 +1,6 @@
 import type { MenuCommand } from '@shared/ipc';
+import type { Language } from '@shared/language';
+import { createTranslator } from '@shared/translations';
 import type { MenuItemConstructorOptions } from 'electron';
 
 export const PROJECT_URL = 'https://github.com/gentledev10/plot';
@@ -10,6 +12,7 @@ interface ApplicationMenuOptions {
   openExternal(url: string): void;
   resetZoom(): void;
   openLicenses?(): void;
+  language?: Language;
 }
 
 export function applicationMenu({
@@ -19,11 +22,12 @@ export function applicationMenu({
   openExternal,
   resetZoom,
   openLicenses,
+  language = 'en',
 }: ApplicationMenuOptions): MenuItemConstructorOptions[] {
   const development: MenuItemConstructorOptions[] = isDevelopment
     ? [{ role: 'forceReload' }, { role: 'toggleDevTools' }, { type: 'separator' }]
     : [];
-  return [
+  const template: MenuItemConstructorOptions[] = [
     {
       label: appName,
       submenu: [
@@ -48,7 +52,18 @@ export function applicationMenu({
         { role: 'close' },
       ],
     },
-    { role: 'editMenu' },
+    {
+      role: 'editMenu',
+      submenu: [
+        { role: 'undo', label: 'Undo' },
+        { role: 'redo', label: 'Redo' },
+        { type: 'separator' },
+        { role: 'cut', label: 'Cut' },
+        { role: 'copy', label: 'Copy' },
+        { role: 'paste', label: 'Paste' },
+        { role: 'selectAll', label: 'Select All' },
+      ],
+    },
     {
       label: 'View',
       submenu: [
@@ -73,4 +88,30 @@ export function applicationMenu({
       ],
     },
   ];
+  const t = createTranslator(language);
+  const roles: Record<string, string> = {
+    about: t('About {value0}', { value0: appName }),
+    services: 'Services',
+    hide: 'Hide',
+    hideOthers: 'Hide Others',
+    unhide: 'Show All',
+    quit: 'Quit',
+    close: 'Close',
+    editMenu: 'Edit',
+    windowMenu: 'Window',
+    help: 'Help',
+    zoomIn: 'Zoom In',
+    zoomOut: 'Zoom Out',
+    togglefullscreen: 'Toggle Full Screen',
+    minimize: 'Minimize',
+  };
+  function localize(items: MenuItemConstructorOptions[]) {
+    for (const item of items) {
+      if (item.label) item.label = t(item.label);
+      else if (item.role && roles[item.role]) item.label = t(roles[item.role] ?? item.role);
+      if (Array.isArray(item.submenu)) localize(item.submenu);
+    }
+  }
+  localize(template);
+  return template;
 }
