@@ -12,6 +12,7 @@ import {
   toGitHubUser,
   toMergeBase,
   toPullRequestDetail,
+  toPullRequestSummaryFromList,
   toPullRequestSummaryFromSearch,
   toRepositoryRef,
 } from './mappers';
@@ -26,6 +27,7 @@ export interface GitHubClient {
   listRepositories(limit: number): Promise<RepositoryRef[]>;
   getRepository(ref: RepositoryRef): Promise<RepositoryRef>;
   countOpenPullRequests(ref: RepositoryRef): Promise<number>;
+  findOpenPullRequest(base: RepositoryRef, head: string): Promise<PullRequestSummary | null>;
 }
 
 export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
@@ -152,6 +154,18 @@ export function createGitHubClient({
       }
       const pulls = await response.json();
       return Array.isArray(pulls) ? pulls.length : 0;
+    },
+
+    async findOpenPullRequest(base, head) {
+      const params = new URLSearchParams({ state: 'open', head, per_page: '1' });
+      const pulls = await request(`${repositoryPath(base)}/pulls?${params}`);
+      if (!Array.isArray(pulls)) {
+        throw new AppError(
+          'github-request-failed',
+          'GitHub returned an unexpected pull request list.',
+        );
+      }
+      return pulls[0] === undefined ? null : toPullRequestSummaryFromList(pulls[0], host);
     },
   };
 }

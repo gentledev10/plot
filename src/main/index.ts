@@ -37,7 +37,7 @@ import { createPreferencesStore } from './preferences/preferences-store';
 import { createAccountService } from './services/account-service';
 import { createAiService } from './services/ai-service';
 import { createDiffService } from './services/diff-service';
-import { createGitHubService } from './services/github-service';
+import { createGitHubService, openPullRequestFinder } from './services/github-service';
 import { createLocalService } from './services/local-service';
 import { createReviewService } from './services/review-service';
 import { runCommand, runCommandForBuffer } from './system/process';
@@ -153,6 +153,7 @@ function createApi(): PlotApi {
       repositories: createLocalRepositoryStore(join(userData, 'local-repositories.json')),
       git: createLocalGit({ run: runCommand, runForBuffer: runCommandForBuffer, env: process.env }),
       chooseFolder: chooseRepositoryFolder,
+      findOpenPullRequest: openPullRequestFinder(connections),
     }),
   };
 }

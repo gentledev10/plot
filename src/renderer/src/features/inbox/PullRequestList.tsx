@@ -1,4 +1,5 @@
 import type { PullRequestRef, PullRequestSummary } from '@shared/github';
+import { pullRequestKey } from '@shared/pull-request-ref';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useId } from 'react';
 import { groupByRepository, type RepositoryGroup } from './grouping';
@@ -10,6 +11,7 @@ interface PullRequestListProps {
   pulls: PullRequestSummary[];
   emptyText: string;
   selected?: PullRequestRef;
+  local?: ReadonlySet<string>;
   collapsed: ReadonlySet<string>;
   collapsible: boolean;
   onToggleGroup(key: string): void;
@@ -21,6 +23,7 @@ export function PullRequestList({
   pulls,
   emptyText,
   selected,
+  local = NONE,
   collapsed,
   collapsible,
   onToggleGroup,
@@ -45,6 +48,7 @@ export function PullRequestList({
               open={!collapsed.has(group.key)}
               collapsible={collapsible}
               selected={selected}
+              local={local}
               onToggle={() => onToggleGroup(group.key)}
               onSelect={onSelect}
             />
@@ -60,6 +64,7 @@ interface RepositoryGroupItemProps {
   open: boolean;
   collapsible: boolean;
   selected?: PullRequestRef;
+  local: ReadonlySet<string>;
   onToggle(): void;
   onSelect(ref: PullRequestRef): void;
 }
@@ -69,6 +74,7 @@ function RepositoryGroupItem({
   open,
   collapsible,
   selected,
+  local,
   onToggle,
   onSelect,
 }: RepositoryGroupItemProps) {
@@ -98,10 +104,17 @@ function RepositoryGroupItem({
       <ul id={listId} className={styles.list} aria-label={group.name} hidden={!open}>
         {group.pulls.map((pull) => (
           <li key={pull.ref.number}>
-            <PullRequestItem pull={pull} selected={selected} onSelect={onSelect} />
+            <PullRequestItem
+              pull={pull}
+              selected={selected}
+              local={local.has(pullRequestKey(pull.ref))}
+              onSelect={onSelect}
+            />
           </li>
         ))}
       </ul>
     </li>
   );
 }
+
+const NONE: ReadonlySet<string> = new Set();

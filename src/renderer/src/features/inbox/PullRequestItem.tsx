@@ -9,6 +9,7 @@ interface PullRequestItemProps {
   pull: PullRequestSummary;
   selected?: PullRequestRef;
   showAuthor?: boolean;
+  local?: boolean;
   badges?: ReactNode;
   onSelect(ref: PullRequestRef): void;
 }
@@ -17,6 +18,7 @@ export function PullRequestItem({
   pull,
   selected,
   showAuthor = false,
+  local = false,
   badges,
   onSelect,
 }: PullRequestItemProps) {
@@ -37,10 +39,11 @@ export function PullRequestItem({
           <time dateTime={pull.updatedAt}>{formatRelativeTime(pull.updatedAt)}</time>
         </span>
         <span className={styles.itemTitle}>{pull.title}</span>
-        {(pull.isDraft || badges) && (
+        {(pull.isDraft || badges || local) && (
           <span className={styles.badges}>
             {pull.isDraft && <Badge>Draft</Badge>}
             {badges}
+            {local && <Badge title="Its branch is checked out on this Mac">Local</Badge>}
           </span>
         )}
       </span>
@@ -50,12 +53,13 @@ export function PullRequestItem({
 
 interface BadgeProps {
   tone?: 'neutral' | 'accent' | 'merged' | 'closed';
+  title?: string;
   children: ReactNode;
 }
 
-export function Badge({ tone = 'neutral', children }: BadgeProps) {
+export function Badge({ tone = 'neutral', title, children }: BadgeProps) {
   return (
-    <span className={styles.badge} data-tone={tone}>
+    <span className={styles.badge} data-tone={tone} title={title}>
       {children}
     </span>
   );

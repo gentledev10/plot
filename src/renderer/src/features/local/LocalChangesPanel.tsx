@@ -3,10 +3,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Folder, FolderPlus, GitBranch, RefreshCw, X } from 'lucide-react';
 import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
+import { Badge } from '../inbox/PullRequestItem';
 import { useCommand } from '../keymap/KeymapProvider';
 import styles from './LocalChangesPanel.module.css';
 import {
   localKeys,
+  useLocalPullRequest,
   useLocalRepositories,
   useLocalRepositoryActions,
   useLocalStatus,
@@ -114,6 +116,7 @@ interface RepositoryRowProps {
 
 function RepositoryRow({ repository, selected, live, onOpen, onRemove }: RepositoryRowProps) {
   const status = useLocalStatus(repository.id, live);
+  const pull = useLocalPullRequest(repository.id, status.data?.branch).data;
 
   return (
     <li className={styles.row}>
@@ -126,7 +129,14 @@ function RepositoryRow({ repository, selected, live, onOpen, onRemove }: Reposit
       >
         <Folder size={14} className={styles.icon} />
         <span className={styles.text}>
-          <span className={styles.name}>{repository.name}</span>
+          <span className={styles.top}>
+            <span className={styles.name}>{repository.name}</span>
+            {pull && (
+              <Badge tone="accent" title={`Pull request #${pull.ref.number}: ${pull.title}`}>
+                #{pull.ref.number}
+              </Badge>
+            )}
+          </span>
           {status.data && (
             <span className={styles.branch}>
               <GitBranch size={11} />

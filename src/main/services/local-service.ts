@@ -1,5 +1,7 @@
+import type { PullRequestSummary, RepositoryRef } from '@shared/github';
 import type { PlotApi } from '@shared/ipc';
 import type { LocalGit } from '../local/local-git';
+import { pullRequestLookups } from '../local/local-pull-request';
 import type { LocalRepositoryStore } from '../local/local-repositories';
 
 export const MAX_LOCAL_FILE_BYTES = 4 * 1024 * 1024;
@@ -10,6 +12,7 @@ export type LocalService = Pick<
   | 'listLocalRepositories'
   | 'removeLocalRepository'
   | 'getLocalStatus'
+  | 'findLocalPullRequest'
   | 'getLocalDiff'
   | 'getLocalSignature'
   | 'readLocalBlob'
@@ -20,12 +23,14 @@ interface LocalServiceOptions {
   repositories: LocalRepositoryStore;
   git: LocalGit;
   chooseFolder(): Promise<string | undefined>;
+  findOpenPullRequest(base: RepositoryRef, head: string): Promise<PullRequestSummary | null>;
 }
 
 export function createLocalService({
   repositories,
   git,
   chooseFolder,
+  findOpenPullRequest,
 }: LocalServiceOptions): LocalService {
   return {
     async openLocalRepository() {
@@ -46,6 +51,17 @@ export function createLocalService({
 
     async getLocalStatus(repositoryId) {
       return git.status(await repositories.root(repositoryId));
+    },
+
+    async findLocalPullRequest(repositoryId) {
+      const tracking = await git.tracking(await repositories.root(repositoryId));
+      for (const { base, head } of pullRequestLookups(tracking)) {
+        const pull = await findOpenPullRequest(base, head);
+        if (pull) {
+          return pull;
+        }
+      }
+      return null;
     },
 
     async getLocalDiff({ repositoryId, compare }) {

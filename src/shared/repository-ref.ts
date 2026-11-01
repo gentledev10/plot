@@ -3,8 +3,10 @@ import { GITHUB_HOST, isHost, normalizeHost } from './hosts';
 
 const OWNER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
 const REPO = /^[A-Za-z0-9._-]{1,100}$/;
-const WEB_URL = /^https?:\/\/([^/\s]+)\/([^/\s]+)\/([^/\s?#]+)(?:[/?#].*)?$/;
-const SSH_URL = /^git@([^:\s]+):([^/\s]+)\/([^/\s]+?)\/?$/;
+const WEB_URL =
+  /^https?:\/\/(?:[^@/\s]+@)?([^/:\s]+)(?::\d+)?\/([^/\s]+)\/([^/\s?#]+)(?:[/?#].*)?$/;
+const SSH_URL = /^ssh:\/\/(?:[^@/\s]+@)?([^/:\s]+)(?::\d+)?\/([^/\s]+)\/([^/\s]+?)\/?$/;
+const SCP_URL = /^[^@/\s]+@([^:/\s]+):([^/\s]+)\/([^/\s]+?)\/?$/;
 const PATH = /^(?:([^/\s]+\.[^/\s]+)\/)?([^/\s]+)\/([^/\s?#]+?)\/?$/;
 
 export function isRepositoryRef(value: unknown): value is RepositoryRef {
@@ -28,7 +30,7 @@ export function parseRepositoryRef(
   defaultHost = GITHUB_HOST,
 ): RepositoryRef | undefined {
   const text = input.trim();
-  const url = WEB_URL.exec(text) ?? SSH_URL.exec(text);
+  const url = WEB_URL.exec(text) ?? SSH_URL.exec(text) ?? SCP_URL.exec(text);
   if (url) {
     const [, host = '', owner, repo] = url;
     return toRef(normalizeHost(host), owner, repo);

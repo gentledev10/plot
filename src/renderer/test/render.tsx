@@ -42,6 +42,7 @@ export function fakeApi(overrides: Partial<PlotApi> = {}): PlotApi {
     listLocalRepositories: vi.fn().mockResolvedValue([]),
     removeLocalRepository: notStubbed('removeLocalRepository'),
     getLocalStatus: vi.fn().mockResolvedValue({ branch: 'main', changedFiles: 0 }),
+    findLocalPullRequest: vi.fn().mockResolvedValue(null),
     getLocalDiff: notStubbed('getLocalDiff'),
     getLocalSignature: vi.fn().mockResolvedValue('signature'),
     readLocalBlob: notStubbed('readLocalBlob'),

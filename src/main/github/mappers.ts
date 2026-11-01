@@ -30,6 +30,20 @@ export function toPullRequestSummaryFromSearch(value: unknown, host: string): Pu
   };
 }
 
+export function toPullRequestSummaryFromList(value: unknown, host: string): PullRequestSummary {
+  const pull = object(value, 'pull request');
+  const base = object(pull.base, 'base');
+  return {
+    ref: { ...toRepositoryRef(base.repo, host), number: number(pull.number, 'number') },
+    title: string(pull.title, 'title'),
+    author: toGitHubUser(pull.user),
+    isDraft: pull.draft === true,
+    state: pullRequestState(pull),
+    updatedAt: string(pull.updated_at, 'updated_at'),
+    url: string(pull.html_url, 'html_url'),
+  };
+}
+
 export function toPullRequestDetail(value: unknown, ref: PullRequestRef): PullRequestDetail {
   const pull = object(value, 'pull request');
   const base = object(pull.base, 'base');

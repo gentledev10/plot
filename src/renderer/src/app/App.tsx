@@ -13,6 +13,7 @@ import { InboxPanel } from '../features/inbox/InboxPanel';
 import { useCommand, useShortcutLabel } from '../features/keymap/KeymapProvider';
 import { formatStroke } from '../features/keymap/keystroke';
 import { LocalChangesPanel } from '../features/local/LocalChangesPanel';
+import { LocalPullRequestLink } from '../features/local/LocalPullRequestLink';
 import { LocalWorkspace } from '../features/local/LocalWorkspace';
 import { useLocalRepositories, useLocalRepositoryActions } from '../features/local/queries';
 import { PullRequestWorkspace } from '../features/pull-request/PullRequestWorkspace';
@@ -270,6 +271,9 @@ export function App() {
               target={open}
               title={titleOf(open)}
               backLabel="Local changes"
+              details={
+                <LocalPullRequestLink repositoryId={open.repositoryId} onOpen={openPullRequest} />
+              }
               selectedPath={selectedPath}
               onSelectFile={setSelectedPath}
               onBack={backToList}

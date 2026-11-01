@@ -9,6 +9,7 @@ import { usePreference } from '../../lib/preferences';
 import { ConnectGitHub } from '../accounts/ConnectGitHub';
 import { useAccounts } from '../accounts/queries';
 import { useCommand } from '../keymap/KeymapProvider';
+import { useLocalPullRequestKeys } from '../local/queries';
 import { RepositorySection } from '../repositories/RepositorySection';
 import { filterPullRequests, newestFirst } from './grouping';
 import styles from './InboxPanel.module.css';
@@ -38,6 +39,7 @@ export function InboxPanel({
   const accounts = useAccounts();
   const current = accounts.data?.accounts.find((account) => account.id === accounts.data.currentId);
   const inbox = useInbox(current?.id);
+  const local = useLocalPullRequestKeys();
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = usePreference<string[]>('inbox.collapsed', [], parseStringList);
   const filtering = query.trim() !== '';
@@ -164,6 +166,7 @@ export function InboxPanel({
           pulls={reviewRequested}
           emptyText={filtering ? 'No pull requests match.' : 'Nothing is waiting for your review.'}
           selected={selected}
+          local={local}
           collapsed={filtering ? NONE : collapsedIn('review-requested')}
           collapsible={!filtering}
           onToggleGroup={(group) => toggleGroup('review-requested', group)}
@@ -174,6 +177,7 @@ export function InboxPanel({
           pulls={authored}
           emptyText={filtering ? 'No pull requests match.' : 'You have no open pull requests.'}
           selected={selected}
+          local={local}
           collapsed={filtering ? NONE : collapsedIn('authored')}
           collapsible={!filtering}
           onToggleGroup={(group) => toggleGroup('authored', group)}

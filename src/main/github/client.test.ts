@@ -261,3 +261,28 @@ describe('lastPage', () => {
     expect(lastPage(null)).toBeUndefined();
   });
 });
+
+describe('findOpenPullRequest', () => {
+  const base = { host: 'github.com', owner: 'octocat', repo: 'hello-world' };
+
+  it('finds the open pull request of a branch', async () => {
+    const { client, fetch } = setup(json([pullRequest()]));
+
+    await expect(client.findOpenPullRequest(base, 'octocat:dark-mode')).resolves.toMatchObject({
+      ref: { ...base, number: 42 },
+      title: 'Add dark mode',
+      state: 'open',
+    });
+    const url = new URL(fetch.mock.calls[0]?.[0] ?? '');
+    expect(url.pathname).toBe('/repos/octocat/hello-world/pulls');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      state: 'open',
+      head: 'octocat:dark-mode',
+      per_page: '1',
+    });
+  });
+
+  it('returns nothing when the branch has no open pull request', async () => {
+    await expect(setup(json([])).client.findOpenPullRequest(base, 'octocat:x')).resolves.toBeNull();
+  });
+});

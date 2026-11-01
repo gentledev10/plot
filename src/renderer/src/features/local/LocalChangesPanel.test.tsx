@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { aPullRequestSummary } from '../../../test/builders';
 import { renderWithApi } from '../../../test/render';
 import { LocalChangesPanel } from './LocalChangesPanel';
 
@@ -80,6 +81,27 @@ describe('LocalChangesPanel', () => {
     const web = screen.getByRole('button', { name: /^web/ });
     expect(await within(web).findByText('No changes')).toBeInTheDocument();
     expect(web).toHaveTextContent('Detached HEAD');
+  });
+
+  it('shows the number of the open pull request for the branch of a folder', async () => {
+    const findLocalPullRequest = vi.fn().mockResolvedValue(
+      aPullRequestSummary(7, {
+        title: 'Retry webhooks',
+        ref: { host: 'github.com', owner: 'acme', repo: 'api', number: 7 },
+      }),
+    );
+    renderWithApi(<LocalChangesPanel onOpen={vi.fn()} />, {
+      listLocalRepositories: vi.fn().mockResolvedValue([repository]),
+      getLocalStatus: vi.fn().mockResolvedValue({ branch: 'retry', changedFiles: 2 }),
+      findLocalPullRequest,
+    });
+
+    const row = await screen.findByRole('button', { name: /^api/ });
+    expect(await within(row).findByText('#7')).toHaveAttribute(
+      'title',
+      'Pull request #7: Retry webhooks',
+    );
+    expect(findLocalPullRequest).toHaveBeenCalledWith(repository.id);
   });
 
   it('says which folder could not be read', async () => {

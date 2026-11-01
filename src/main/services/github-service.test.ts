@@ -1,10 +1,12 @@
 import type { PullRequestSummary } from '@shared/github';
 import { describe, expect, it, vi } from 'vitest';
+import { AppError } from '../errors';
 import type { GitHubClient } from '../github/client';
 import { fakeConnections } from '../github/fake-connections';
 import {
   createGitHubService,
   INBOX_QUERIES,
+  openPullRequestFinder,
   REPOSITORY_PAGE_SIZE,
   repositorySearch,
 } from './github-service';
@@ -33,6 +35,7 @@ function fakeClient(overrides: Partial<GitHubClient> = {}): GitHubClient {
     listRepositories: vi.fn().mockResolvedValue([]),
     getRepository: vi.fn(),
     countOpenPullRequests: vi.fn().mockResolvedValue(0),
+    findOpenPullRequest: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
 }
@@ -131,5 +134,31 @@ describe('repositories', () => {
     expect(
       repositorySearch({ ...query, state: 'all', scope: 'assigned', text: ' label:bug login ' }),
     ).toBe('repo:acme/api is:pr assignee:@me label:bug login');
+  });
+});
+
+describe('openPullRequestFinder', () => {
+  const api = { host: 'github.com', owner: 'acme', repo: 'api' };
+
+  it('asks the account for the host and finds nothing without one', async () => {
+    const findOpenPullRequest = vi.fn().mockResolvedValue(summary(4));
+    const find = openPullRequestFinder(fakeConnections(fakeClient({ findOpenPullRequest })));
+
+    await expect(find(api, 'acme:retry')).resolves.toEqual(summary(4));
+    expect(findOpenPullRequest).toHaveBeenCalledWith(api, 'acme:retry');
+    await expect(find({ ...api, host: 'github.example.com' }, 'acme:retry')).resolves.toBeNull();
+  });
+
+  it('finds nothing in a repository the account cannot read, but reports other failures', async () => {
+    const notFound = new AppError('github-not-found', 'Not found.');
+    const limited = new AppError('github-rate-limited', 'Slow down.');
+    const findOpenPullRequest = vi
+      .fn()
+      .mockRejectedValueOnce(notFound)
+      .mockRejectedValueOnce(limited);
+    const find = openPullRequestFinder(fakeConnections(fakeClient({ findOpenPullRequest })));
+
+    await expect(find(api, 'acme:retry')).resolves.toBeNull();
+    await expect(find(api, 'acme:retry')).rejects.toBe(limited);
   });
 });

@@ -114,6 +114,28 @@ describe('createLocalGit', () => {
     });
   });
 
+  it('reads the remotes and the branch the current branch tracks', async () => {
+    const clone = join(root, 'clone');
+    await mkdir(clone);
+    await git(clone, 'init', '--quiet', '--initial-branch=main');
+    await git(clone, 'remote', 'add', 'origin', 'git@github.com:me/api.git');
+    await git(clone, 'remote', 'add', 'upstream', 'https://github.com/acme/api.git');
+    await git(clone, 'switch', '--quiet', '-c', 'retry-webhooks');
+    await git(clone, 'config', 'branch.retry-webhooks.remote', 'origin');
+    await git(clone, 'config', 'branch.retry-webhooks.merge', 'refs/heads/webhooks/retry');
+
+    await expect(local.tracking(clone)).resolves.toEqual({
+      branch: 'retry-webhooks',
+      remotes: { origin: 'git@github.com:me/api.git', upstream: 'https://github.com/acme/api.git' },
+      upstream: { remote: 'origin', branch: 'webhooks/retry' },
+    });
+    await expect(local.tracking(repo)).resolves.toEqual({
+      branch: 'feature',
+      remotes: {},
+      upstream: null,
+    });
+  });
+
   it('shows only uncommitted work when asked', async () => {
     const diff = await local.diff(repo, 'uncommitted');
     expect(diff.base?.name).toBe('HEAD');

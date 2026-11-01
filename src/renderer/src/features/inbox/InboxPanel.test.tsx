@@ -221,4 +221,24 @@ describe('InboxPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     await vi.waitFor(() => expect(listInbox).toHaveBeenCalledTimes(2));
   });
+
+  it('marks pull requests whose branch is checked out in a local folder', async () => {
+    const checkedOut = aPullRequestSummary(3, { title: 'Retry webhooks' });
+    renderWithApi(<InboxPanel onSelect={vi.fn()} />, {
+      listAccounts: signedIn,
+      listInbox: vi.fn().mockResolvedValue({
+        reviewRequested: [aPullRequestSummary(1, { title: 'Fix login' })],
+        authored: [checkedOut],
+      }),
+      listLocalRepositories: vi
+        .fn()
+        .mockResolvedValue([{ id: '0123456789abcdef', name: 'api', path: '/work/api' }]),
+      getLocalStatus: vi.fn().mockResolvedValue({ branch: 'retry', changedFiles: 1 }),
+      findLocalPullRequest: vi.fn().mockResolvedValue(checkedOut),
+    });
+
+    const row = await screen.findByRole('button', { name: /Retry webhooks/ });
+    expect(await within(row).findByText('Local')).toBeVisible();
+    expect(screen.getByRole('button', { name: /Fix login/ })).not.toHaveTextContent('Local');
+  });
 });

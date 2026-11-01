@@ -1,5 +1,5 @@
 import { ChevronLeft } from 'lucide-react';
-import { useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { StatusMessage } from '../../components/StatusMessage';
 import { useTargetDiff } from '../diff/queries';
 import type { DiffTarget } from '../diff/target';
@@ -11,6 +11,7 @@ interface FilesPanelProps {
   target: DiffTarget;
   title: string;
   backLabel: string;
+  details?: ReactNode;
   selectedPath?: string;
   onSelectFile(path: string): void;
   onBack(): void;
@@ -20,6 +21,7 @@ export function FilesPanel({
   target,
   title,
   backLabel,
+  details,
   selectedPath,
   onSelectFile,
   onBack,
@@ -43,6 +45,7 @@ export function FilesPanel({
         </button>
       </header>
       <p className={styles.target}>{title}</p>
+      {details}
       <div className={styles.content}>{renderContent()}</div>
       {diff.data && (
         <footer className={styles.footer}>

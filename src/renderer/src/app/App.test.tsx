@@ -405,6 +405,29 @@ describe('App', () => {
     expect(screen.getByRole('complementary', { name: 'Pull requests' })).toBeVisible();
   });
 
+  it('opens the pull request of a local folder in the pull requests window', async () => {
+    const repository = { id: '0123456789abcdef', name: 'api', path: '/work/api' };
+    const ref = { host: 'github.com', owner: 'acme', repo: 'api', number: 7 };
+    const fake = {
+      ...api(),
+      listLocalRepositories: vi.fn().mockResolvedValue([repository]),
+      getLocalStatus: vi.fn().mockResolvedValue({ branch: 'retry', changedFiles: 1 }),
+      findLocalPullRequest: vi
+        .fn()
+        .mockResolvedValue(aPullRequestSummary(7, { ref, title: 'Retry webhooks' })),
+      getLocalDiff: vi.fn().mockResolvedValue({ branch: 'retry', base: null, files: [] }),
+      getLocalSignature: vi.fn().mockResolvedValue('same'),
+    };
+    renderWithApi(<App />, fake);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Local changes' }));
+    await userEvent.click(await screen.findByRole('button', { name: /^api/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Pull request #7' }));
+
+    expect(fake.getPullRequestDiff).toHaveBeenCalledWith(ref);
+    expect(screen.getByRole('button', { name: 'Pull requests', pressed: true })).toBeVisible();
+  });
+
   it('opens a pull request pasted as a URL', async () => {
     const fake = api();
     renderWithApi(<App />, fake);

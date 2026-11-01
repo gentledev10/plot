@@ -13,9 +13,16 @@ const BASE_CANDIDATES = ['main', 'master', 'origin/main', 'origin/master'];
 const DIFF_OPTIONS = ['diff', '--no-color', '--no-ext-diff', '--no-textconv', '-M', '-z'];
 const LINE_COUNT_LIMIT = 1024 * 1024;
 
+export interface LocalTracking {
+  branch: string | null;
+  remotes: Record<string, string>;
+  upstream: { remote: string; branch: string } | null;
+}
+
 export interface LocalGit {
   topLevel(path: string): Promise<string>;
   status(root: string): Promise<LocalStatus>;
+  tracking(root: string): Promise<LocalTracking>;
   diff(root: string, compare: LocalCompare): Promise<LocalDiff>;
   signature(root: string, compare: LocalCompare): Promise<string>;
   readBlob(root: string, blob: string, maxBytes: number): Promise<BlobContent>;
@@ -122,6 +129,32 @@ export function createLocalGit({ run, runForBuffer, env }: LocalGitOptions): Loc
       ]);
       const changed = await git(root, [...DIFF_OPTIONS, '--name-only', from?.commit ?? EMPTY_TREE]);
       return { branch, changedFiles: changed.split('\0').filter(Boolean).length + added.length };
+    },
+
+    async tracking(root) {
+      const [branch, urls] = await Promise.all([
+        optional(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']),
+        optional(root, ['config', '--get-regexp', '^remote\\..*\\.url$']),
+      ]);
+      const remotes: Record<string, string> = {};
+      for (const line of (urls ?? '').split('\n')) {
+        const match = /^remote\.(.+)\.url (.+)$/.exec(line);
+        if (match?.[1] && match[2]) {
+          remotes[match[1]] = match[2];
+        }
+      }
+      if (!branch) {
+        return { branch, remotes, upstream: null };
+      }
+      const [remote, merge] = await Promise.all([
+        optional(root, ['config', '--get', `branch.${branch}.remote`]),
+        optional(root, ['config', '--get', `branch.${branch}.merge`]),
+      ]);
+      const upstream =
+        remote && merge?.startsWith('refs/heads/')
+          ? { remote, branch: merge.slice('refs/heads/'.length) }
+          : null;
+      return { branch, remotes, upstream };
     },
 
     async diff(root, compare) {

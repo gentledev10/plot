@@ -34,7 +34,11 @@ export function pullRequest(overrides: Record<string, unknown> = {}) {
     merged: false,
     merged_at: null,
     user: octocat,
-    base: { ref: 'main', sha: 'a'.repeat(40) },
+    base: {
+      ref: 'main',
+      sha: 'a'.repeat(40),
+      repo: { name: 'hello-world', owner: { login: 'octocat' } },
+    },
     head: { ref: 'dark-mode', sha: 'b'.repeat(40) },
     additions: 120,
     deletions: 8,

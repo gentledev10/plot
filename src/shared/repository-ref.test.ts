@@ -21,6 +21,9 @@ describe('parseRepositoryRef', () => {
 
   it('reads page and clone URLs', () => {
     expect(parseRepositoryRef('https://github.com/acme/api')).toEqual(api);
+    expect(parseRepositoryRef('https://octocat@github.com/acme/api.git')).toEqual(api);
+    expect(parseRepositoryRef('ssh://git@github.com/acme/api.git')).toEqual(api);
+    expect(parseRepositoryRef('ssh://git@github.com:22/acme/api')).toEqual(api);
     expect(parseRepositoryRef('https://github.com/acme/api/pull/12/files')).toEqual(api);
     expect(parseRepositoryRef('https://github.com/acme/api.git')).toEqual(api);
     expect(parseRepositoryRef('git@github.com:acme/api.git')).toEqual(api);

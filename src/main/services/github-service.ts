@@ -1,9 +1,12 @@
 import type {
   PullRequestScope,
   PullRequestStateFilter,
+  PullRequestSummary,
   RepositoryPullRequestQuery,
+  RepositoryRef,
 } from '@shared/github';
 import type { PlotApi } from '@shared/ipc';
+import { AppError } from '../errors';
 import type { GitHubConnections } from '../github/connections';
 
 export const INBOX_QUERIES = {
@@ -97,5 +100,24 @@ export function createGitHubService(connections: GitHubConnections): GitHubServi
         REPOSITORY_PAGE_SIZE,
       );
     },
+  };
+}
+
+// A local folder may point at a server without a connected account, or at a repository the
+// account cannot read. Neither has a pull request to show.
+export function openPullRequestFinder(connections: GitHubConnections) {
+  return async (base: RepositoryRef, head: string): Promise<PullRequestSummary | null> => {
+    try {
+      const { client } = await connections.forHost(base.host);
+      return await client.findOpenPullRequest(base, head);
+    } catch (error) {
+      if (
+        error instanceof AppError &&
+        (error.code === 'github-no-account' || error.code === 'github-not-found')
+      ) {
+        return null;
+      }
+      throw error;
+    }
   };
 }

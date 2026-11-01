@@ -15,6 +15,7 @@ import { useCurrentAccount } from '../accounts/queries';
 import { Badge, PullRequestItem } from '../inbox/PullRequestItem';
 import { useInbox } from '../inbox/queries';
 import { useCommand } from '../keymap/KeymapProvider';
+import { useLocalPullRequestKeys } from '../local/queries';
 import { useRepositoryPullRequests } from './queries';
 import styles from './RepositoryPullsPanel.module.css';
 
@@ -54,6 +55,7 @@ export function RepositoryPullsPanel({
   const items = pulls.data?.pages.flatMap((page) => page.pullRequests) ?? [];
   const total = pulls.data?.pages[0]?.total;
   const waiting = useReviewRequests();
+  const local = useLocalPullRequestKeys();
   const filtered = state !== 'open' || scope !== 'everyone' || text !== '';
 
   function refresh() {
@@ -139,6 +141,7 @@ export function RepositoryPullsPanel({
                 pull={pull}
                 selected={selected}
                 showAuthor
+                local={local.has(pullRequestKey(pull.ref))}
                 badges={badges(pull, waiting)}
                 onSelect={onSelect}
               />

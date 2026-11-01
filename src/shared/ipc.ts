@@ -8,6 +8,7 @@ import type {
   PullRequestDetail,
   PullRequestPage,
   PullRequestRef,
+  PullRequestSummary,
   RepositoryPullRequestQuery,
   RepositoryRef,
 } from './github';
@@ -46,6 +47,7 @@ export interface PlotApi {
   listLocalRepositories(): Promise<LocalRepository[]>;
   removeLocalRepository(id: string): Promise<void>;
   getLocalStatus(repositoryId: string): Promise<LocalStatus>;
+  findLocalPullRequest(repositoryId: string): Promise<PullRequestSummary | null>;
   getLocalDiff(target: LocalTarget): Promise<LocalDiff>;
   getLocalSignature(target: LocalTarget): Promise<string>;
   readLocalBlob(repositoryId: string, blob: string): Promise<BlobContent>;
@@ -86,6 +88,7 @@ const METHODS: Record<IpcMethod, true> = {
   listLocalRepositories: true,
   removeLocalRepository: true,
   getLocalStatus: true,
+  findLocalPullRequest: true,
   getLocalDiff: true,
   getLocalSignature: true,
   readLocalBlob: true,
