@@ -1,6 +1,7 @@
 import { RotateCcw } from 'lucide-react';
 import { useId, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
+import { AppearancePreview } from './AppearancePreview';
 import { useAppearance } from './AppearanceProvider';
 import styles from './AppearanceSettings.module.css';
 import {
@@ -8,7 +9,6 @@ import {
   CUSTOM_COLORS,
   type CustomColor,
   clampFontSize,
-  codeFontStack,
   FONT_SIZE,
   isFontFamily,
   type ThemeChoice,
@@ -34,6 +34,7 @@ const CHOICES: readonly { id: ThemeChoice; name: string }[] = [
 export function AppearanceSettings() {
   const { appearance, setAppearance, theme, colors } = useAppearance();
   const groupName = useId();
+  const [highlight, setHighlight] = useState<CustomColor>();
   const overrides = appearance.colors[theme.id] ?? {};
 
   function update(changes: Partial<Appearance>) {
@@ -52,6 +53,7 @@ export function AppearanceSettings() {
 
   return (
     <div className={styles.appearance}>
+      <AppearancePreview theme={theme} font={appearance.codeFont} highlight={highlight} />
       <fieldset className={styles.section}>
         <legend className={styles.legend}>Theme</legend>
         <div className={styles.themes}>
@@ -109,7 +111,14 @@ export function AppearanceSettings() {
         </p>
         <ul className={styles.colors}>
           {CUSTOM_COLORS.map(({ id, label }) => (
-            <li key={id} className={styles.color}>
+            <li
+              key={id}
+              className={styles.color}
+              onMouseEnter={() => setHighlight(id)}
+              onMouseLeave={() => setHighlight(undefined)}
+              onFocus={() => setHighlight(id)}
+              onBlur={() => setHighlight(undefined)}
+            >
               <input
                 type="color"
                 className={styles.picker}
@@ -215,9 +224,6 @@ function FontFields({ family, size, onChange }: FontFieldsProps) {
           Use a font name made of letters, digits, spaces, dots, dashes, or underscores.
         </p>
       )}
-      <pre className={styles.preview} style={{ fontFamily: codeFontStack(family), fontSize: size }}>
-        {"const greeting = 'Hello, 세계'; // 0O il1 => !== ->"}
-      </pre>
       <p className={styles.hint}>
         Fonts that are not installed fall back to JetBrains Mono, which comes with Plot.
       </p>

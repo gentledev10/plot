@@ -55,6 +55,28 @@ describe('AppearanceSettings', () => {
     expect(variable('--font-code')).toContain('"D2Coding"');
   });
 
+  it('shows where a color is used, and the code font, in a preview of the app', async () => {
+    renderWithApi(<AppearanceSettings />);
+    const preview = screen.getByRole('figure', { name: 'Preview' });
+    const active = () =>
+      [...preview.querySelectorAll('[data-active="true"]')].map(
+        (element) => element.getAttribute('data-kind') ?? element.textContent,
+      );
+    expect(active()).toEqual([]);
+
+    await userEvent.hover(screen.getByLabelText('Inserted lines'));
+    expect(active()).toEqual(['inserted']);
+    await userEvent.hover(screen.getByLabelText('Accent'));
+    expect(active()).toEqual(['Pull request #412']);
+    await userEvent.unhover(screen.getByLabelText('Accent'));
+    expect(active()).toEqual([]);
+
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Size' }), {
+      target: { value: '18' },
+    });
+    expect(preview.querySelector('[style*="font-size: 18px"]')).toHaveTextContent('tries');
+  });
+
   it('refuses font names that could break out of the style', async () => {
     renderWithApi(<AppearanceSettings />);
     const family = screen.getByRole('combobox', { name: 'Font' });

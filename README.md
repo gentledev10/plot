@@ -56,7 +56,7 @@ Change any shortcut in Settings > Keymap. Actions such as switching to the unifi
 
 ## Make it yours
 
-Settings > Appearance offers Light, Dark, and IntelliJ's classic Darcula theme, or System to follow macOS. Pick any installed code font and size, and change the diff and accent colors of each theme. Panels can be hidden, resized by dragging their edge, and the AI overview can take the whole window.
+Settings > Appearance offers Light, Dark, and IntelliJ's classic Darcula theme, or System to follow macOS. Pick any installed code font and size, and change the diff and accent colors of each theme, while a preview shows which part of the window each one changes. Panels can be hidden, resized by dragging their edge, and the AI overview can take the whole window.
 
 ## Connecting GitHub
 

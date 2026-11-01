@@ -121,15 +121,6 @@
   border-color: var(--color-danger);
 }
 
-.preview {
-  margin: 0;
-  padding: 10px 12px;
-  overflow-x: auto;
-  border-radius: var(--radius);
-  background: var(--color-bg-editor);
-  border: 1px solid var(--color-border-strong);
-}
-
 .hint {
   margin: 0;
   color: var(--color-text-muted);
