@@ -1,0 +1,21 @@
+.control {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.control > select {
+  max-width: 100%;
+  padding-inline-end: 34px;
+  appearance: none;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}

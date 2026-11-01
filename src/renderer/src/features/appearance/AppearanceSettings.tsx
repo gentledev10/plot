@@ -1,6 +1,7 @@
 import { RotateCcw } from 'lucide-react';
 import { useId, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
+import { Select } from '../../components/Select';
 import { AppearancePreview } from './AppearancePreview';
 import { useAppearance } from './AppearanceProvider';
 import styles from './AppearanceSettings.module.css';
@@ -159,6 +160,8 @@ interface FontFieldsProps {
 }
 
 function FontFields({ family, size, onChange }: FontFieldsProps) {
+  const filterHintId = useId();
+  const fontId = useId();
   const installed = useInstalledFonts();
   const added = useAddedFonts();
   const addFonts = useAddFonts();
@@ -182,9 +185,10 @@ function FontFields({ family, size, onChange }: FontFieldsProps) {
   return (
     <div className={styles.font}>
       <div className={styles.fontRow}>
-        <label className={styles.field}>
+        <label className={styles.field} htmlFor={fontId}>
           <span>Font</span>
-          <select
+          <Select
+            id={fontId}
             className={styles.select}
             value={family}
             onChange={(event) => chooseFamily(event.target.value)}
@@ -217,7 +221,7 @@ function FontFields({ family, size, onChange }: FontFieldsProps) {
             {!listed.includes(family) && (
               <option value={family}>{missing ? `${family} (not installed)` : family}</option>
             )}
-          </select>
+          </Select>
         </label>
         <label className={styles.field}>
           <span>Size</span>
@@ -266,12 +270,17 @@ function FontFields({ family, size, onChange }: FontFieldsProps) {
         <label className={styles.check}>
           <input
             type="checkbox"
+            aria-describedby={filterHintId}
             checked={monospacedOnly}
             onChange={(event) => setMonospacedOnly(event.target.checked)}
           />
-          Show only monospaced fonts
+          Only fixed-width system fonts
         </label>
       </div>
+      <p id={filterHintId} className={styles.hint}>
+        Fixed-width (monospaced) fonts give every character the same space, keeping code columns
+        aligned. This filters fonts installed on your Mac.
+      </p>
       {error && (
         <p className={styles.error} role="alert">
           {error.message}

@@ -100,7 +100,9 @@ describe('AppearanceSettings', () => {
       'Installed on this Mac': ['Menlo'],
     });
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Show only monospaced fonts' }));
+    const filter = screen.getByRole('checkbox', { name: 'Only fixed-width system fonts' });
+    expect(filter).toHaveAccessibleDescription(/keeping code columns aligned/);
+    await userEvent.click(filter);
     expect(groups()['Installed on this Mac']).toEqual(['Helvetica', 'Menlo']);
   });
 

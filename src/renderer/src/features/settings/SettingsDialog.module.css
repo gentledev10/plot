@@ -1,16 +1,23 @@
 .dialog {
   width: min(880px, calc(100vw - 80px));
   height: min(640px, calc(100vh - 80px));
-  max-width: none;
-  max-height: none;
+  min-width: min(640px, calc(100vw - 32px));
+  min-height: min(400px, calc(100vh - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
   padding: 0;
   overflow: hidden;
+  resize: both;
   border: 1px solid var(--color-border-strong);
   border-radius: 10px;
   background: var(--color-bg-editor);
   color: var(--color-text);
   box-shadow: 0 24px 64px rgb(0 0 0 / 35%);
   -webkit-app-region: no-drag;
+}
+
+.dialog[data-expanded="true"] {
+  resize: none;
 }
 
 .dialog[open] {
@@ -59,6 +66,11 @@
   flex: 1;
   flex-direction: column;
   min-width: 0;
+}
+
+.windowActions {
+  display: flex;
+  gap: 4px;
 }
 
 .header {

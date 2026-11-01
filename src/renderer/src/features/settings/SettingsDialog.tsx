@@ -1,5 +1,5 @@
-import { X } from 'lucide-react';
-import { type ReactNode, useEffect, useRef } from 'react';
+import { Maximize2, Minimize2, X } from 'lucide-react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { AccountsSettings } from '../accounts/AccountsSettings';
 import { AiReviewSettings } from '../ai/AiReviewSettings';
@@ -25,6 +25,8 @@ interface SettingsDialogProps {
 
 export function SettingsDialog({ section, onSectionChange, onClose }: SettingsDialogProps) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const normalSize = useRef({ width: '', height: '' });
   const current = SECTIONS.find((item) => item.id === section) ?? SECTIONS[0];
   useSuspendShortcuts();
 
@@ -38,6 +40,12 @@ export function SettingsDialog({ section, onSectionChange, onClose }: SettingsDi
     <dialog
       ref={dialog}
       className={styles.dialog}
+      data-expanded={expanded}
+      style={
+        expanded
+          ? { width: 'calc(100vw - 32px)', height: 'calc(100vh - 32px)' }
+          : normalSize.current
+      }
       aria-labelledby="settings-title"
       onClose={onClose}
     >
@@ -60,9 +68,23 @@ export function SettingsDialog({ section, onSectionChange, onClose }: SettingsDi
       <div className={styles.content}>
         <header className={styles.header}>
           <h3 className={styles.sectionTitle}>{current?.title}</h3>
-          <IconButton label="Close settings" onClick={() => dialog.current?.close()}>
-            <X size={14} />
-          </IconButton>
+          <div className={styles.windowActions}>
+            <IconButton
+              label={expanded ? 'Restore settings size' : 'Expand settings'}
+              onClick={() => {
+                if (!expanded && dialog.current) {
+                  const { width, height } = dialog.current.style;
+                  normalSize.current = { width, height };
+                }
+                setExpanded(!expanded);
+              }}
+            >
+              {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </IconButton>
+            <IconButton label="Close settings" onClick={() => dialog.current?.close()}>
+              <X size={14} />
+            </IconButton>
+          </div>
         </header>
         <div className={styles.body}>{current?.render()}</div>
       </div>
