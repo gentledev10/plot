@@ -67,13 +67,23 @@ describe('ConnectGitHub', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Bad credentials.');
   });
 
-  it('connects to GitHub Enterprise Server through the GitHub CLI', async () => {
+  it('points GitHub Enterprise Cloud accounts to GitHub.com', async () => {
+    setup();
+    expect(await screen.findByRole('radio', { name: 'GitHub.com' })).toHaveAccessibleDescription(
+      'Including GitHub Enterprise Cloud',
+    );
+    expect(screen.getByRole('radio', { name: 'Company server' })).toHaveAccessibleDescription(
+      'GitHub Enterprise Server or GHE.com',
+    );
+  });
+
+  it('connects to a company server through the GitHub CLI', async () => {
     const signInWithGitHubCli = vi
       .fn()
       .mockResolvedValue(anAccount('mona', { host: 'github.example.com' }));
     setup({ signInWithGitHubCli });
 
-    await userEvent.click(await screen.findByRole('radio', { name: 'GitHub Enterprise Server' }));
+    await userEvent.click(await screen.findByRole('radio', { name: 'Company server' }));
     expect(
       screen.queryByRole('button', { name: /Sign in with your browser/ }),
     ).not.toBeInTheDocument();
@@ -81,9 +91,28 @@ describe('ConnectGitHub', () => {
     expect(cli).toBeDisabled();
 
     await userEvent.type(screen.getByLabelText('Server address'), 'https://GitHub.Example.com/');
+    expect(
+      screen.getByText('gh auth login --hostname github.example.com --web'),
+    ).toBeInTheDocument();
     await userEvent.click(cli);
 
     expect(signInWithGitHubCli).toHaveBeenCalledWith('github.example.com');
+  });
+
+  it('copies the command that signs in to a company server with the GitHub CLI', async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(await screen.findByRole('radio', { name: 'Company server' }));
+    const copy = screen.getByRole('button', { name: 'Copy' });
+    expect(copy).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Server address'), 'github.example.com');
+    await user.click(copy);
+
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    await expect(navigator.clipboard.readText()).resolves.toBe(
+      'gh auth login --hostname github.example.com --web',
+    );
   });
 
   it('signs in through the browser with a one-time code', async () => {

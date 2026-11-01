@@ -23,8 +23,18 @@
 
 .choice {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
+}
+
+.choiceText {
+  display: flex;
+  flex-direction: column;
+}
+
+.choiceDetail {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
 }
 
 .input {
@@ -121,7 +131,8 @@
   color: #ffffff;
 }
 
-.primary:disabled {
+.primary:disabled,
+.secondary:disabled {
   opacity: 0.55;
 }
 
@@ -134,6 +145,31 @@
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
+}
+
+.cliHint {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.commandRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.command {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-input);
+  font-family: var(--font-code);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+  user-select: all;
 }
 
 .error {

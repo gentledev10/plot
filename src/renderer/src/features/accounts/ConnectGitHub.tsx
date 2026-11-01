@@ -13,12 +13,12 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
   const accounts = useAccounts();
   const { signInWithToken, signInWithGitHubCli } = useAccountActions();
   const browser = useBrowserSignIn(onConnected);
-  const [enterprise, setEnterprise] = useState(false);
+  const [companyServer, setCompanyServer] = useState(false);
   const [hostText, setHostText] = useState('');
   const [tokenOpen, setTokenOpen] = useState(false);
   const [token, setToken] = useState('');
   const serverName = useId();
-  const host = enterprise ? normalizeHost(hostText) : GITHUB_HOST;
+  const host = companyServer ? normalizeHost(hostText) : GITHUB_HOST;
   const busy = signInWithToken.isPending || signInWithGitHubCli.isPending;
   const error =
     browser.state.step === 'failed'
@@ -61,25 +61,21 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
     <div className={styles.connect}>
       <fieldset className={styles.server}>
         <legend className={styles.legend}>GitHub server</legend>
-        <label className={styles.choice}>
-          <input
-            type="radio"
-            name={serverName}
-            checked={!enterprise}
-            onChange={() => setEnterprise(false)}
-          />
-          GitHub.com
-        </label>
-        <label className={styles.choice}>
-          <input
-            type="radio"
-            name={serverName}
-            checked={enterprise}
-            onChange={() => setEnterprise(true)}
-          />
-          GitHub Enterprise Server
-        </label>
-        {enterprise && (
+        <ServerChoice
+          name={serverName}
+          title="GitHub.com"
+          detail="Including GitHub Enterprise Cloud"
+          checked={!companyServer}
+          onChange={() => setCompanyServer(false)}
+        />
+        <ServerChoice
+          name={serverName}
+          title="Company server"
+          detail="GitHub Enterprise Server or GHE.com"
+          checked={companyServer}
+          onChange={() => setCompanyServer(true)}
+        />
+        {companyServer && (
           <input
             className={styles.input}
             aria-label="Server address"
@@ -92,8 +88,10 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
         )}
       </fieldset>
 
+      {companyServer && <GitHubCliHint host={host} />}
+
       <div className={styles.methods}>
-        {!enterprise && accounts.data?.browserSignIn && (
+        {!companyServer && accounts.data?.browserSignIn && (
           <Method
             icon={<Globe size={16} />}
             title="Sign in with your browser"
@@ -166,6 +164,71 @@ export function ConnectGitHub({ onConnected }: ConnectGitHubProps) {
       <p className={styles.hint}>
         Tokens are encrypted with your macOS keychain and only sent to {host ?? 'your server'}.
       </p>
+    </div>
+  );
+}
+
+interface ServerChoiceProps {
+  name: string;
+  title: string;
+  detail: string;
+  checked: boolean;
+  onChange(): void;
+}
+
+function ServerChoice({ name, title, detail, checked, onChange }: ServerChoiceProps) {
+  const titleId = useId();
+  const detailId = useId();
+  return (
+    <label className={styles.choice}>
+      <input
+        type="radio"
+        name={name}
+        checked={checked}
+        aria-labelledby={titleId}
+        aria-describedby={detailId}
+        onChange={onChange}
+      />
+      <span className={styles.choiceText}>
+        <span id={titleId}>{title}</span>
+        <span id={detailId} className={styles.choiceDetail}>
+          {detail}
+        </span>
+      </span>
+    </label>
+  );
+}
+
+interface GitHubCliHintProps {
+  host: string | undefined;
+}
+
+function GitHubCliHint({ host }: GitHubCliHintProps) {
+  const [copiedCommand, setCopiedCommand] = useState<string>();
+  const command = `gh auth login --hostname ${host ?? '<server address>'} --web`;
+
+  function copy() {
+    navigator.clipboard?.writeText(command).then(
+      () => setCopiedCommand(command),
+      () => setCopiedCommand(undefined),
+    );
+  }
+
+  return (
+    <div className={styles.cliHint}>
+      <p className={styles.hint}>
+        To connect without a token, sign in once with the{' '}
+        <a href="https://cli.github.com" target="_blank" rel="noreferrer">
+          GitHub CLI
+        </a>{' '}
+        in Terminal, then choose Use the GitHub CLI.
+      </p>
+      <div className={styles.commandRow}>
+        <code className={styles.command}>{command}</code>
+        <button type="button" className={styles.secondary} disabled={!host} onClick={copy}>
+          {copiedCommand === command ? 'Copied' : 'Copy'}
+        </button>
+      </div>
     </div>
   );
 }

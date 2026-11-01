@@ -65,7 +65,9 @@ Plot connects to nothing until you choose how to sign in:
 - **Personal access token.** A classic token with the `repo` scope, or a fine-grained token with read access to contents and pull requests.
 - **GitHub CLI.** Uses the account you signed in to with `gh auth login`. Plot asks `gh` for the token when it needs one and stores no copy.
 
-You can connect several accounts, including accounts on GitHub Enterprise Server, and switch between them in Settings > Accounts. Pull requests on an Enterprise server open with the account connected for that server. Tokens are encrypted with your macOS keychain and only sent to the server they belong to.
+Accounts on GitHub Enterprise Cloud live on github.com, so choose GitHub.com for them. Choose Company server for GitHub Enterprise Server or GHE.com. Browser sign-in works only on github.com, so for a company server, run `gh auth login --hostname <server> --web` once and connect with the GitHub CLI, or use a token.
+
+You can connect several accounts, including accounts on company servers, and switch between them in Settings > Accounts. Pull requests on a company server open with the account connected for that server. Tokens are encrypted with your macOS keychain and only sent to the server they belong to.
 
 ## Requirements
 
