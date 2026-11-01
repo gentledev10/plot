@@ -50,19 +50,19 @@ describe('createAccountStore', () => {
 
   it('saves accounts, makes the newest current, and returns tokens only on request', async () => {
     const store = createAccountStore({ file, cipher });
-    await store.save(account('mona'), 'ghp_mona');
-    await store.save(account('hubot'), 'ghp_hubot');
+    await store.save(account('mona'), { accessToken: 'ghp_mona' });
+    await store.save(account('hubot'), { accessToken: 'ghp_hubot' });
 
     const { accounts, currentId } = await store.read();
     expect(accounts.map((item) => item.login)).toEqual(['mona', 'hubot']);
     expect(currentId).toBe('github.com/hubot');
     expect(JSON.stringify(accounts)).not.toContain('ghp_');
-    await expect(store.readToken('github.com/mona')).resolves.toBe('ghp_mona');
+    await expect(store.readTokens('github.com/mona')).resolves.toEqual({ accessToken: 'ghp_mona' });
   });
 
   it('never writes a token in plain text, and keeps the file private', async () => {
     const store = createAccountStore({ file, cipher });
-    await store.save(account('mona'), 'ghp_secret_value');
+    await store.save(account('mona'), { accessToken: 'ghp_secret_value' });
 
     expect(await readFile(file, 'utf8')).not.toContain('ghp_secret_value');
     expect((await stat(file)).mode & 0o777).toBe(0o600);
@@ -70,19 +70,71 @@ describe('createAccountStore', () => {
 
   it('replaces an account that signs in again', async () => {
     const store = createAccountStore({ file, cipher });
-    await store.save(account('mona'), 'old');
-    await store.save(account('mona', { method: 'browser' }), 'new');
+    await store.save(account('mona'), { accessToken: 'old' });
+    await store.save(account('mona', { method: 'browser' }), { accessToken: 'new' });
 
     const { accounts } = await store.read();
     expect(accounts).toHaveLength(1);
     expect(accounts[0]?.method).toBe('browser');
-    await expect(store.readToken('github.com/mona')).resolves.toBe('new');
+    await expect(store.readTokens('github.com/mona')).resolves.toEqual({ accessToken: 'new' });
+  });
+
+  it('seals refresh tokens too and returns them with their expiry', async () => {
+    const store = createAccountStore({ file, cipher });
+    const tokens = {
+      accessToken: 'ghu_access',
+      refreshToken: 'ghr_refresh',
+      expiresAt: 1_000,
+      refreshTokenExpiresAt: 2_000,
+    };
+    await store.save(account('mona', { method: 'browser' }), tokens);
+
+    const written = await readFile(file, 'utf8');
+    expect(written).not.toContain('ghu_access');
+    expect(written).not.toContain('ghr_refresh');
+    expect((await store.read()).accounts).toEqual([account('mona', { method: 'browser' })]);
+    await expect(
+      createAccountStore({ file, cipher }).readTokens('github.com/mona'),
+    ).resolves.toEqual(tokens);
+  });
+
+  it('stores refreshed tokens without switching the current account', async () => {
+    const store = createAccountStore({ file, cipher });
+    await store.save(account('mona', { method: 'browser' }), {
+      accessToken: 'old',
+      refreshToken: 'r1',
+      expiresAt: 1,
+    });
+    await store.save(account('hubot'), { accessToken: 'ghp_hubot' });
+
+    await store.saveTokens('github.com/mona', {
+      accessToken: 'new',
+      refreshToken: 'r2',
+      expiresAt: 2,
+    });
+
+    expect((await store.read()).currentId).toBe('github.com/hubot');
+    await expect(store.readTokens('github.com/mona')).resolves.toEqual({
+      accessToken: 'new',
+      refreshToken: 'r2',
+      expiresAt: 2,
+    });
+  });
+
+  it('does not bring back an account removed while its tokens were refreshed', async () => {
+    const store = createAccountStore({ file, cipher });
+    await store.save(account('mona', { method: 'browser' }), { accessToken: 'old' });
+    await store.remove('github.com/mona');
+
+    await store.saveTokens('github.com/mona', { accessToken: 'new' });
+
+    expect((await store.read()).accounts).toEqual([]);
   });
 
   it('switches and removes accounts, moving the current one when needed', async () => {
     const store = createAccountStore({ file, cipher });
-    await store.save(account('mona'), 'a');
-    await store.save(account('hubot'), 'b');
+    await store.save(account('mona'), { accessToken: 'a' });
+    await store.save(account('hubot'), { accessToken: 'b' });
 
     await store.setCurrent('github.com/mona');
     expect((await store.read()).currentId).toBe('github.com/mona');
@@ -97,14 +149,14 @@ describe('createAccountStore', () => {
   it('keeps no token for accounts that borrow the GitHub CLI login', async () => {
     const store = createAccountStore({ file, cipher });
     await store.save(account('mona', { method: 'github-cli' }));
-    await expect(store.readToken('github.com/mona')).rejects.toMatchObject({
+    await expect(store.readTokens('github.com/mona')).rejects.toMatchObject({
       code: 'github-unauthorized',
     });
   });
 
   it('refuses to save a token when the keychain is unavailable', async () => {
     const store = createAccountStore({ file, cipher: { ...cipher, isAvailable: () => false } });
-    await expect(store.save(account('mona'), 'ghp_x')).rejects.toMatchObject({
+    await expect(store.save(account('mona'), { accessToken: 'ghp_x' })).rejects.toMatchObject({
       code: 'secure-storage-unavailable',
     });
     expect((await store.read()).accounts).toEqual([]);
@@ -119,7 +171,7 @@ describe('createAccountStore', () => {
       }),
     );
     await expect(
-      createAccountStore({ file, cipher }).readToken('github.com/mona'),
+      createAccountStore({ file, cipher }).readTokens('github.com/mona'),
     ).rejects.toMatchObject({ code: 'secure-storage-unavailable' });
   });
 

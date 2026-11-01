@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CommandError, type CommandRunner } from '../system/process';
-import { createGhTokenProvider } from './token';
+import type { OAuthTokens } from './oauth';
+import { createGhTokenProvider, storedTokens } from './token';
 
 function runnerReturning(stdout: string) {
   return vi.fn<CommandRunner>().mockResolvedValue({ stdout, stderr: '' });
@@ -82,5 +83,108 @@ describe('createGhTokenProvider', () => {
 
     await expect(tokens.getToken()).rejects.toBeDefined();
     await expect(tokens.getToken()).resolves.toBe('gho_after_login');
+  });
+});
+
+describe('storedTokens', () => {
+  const HOUR = 3_600_000;
+
+  function setup(initial: OAuthTokens, { canRefresh = true } = {}) {
+    let stored = initial;
+    let time = 0;
+    const refresh = vi.fn(async (refreshToken: string) => ({
+      accessToken: `fresh-from-${refreshToken}`,
+      refreshToken: 'ghr_next',
+      expiresAt: time + 8 * HOUR,
+    }));
+    const save = vi.fn(async (tokens: OAuthTokens) => {
+      stored = tokens;
+    });
+    const tokens = storedTokens({
+      read: async () => stored,
+      save,
+      refresh: canRefresh ? refresh : undefined,
+      now: () => time,
+    });
+    return {
+      tokens,
+      refresh,
+      save,
+      setTime: (value: number) => {
+        time = value;
+      },
+    };
+  }
+
+  it('uses a token that does not expire as it is', async () => {
+    const { tokens, refresh } = setup({ accessToken: 'ghp_forever' });
+    await expect(tokens.getToken()).resolves.toBe('ghp_forever');
+    tokens.invalidate('ghp_forever');
+    await expect(tokens.getToken()).resolves.toBe('ghp_forever');
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('refreshes a token shortly before it expires and saves the new pair', async () => {
+    const { tokens, refresh, save, setTime } = setup({
+      accessToken: 'ghu_old',
+      refreshToken: 'ghr_old',
+      expiresAt: 8 * HOUR,
+    });
+    await expect(tokens.getToken()).resolves.toBe('ghu_old');
+
+    setTime(8 * HOUR - 60_000);
+    await expect(tokens.getToken()).resolves.toBe('fresh-from-ghr_old');
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: 'fresh-from-ghr_old', refreshToken: 'ghr_next' }),
+    );
+  });
+
+  it('refreshes once for requests that need a token at the same time', async () => {
+    const { tokens, refresh } = setup({
+      accessToken: 'ghu_old',
+      refreshToken: 'ghr_old',
+      expiresAt: 0,
+    });
+    await expect(
+      Promise.all([tokens.getToken(), tokens.getToken(), tokens.getToken()]),
+    ).resolves.toEqual(['fresh-from-ghr_old', 'fresh-from-ghr_old', 'fresh-from-ghr_old']);
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes once after GitHub rejects a token, however many requests saw it fail', async () => {
+    const { tokens, refresh } = setup({
+      accessToken: 'ghu_old',
+      refreshToken: 'ghr_old',
+      expiresAt: 8 * HOUR,
+    });
+    const rejected = await tokens.getToken();
+
+    tokens.invalidate(rejected);
+    const retry = tokens.getToken();
+    tokens.invalidate(rejected);
+    await expect(retry).resolves.toBe('fresh-from-ghr_old');
+    tokens.invalidate(rejected);
+
+    await expect(tokens.getToken()).resolves.toBe('fresh-from-ghr_old');
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks to sign in again when an expired token cannot be refreshed', async () => {
+    const outdated = setup({
+      accessToken: 'ghu_old',
+      refreshToken: 'ghr_old',
+      expiresAt: 0,
+      refreshTokenExpiresAt: 0,
+    });
+    await expect(outdated.tokens.getToken()).rejects.toMatchObject({
+      code: 'github-unauthorized',
+    });
+
+    const noApp = setup(
+      { accessToken: 'ghu_old', refreshToken: 'ghr_old', expiresAt: 0 },
+      { canRefresh: false },
+    );
+    await expect(noApp.tokens.getToken()).rejects.toMatchObject({ code: 'github-unauthorized' });
   });
 });

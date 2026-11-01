@@ -56,7 +56,7 @@ export function createGitHubClient({
       });
     }
     if (response.status === 401 && !isRetry) {
-      tokens.invalidate();
+      tokens.invalidate(token);
       return request(path, true);
     }
     if (!response.ok) {

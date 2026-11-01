@@ -99,13 +99,21 @@ describe('waitForAccessToken', () => {
     const fetch = fakeFetch(
       json({ error: 'authorization_pending' }),
       json({ error: 'slow_down', interval: 10 }),
-      json({ access_token: 'gho_new', token_type: 'bearer', scope: 'repo' }),
+      json({
+        access_token: 'gho_new',
+        token_type: 'bearer',
+        scope: 'repo',
+        refresh_token: 'ghr_new',
+        expires_in: 28_800,
+      }),
     );
     const time = clock();
 
-    await expect(waitForAccessToken(client(fetch), grant, { signal, ...time })).resolves.toBe(
-      'gho_new',
-    );
+    await expect(waitForAccessToken(client(fetch), grant, { signal, ...time })).resolves.toEqual({
+      accessToken: 'gho_new',
+      refreshToken: 'ghr_new',
+      expiresAt: 20_000 + 28_800_000,
+    });
     expect(time.waits).toEqual([5_000, 5_000, 10_000]);
     expect(Object.fromEntries(new URLSearchParams(String(fetch.mock.calls[0]?.[1]?.body)))).toEqual(
       {
@@ -152,8 +160,8 @@ describe('waitForAccessToken', () => {
 
   it('rides out a brief network failure', async () => {
     const fetch = fakeFetch(new Error('offline'), json({ access_token: 'gho_new' }));
-    await expect(waitForAccessToken(client(fetch), grant, { signal, ...clock() })).resolves.toBe(
-      'gho_new',
+    await expect(waitForAccessToken(client(fetch), grant, { signal, ...clock() })).resolves.toEqual(
+      { accessToken: 'gho_new' },
     );
   });
 

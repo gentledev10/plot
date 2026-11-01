@@ -3,22 +3,26 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AccountStore } from '../accounts/account-store';
 import { AppError } from '../errors';
 import type { Fetch, GitHubClient } from '../github/client';
+import type { OAuthTokens } from '../github/oauth';
 import type { TokenProvider } from '../github/token';
 import { createAccountService } from './account-service';
 
-function memoryStore(): AccountStore & { tokens: Map<string, string> } {
+function memoryStore(): AccountStore & { tokens: Map<string, OAuthTokens> } {
   let accounts: Account[] = [];
   let currentId: string | undefined;
-  const tokens = new Map<string, string>();
+  const tokens = new Map<string, OAuthTokens>();
   return {
     tokens,
     read: async () => ({ accounts, currentId }),
-    save: async (account, token) => {
+    save: async (account, saved) => {
       accounts = [...accounts.filter((item) => item.id !== account.id), account];
       currentId = account.id;
-      if (token !== undefined) {
-        tokens.set(account.id, token);
+      if (saved !== undefined) {
+        tokens.set(account.id, saved);
       }
+    },
+    saveTokens: async (id, saved) => {
+      tokens.set(id, saved);
     },
     remove: async (id) => {
       accounts = accounts.filter((item) => item.id !== id);
@@ -27,7 +31,7 @@ function memoryStore(): AccountStore & { tokens: Map<string, string> } {
     setCurrent: async (id) => {
       currentId = id;
     },
-    readToken: async (id) => tokens.get(id) ?? '',
+    readTokens: async (id) => tokens.get(id) ?? { accessToken: '' },
   };
 }
 
@@ -86,7 +90,7 @@ describe('createAccountService', () => {
       method: 'token',
     });
     expect(clientFor).toHaveBeenCalledWith('github.example.com', expect.anything());
-    expect(store.tokens.get('github.example.com/mona')).toBe('ghp_mona');
+    expect(store.tokens.get('github.example.com/mona')).toEqual({ accessToken: 'ghp_mona' });
     await expect(service.listAccounts()).resolves.toMatchObject({
       currentId: 'github.example.com/mona',
       browserSignIn: true,
@@ -110,11 +114,18 @@ describe('createAccountService', () => {
     expect(store.tokens.size).toBe(0);
   });
 
-  it('signs in through the browser with a device code', async () => {
+  it('signs in through the browser with a device code and keeps the refresh token', async () => {
     const fetch = vi
       .fn<Fetch>()
       .mockResolvedValueOnce(json(deviceCode))
-      .mockResolvedValueOnce(json({ access_token: 'gho_browser' }));
+      .mockResolvedValueOnce(
+        json({
+          access_token: 'gho_browser',
+          refresh_token: 'ghr_browser',
+          expires_in: 28_800,
+          refresh_token_expires_in: 15_897_600,
+        }),
+      );
     const { service, store } = setup({ fetch });
 
     await expect(service.startBrowserSignIn()).resolves.toEqual({
@@ -127,7 +138,13 @@ describe('createAccountService', () => {
       id: 'github.com/mona',
       method: 'browser',
     });
-    expect(store.tokens.get('github.com/mona')).toBe('gho_browser');
+    const signedInAt = Date.parse('2026-10-31T00:00:00Z');
+    expect(store.tokens.get('github.com/mona')).toEqual({
+      accessToken: 'gho_browser',
+      refreshToken: 'ghr_browser',
+      expiresAt: signedInAt + 28_800_000,
+      refreshTokenExpiresAt: signedInAt + 15_897_600_000,
+    });
     await expect(service.finishBrowserSignIn('sign-in-1')).rejects.toMatchObject({
       code: 'sign-in-failed',
     });

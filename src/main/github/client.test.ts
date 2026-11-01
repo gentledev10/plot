@@ -87,6 +87,7 @@ describe('createGitHubClient', () => {
     const { client, fetch, tokens } = setup(new Response(null, { status: 401 }), json(octocat));
     await expect(client.getViewer()).resolves.toMatchObject({ login: 'octocat' });
     expect(tokens.invalidate).toHaveBeenCalledOnce();
+    expect(tokens.invalidate).toHaveBeenCalledWith('gho_token');
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 

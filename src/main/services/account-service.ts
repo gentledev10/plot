@@ -12,6 +12,7 @@ import {
   type Sleep,
   waitForAccessToken,
 } from '../github/device-flow';
+import type { OAuthClient, OAuthTokens } from '../github/oauth';
 import { cachedTokens, type TokenProvider } from '../github/token';
 
 export type AccountService = Pick<
@@ -28,10 +29,7 @@ export type AccountService = Pick<
 
 export const BROWSER_SIGN_IN_SCOPES = ['repo'] as const;
 
-export interface BrowserSignInApp {
-  fetch: Parameters<typeof requestDeviceCode>[0]['fetch'];
-  clientId: string;
-  userAgent: string;
+export interface BrowserSignInApp extends OAuthClient {
   sleep?: Sleep;
 }
 
@@ -76,8 +74,8 @@ export function createAccountService({
     };
   }
 
-  async function add(account: Account, token?: string): Promise<Account> {
-    await store.save(account, token);
+  async function add(account: Account, tokens?: OAuthTokens): Promise<Account> {
+    await store.save(account, tokens);
     connections.forget(account.id);
     return account;
   }
@@ -104,7 +102,7 @@ export function createAccountService({
           cachedTokens(async () => token),
           'token',
         ),
-        token,
+        { accessToken: token },
       );
     },
 
@@ -136,17 +134,18 @@ export function createAccountService({
         throw new AppError('sign-in-failed', 'This sign-in is no longer in progress. Start again.');
       }
       try {
-        const token = await waitForAccessToken(browserSignIn, signIn.grant, {
+        const tokens = await waitForAccessToken(browserSignIn, signIn.grant, {
           signal: signIn.controller.signal,
           sleep: browserSignIn.sleep,
+          now: () => now().getTime(),
         });
         return await add(
           await identify(
             GITHUB_HOST,
-            cachedTokens(async () => token),
+            cachedTokens(async () => tokens.accessToken),
             'browser',
           ),
-          token,
+          tokens,
         );
       } finally {
         pending.delete(id);

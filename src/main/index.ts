@@ -25,8 +25,9 @@ import { basicAuthHeader } from './git/environment';
 import { createRepositoryCache } from './git/repository-cache';
 import { createGitHubClient } from './github/client';
 import { createConnections } from './github/connections';
+import { type OAuthClient, refreshTokens } from './github/oauth';
 import { GITHUB_OAUTH_CLIENT_ID } from './github/oauth-app';
-import { cachedTokens, createGhTokenProvider, type TokenProvider } from './github/token';
+import { createGhTokenProvider, storedTokens, type TokenProvider } from './github/token';
 import { argumentParsers } from './ipc/arguments';
 import { registerIpcHandlers } from './ipc/register';
 import { createLocalGit } from './local/local-git';
@@ -57,6 +58,9 @@ function createApi(): PlotApi {
   const fetch = (url: string, init: RequestInit) => net.fetch(url, init);
   const clientFor = (host: string, tokens: TokenProvider) =>
     createGitHubClient({ fetch, tokens, userAgent, host });
+  const oauthApp: OAuthClient | undefined = GITHUB_OAUTH_CLIENT_ID
+    ? { fetch, clientId: GITHUB_OAUTH_CLIENT_ID, userAgent }
+    : undefined;
 
   const accounts = createAccountStore({
     file: join(userData, 'accounts.json'),
@@ -68,7 +72,13 @@ function createApi(): PlotApi {
       const tokens =
         account.method === 'github-cli'
           ? createGhTokenProvider(runCommand, { host: account.host, user: account.login })
-          : cachedTokens(() => accounts.readToken(account.id));
+          : storedTokens({
+              read: () => accounts.readTokens(account.id),
+              save: (fresh) => accounts.saveTokens(account.id, fresh),
+              refresh: oauthApp
+                ? (refreshToken) => refreshTokens(oauthApp, refreshToken)
+                : undefined,
+            });
       return {
         account,
         client: clientFor(account.host, tokens),
@@ -107,9 +117,7 @@ function createApi(): PlotApi {
       connections,
       clientFor,
       gitHubCliTokens: (host) => createGhTokenProvider(runCommand, { host }),
-      browserSignIn: GITHUB_OAUTH_CLIENT_ID
-        ? { fetch, clientId: GITHUB_OAUTH_CLIENT_ID, userAgent }
-        : undefined,
+      browserSignIn: oauthApp,
     }),
     ...createGitHubService(connections),
     ...createDiffService({ connections, repositories }),

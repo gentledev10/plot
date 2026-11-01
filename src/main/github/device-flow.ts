@@ -1,8 +1,15 @@
 import { AppError } from '../errors';
-import type { Fetch } from './client';
+import {
+  ACCESS_TOKEN_URL,
+  type OAuthClient,
+  type OAuthResponse,
+  type OAuthTokens,
+  parseTokens,
+  postForm,
+  refusedSignIn,
+} from './oauth';
 
 const DEVICE_CODE_URL = 'https://github.com/login/device/code';
-const ACCESS_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const DEVICE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
 const MAX_NETWORK_FAILURES = 3;
 
@@ -14,26 +21,18 @@ export interface DeviceCodeGrant {
   intervalSeconds: number;
 }
 
-interface DeviceFlowClient {
-  fetch: Fetch;
-  clientId: string;
-  userAgent: string;
-}
-
 export type Sleep = (ms: number, signal: AbortSignal) => Promise<void>;
 
-type Json = Record<string, unknown>;
-
 export async function requestDeviceCode(
-  client: DeviceFlowClient,
+  client: OAuthClient,
   scopes: readonly string[],
 ): Promise<DeviceCodeGrant> {
-  const body = await post(client, DEVICE_CODE_URL, {
+  const body = await postForm(client, DEVICE_CODE_URL, {
     client_id: client.clientId,
     scope: scopes.join(' '),
   });
   if (typeof body.error === 'string') {
-    throw refused(body);
+    throw refusedSignIn(body);
   }
   const { device_code, user_code, verification_uri, expires_in, interval } = body;
   if (
@@ -62,10 +61,10 @@ interface WaitOptions {
 }
 
 export async function waitForAccessToken(
-  client: DeviceFlowClient,
+  client: OAuthClient,
   grant: DeviceCodeGrant,
   { signal, sleep = abortableSleep, now = Date.now }: WaitOptions,
-): Promise<string> {
+): Promise<OAuthTokens> {
   const deadline = now() + grant.expiresInSeconds * 1_000;
   let interval = grant.intervalSeconds;
   let networkFailures = 0;
@@ -74,9 +73,9 @@ export async function waitForAccessToken(
     await sleep(interval * 1_000, signal).catch(() => {
       throw cancelled();
     });
-    let body: Json;
+    let body: OAuthResponse;
     try {
-      body = await post(client, ACCESS_TOKEN_URL, {
+      body = await postForm(client, ACCESS_TOKEN_URL, {
         client_id: client.clientId,
         device_code: grant.deviceCode,
         grant_type: DEVICE_GRANT,
@@ -89,8 +88,9 @@ export async function waitForAccessToken(
       }
       continue;
     }
-    if (typeof body.access_token === 'string' && body.access_token !== '') {
-      return body.access_token;
+    const tokens = parseTokens(body, now());
+    if (tokens) {
+      return tokens;
     }
     switch (body.error) {
       case 'authorization_pending':
@@ -103,41 +103,10 @@ export async function waitForAccessToken(
       case 'access_denied':
         throw new AppError('sign-in-failed', 'The sign-in was declined on GitHub.');
       default:
-        throw refused(body);
+        throw refusedSignIn(body);
     }
   }
   throw expired();
-}
-
-async function post(client: DeviceFlowClient, url: string, form: Record<string, string>) {
-  let response: Response;
-  try {
-    response = await client.fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': client.userAgent,
-      },
-      body: new URLSearchParams(form).toString(),
-    });
-  } catch (error) {
-    throw new AppError('network', 'Could not reach github.com. Check your connection.', {
-      cause: error,
-    });
-  }
-  try {
-    return (await response.json()) as Json;
-  } catch (error) {
-    throw new AppError('sign-in-failed', `GitHub answered the sign-in with ${response.status}.`, {
-      cause: error,
-    });
-  }
-}
-
-function refused(body: Json): AppError {
-  const reason = typeof body.error_description === 'string' ? body.error_description : body.error;
-  return new AppError('sign-in-failed', `GitHub refused the sign-in: ${String(reason)}`);
 }
 
 function expired(): AppError {
