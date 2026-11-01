@@ -654,7 +654,17 @@ try {
       takeaway: 'The environment mediates the runner call.',
       scope: 'Source inspected.',
       before: beforeGraph,
-      after: afterGraph,
+      after: {
+        ...afterGraph,
+        nodes: afterGraph.nodes.map((node) =>
+          node.id === 'processor' ? { ...node, location: { path: longSourcePath, line: 1 } } : node,
+        ),
+        edges: [
+          ...afterGraph.edges,
+          { from: 'processor', to: 'processor', label: 'cache result', evidence: 'code' },
+          { from: 'processor', to: 'caller', label: 'return result', evidence: 'code' },
+        ],
+      },
     },
   ];
   writeFileSync(cacheFile, JSON.stringify(largeReview));
@@ -671,7 +681,8 @@ try {
     .waitFor();
   await changeMap
     .getByRole('img', { name: 'Module calls · After', exact: true })
-    .locator('svg')
+    .locator('rect')
+    .first()
     .waitFor();
   await changeMap.getByRole('button', { name: 'Enlarge diagrams' }).click();
   const structure = changeMap.getByRole('region', { name: 'System responsibilities', exact: true });
@@ -692,6 +703,19 @@ try {
   await structure.getByRole('button', { name: 'Before', exact: true }).click();
   assert.equal(await structure.locator('svg [role="button"]').count(), 0);
   await structure.getByRole('button', { name: 'After', exact: true }).click();
+  const calls = changeMap.getByRole('region', { name: 'Module calls', exact: true });
+  const sequence = calls.getByRole('img', { name: 'Module calls · After', exact: true });
+  assert.equal(await sequence.getAttribute('data-kind'), 'sequence');
+  await sequence.getByText('cache result', { exact: true }).waitFor();
+  await sequence.getByText('return result', { exact: true }).waitFor();
+  await calls.getByRole('button', { name: 'Before', exact: true }).click();
+  assert.equal(await calls.locator('svg [role="button"]').count(), 0);
+  await calls.getByRole('button', { name: 'After', exact: true }).click();
+  await calls.locator('svg [role="button"]').filter({ hasText: 'Module runner' }).focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() =>
+    document.querySelector('.editor.modified .view-lines')?.textContent?.includes('long-path'),
+  );
   await structure.locator('svg [role="button"]').filter({ hasText: 'Module runner' }).click();
   await page.waitForFunction(() =>
     document.querySelector('.editor.modified .view-lines')?.textContent?.includes('result'),

@@ -73,7 +73,7 @@
 }
 .canvas {
   overflow: auto;
-  max-height: 680px;
+  max-height: 800px;
   min-width: 0;
 }
 .canvas svg {
@@ -82,68 +82,193 @@
   min-width: 0;
   margin-inline: auto;
 }
-.edge rect {
-  fill: var(--color-bg-editor);
+.drawing {
+  --drawing-bg: #f4f6fa;
+  --drawing-surface: #ffffff;
+  --drawing-ink: #26324a;
+  --drawing-muted: #5c6a82;
+  --drawing-wire: #8090a8;
+  --drawing-dot: #d2d9e5;
+  --drawing-border: #d6dfeb;
+  --drawing-blue: #315fbe;
+  --drawing-teal: #126e68;
+  --drawing-violet: #7052ab;
+  --drawing-amber: #88601c;
+  --drawing-rose: #a33e65;
+  --drawing-accent: var(--drawing-blue);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  isolation: isolate;
 }
-.area rect {
-  fill: var(--color-bg-panel);
-  stroke: var(--color-border-strong);
-  stroke-dasharray: 4 3;
+.drawing[data-tone="dark"] {
+  --drawing-bg: #191e29;
+  --drawing-surface: #2a3242;
+  --drawing-ink: #eef2fa;
+  --drawing-muted: #b1bdd0;
+  --drawing-wire: #8796af;
+  --drawing-dot: #354052;
+  --drawing-border: #48556c;
+  --drawing-blue: #8cacff;
+  --drawing-teal: #6bd5c2;
+  --drawing-violet: #bea2f5;
+  --drawing-amber: #e9c379;
+  --drawing-rose: #ee9dbb;
 }
-.area text {
-  fill: var(--color-text-muted);
-  font:
-    12px -apple-system,
-    sans-serif;
+.drawing [data-palette="blue"] {
+  --drawing-accent: var(--drawing-blue);
 }
-.node rect {
-  fill: var(--color-bg-input);
-  stroke: var(--color-border-strong);
-  stroke-width: 1.5;
+.drawing [data-palette="teal"] {
+  --drawing-accent: var(--drawing-teal);
 }
-.node text {
-  fill: var(--color-text);
-  font:
-    14px -apple-system,
-    sans-serif;
+.drawing [data-palette="violet"] {
+  --drawing-accent: var(--drawing-violet);
 }
-.node[data-status="added"] rect {
-  fill: var(--diff-inserted-line);
-  stroke: var(--color-success);
+.drawing [data-palette="amber"] {
+  --drawing-accent: var(--drawing-amber);
 }
-.node[data-status="changed"] rect {
-  fill: var(--diff-modified-line);
-  stroke: var(--color-accent);
+.drawing [data-palette="rose"] {
+  --drawing-accent: var(--drawing-rose);
 }
-.node[data-status="removed"] rect {
-  fill: var(--diff-deleted-line);
-  stroke-dasharray: 4 3;
+.area {
+  pointer-events: none;
 }
-.node[data-inferred="true"] rect {
-  stroke-dasharray: 4 3;
+.areaBody {
+  fill: color-mix(in srgb, var(--drawing-accent) 5%, var(--drawing-bg));
+  stroke: color-mix(in srgb, var(--drawing-accent) 30%, var(--drawing-border));
+  stroke-width: 1;
+}
+.areaHeader {
+  fill: color-mix(in srgb, var(--drawing-accent) 12%, var(--drawing-bg));
+}
+.areaIcon,
+.nodeIcon {
+  fill: color-mix(in srgb, var(--drawing-accent) 14%, var(--drawing-surface));
+}
+.areaTitle {
+  fill: var(--drawing-accent);
+  font-size: 15px;
+  font-weight: 650;
+}
+.glyph {
+  color: var(--drawing-accent);
+}
+.nodeBody {
+  fill: var(--drawing-surface);
+  stroke: color-mix(in srgb, var(--drawing-accent) 40%, var(--drawing-border));
+  stroke-width: 1.2;
+}
+.nodeAccent {
+  fill: var(--drawing-accent);
+}
+.nodeText {
+  fill: var(--drawing-ink);
+  font-size: 15px;
+  font-weight: 550;
+}
+.node[data-inferred="true"] .nodeBody,
+.node[data-status="removed"] .nodeBody {
+  stroke-dasharray: 5 4;
 }
 .node[role="button"] {
   cursor: pointer;
   outline: none;
 }
-.edge path {
-  fill: none;
-  stroke: var(--color-text-muted);
-  stroke-width: 1.4;
+.node[data-active="true"] .nodeBody,
+.node:focus-visible .nodeBody {
+  stroke: var(--drawing-accent);
+  stroke-width: 2.5;
 }
-.edge[data-inferred="true"] path {
+.node[data-dimmed="true"] {
+  opacity: 0.38;
+}
+.addedMark circle {
+  fill: var(--drawing-accent);
+  stroke: var(--drawing-bg);
+  stroke-width: 2;
+}
+.addedMark path {
+  fill: none;
+  stroke: var(--drawing-bg);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.wireHalo,
+.wire {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.wireHalo {
+  stroke: var(--drawing-bg);
+  stroke-width: 7;
+}
+.wire {
+  stroke: var(--drawing-wire);
+  stroke-width: 1.8;
+}
+.edgeCaption {
+  fill: var(--drawing-bg);
+  stroke: color-mix(in srgb, var(--drawing-wire) 20%, var(--drawing-bg));
+  stroke-width: 0.75;
+}
+.edgeText {
+  fill: var(--drawing-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.sequenceMessage .wire {
+  stroke: var(--drawing-accent);
+}
+.sequenceMessage .edgeText {
+  fill: var(--drawing-ink);
+  font-size: 14px;
+}
+.edge[data-inferred="true"] .wire,
+.sequenceMessage[data-inferred="true"] .wire {
   stroke-dasharray: 5 4;
 }
-.edge text {
-  fill: var(--color-text-muted);
-  font:
-    11px -apple-system,
-    sans-serif;
+.edge[data-dimmed="true"] {
+  opacity: 0.18;
 }
-.node[role="button"]:hover rect,
-.node[role="button"]:focus-visible rect {
-  stroke: var(--color-accent);
+.edge[data-active="true"] .wire {
+  stroke: var(--drawing-blue);
+  stroke-width: 2.5;
+}
+.edge[data-active="true"] .edgeText {
+  fill: var(--drawing-ink);
+}
+.lane {
+  fill: color-mix(in srgb, var(--drawing-accent) 4%, var(--drawing-bg));
+}
+.lifeline {
+  stroke: color-mix(in srgb, var(--drawing-accent) 40%, var(--drawing-border));
+  stroke-width: 1.5;
+  stroke-dasharray: 4 6;
+}
+.activation {
+  fill: color-mix(in srgb, var(--drawing-accent) 35%, var(--drawing-surface));
+  stroke: var(--drawing-accent);
+  stroke-width: 1;
+}
+.sequenceMessage {
+  outline: none;
+}
+.sequenceMessage[data-dimmed="true"] {
+  opacity: 0.18;
+}
+.sequenceMessage[data-active="true"] .wire {
+  stroke-width: 2.7;
+}
+.messageNumber {
+  fill: var(--drawing-accent);
+  stroke: var(--drawing-bg);
   stroke-width: 3;
+}
+.messageIndex {
+  fill: var(--drawing-bg);
+  font-size: 12px;
+  font-weight: 750;
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 .evidence {
   margin-top: 10px;

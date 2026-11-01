@@ -1,8 +1,7 @@
 import type { Architecture, CodeLocation, ReviewVisual } from '@shared/review';
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useT } from '../language/LanguageProvider';
-import { MermaidDiagram } from './MermaidDiagram';
-import { sequenceToMermaid } from './mermaid-source';
+import { SequenceDiagram } from './SequenceDiagram';
 import { VectorDiagram } from './VectorDiagram';
 import styles from './VisualWalkthrough.module.css';
 
@@ -139,19 +138,8 @@ function Graph({
   onOpen?(location: CodeLocation): void;
   changedPaths: ReadonlySet<string>;
 }) {
-  const source = useMemo(() => {
-    if (kind !== 'sequence') return '';
-    const names = new Map(graph.nodes.map((node) => [node.id, node.label]));
-    return sequenceToMermaid(
-      graph.edges.map((edge) => ({
-        from: names.get(edge.from) ?? edge.from,
-        to: names.get(edge.to) ?? edge.to,
-        label: edge.label ?? '',
-      })),
-    );
-  }, [graph, kind]);
   return kind === 'sequence' ? (
-    <MermaidDiagram source={source} fit label={label} />
+    <SequenceDiagram graph={graph} label={label} onOpen={onOpen} changedPaths={changedPaths} />
   ) : (
     <VectorDiagram
       graph={graph}

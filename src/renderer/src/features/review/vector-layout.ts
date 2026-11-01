@@ -1,19 +1,39 @@
 import type { Architecture } from '@shared/review';
 import type { ElkNode } from 'elkjs/lib/elk-api';
+import {
+  type DiagramPalette,
+  type DiagramRole,
+  diagramPalette,
+  diagramRole,
+  nodeRole,
+  roundedConnection,
+} from './diagram-design';
 
-export function labelLines(label: string): string[] {
+export function labelLines(label: string, capacity = 10.5): string[] {
   const lines: string[] = [];
   let line = '';
-  let width = 0;
-  for (const character of label.slice(0, 100)) {
-    const units = character.charCodeAt(0) > 127 ? 1 : 0.55;
-    if (width + units > 10.5 && line) {
+  const units = (text: string) =>
+    [...text].reduce((total, character) => total + (character.charCodeAt(0) > 127 ? 1 : 0.55), 0);
+  const append = (part: string) => {
+    if (line && units(line + part) > capacity) {
       lines.push(line.trim());
       line = '';
-      width = 0;
     }
-    line += character;
-    width += units;
+    if (units(part) <= capacity) {
+      line += part;
+      return;
+    }
+    for (const character of part) {
+      if (line && units(line + character) > capacity) {
+        lines.push(line.trim());
+        line = '';
+      }
+      line += character;
+    }
+  };
+  for (const part of label.slice(0, 100).split(/(?<=[\s·/])/u)) {
+    if (units(part) <= capacity) append(part);
+    else for (const identifierPart of part.split(/(?<=[a-z])(?=[A-Z])/u)) append(identifierPart);
   }
   if (line) lines.push(line.trim());
   return lines.length ? lines : [''];
@@ -22,22 +42,51 @@ export function labelLines(label: string): string[] {
 export interface VectorLayout {
   width: number;
   height: number;
-  nodes: { index: number; x: number; y: number; width: number; height: number; lines: string[] }[];
-  groups: { id: string; label: string; x: number; y: number; width: number; height: number }[];
+  nodes: {
+    index: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    lines: string[];
+    role: DiagramRole;
+    palette: DiagramPalette;
+  }[];
+  groups: {
+    id: string;
+    label: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    role: DiagramRole;
+    palette: DiagramPalette;
+  }[];
   edges: {
     index: number;
     path: string;
-    labels: { text: string; x: number; y: number; width: number; height: number }[];
+    labels: {
+      text: string;
+      lines: string[];
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }[];
   }[];
 }
 
 export async function layoutVectorGraph(graph: Architecture, flow = false): Promise<VectorLayout> {
   const { default: ELK } = await import('elkjs/lib/elk.bundled.js');
   const ids = new Map(graph.nodes.map((node, index) => [node.id, `n${index}`]));
+  const roles = graph.nodes.map((_, index) => nodeRole(graph, index, flow));
   const children: ElkNode[] = graph.nodes.map((node, index) => ({
     id: `n${index}`,
-    width: 164,
-    height: Math.max(56, labelLines(node.label).length * 17 + 24),
+    width: 244,
+    height: Math.max(
+      roles[index] === 'decision' ? 100 : 80,
+      labelLines(node.label).length * 19 + 32,
+    ),
   }));
   const grouped = new Set<string>();
   const areas = (graph.groups ?? []).flatMap((group, index) => {
@@ -48,7 +97,7 @@ export async function layoutVectorGraph(graph: Architecture, flow = false): Prom
       {
         id: `g${index}`,
         children: members,
-        layoutOptions: { 'elk.padding': '[top=38,left=18,bottom=18,right=18]' },
+        layoutOptions: { 'elk.padding': '[top=60,left=24,bottom=20,right=24]' },
       },
     ];
   });
@@ -59,9 +108,10 @@ export async function layoutVectorGraph(graph: Architecture, flow = false): Prom
       'elk.direction': flow ? 'RIGHT' : 'DOWN',
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
       'elk.edgeRouting': 'ORTHOGONAL',
-      'elk.spacing.nodeNode': '32',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '48',
-      'elk.padding': '[top=16,left=16,bottom=16,right=16]',
+      'elk.spacing.nodeNode': '24',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '24',
+      'elk.layered.spacing.edgeNodeBetweenLayers': '12',
+      'elk.padding': '[top=28,left=28,bottom=28,right=28]',
     },
     children: [...areas, ...children.filter((node) => !grouped.has(node.id))],
     edges: graph.edges.flatMap((edge, index) => {
@@ -69,13 +119,30 @@ export async function layoutVectorGraph(graph: Architecture, flow = false): Prom
       const to = ids.get(edge.to);
       if (!from || !to) return [];
       const text = edge.label?.slice(0, 48);
+      const lines = text ? labelLines(text, 16) : [];
       return [
         {
           id: `e${index}`,
           sources: [from],
           targets: [to],
           ...(text
-            ? { labels: [{ text, width: Math.min(160, text.length * 8), height: 18 }] }
+            ? {
+                labels: [
+                  {
+                    text,
+                    width:
+                      Math.max(
+                        ...lines.map((line) =>
+                          [...line].reduce(
+                            (sum, character) => sum + (character.charCodeAt(0) > 127 ? 13 : 7.15),
+                            0,
+                          ),
+                        ),
+                      ) + 20,
+                    height: lines.length * 18 + 10,
+                  },
+                ],
+              }
             : {}),
         },
       ];
@@ -90,6 +157,8 @@ export async function layoutVectorGraph(graph: Architecture, flow = false): Prom
     origins.set(node.id, { x: left, y: top });
     if (/^n\d+$/.test(node.id)) {
       const index = Number(node.id.slice(1));
+      const group = graph.groups?.find((candidate) => candidate.id === graph.nodes[index]?.group);
+      const role = roles[index] ?? 'component';
       nodes.push({
         index,
         x: left,
@@ -97,8 +166,14 @@ export async function layoutVectorGraph(graph: Architecture, flow = false): Prom
         width: node.width ?? 164,
         height: node.height ?? 56,
         lines: labelLines(graph.nodes[index]?.label ?? ''),
+        role,
+        palette: group
+          ? diagramPalette(diagramRole(group.label), group.id)
+          : diagramPalette(role, graph.nodes[index]?.id),
       });
     } else if (/^g\d+$/.test(node.id)) {
+      const group = graph.groups?.[Number(node.id.slice(1))];
+      const role = diagramRole(group?.label ?? '');
       groups.push({
         id: node.id,
         label: graph.groups?.[Number(node.id.slice(1))]?.label ?? '',
@@ -106,6 +181,8 @@ export async function layoutVectorGraph(graph: Architecture, flow = false): Prom
         y: top,
         width: node.width ?? 0,
         height: node.height ?? 0,
+        role,
+        palette: diagramPalette(role, group?.id),
       });
     }
     for (const child of node.children ?? []) collect(child, left, top);
@@ -124,15 +201,14 @@ export async function layoutVectorGraph(graph: Architecture, flow = false): Prom
         path: (edge.sections ?? [])
           .map((section) => {
             const points = [section.startPoint, ...(section.bendPoints ?? []), section.endPoint];
-            return points
-              .map(
-                (point, index) => `${index ? 'L' : 'M'}${point.x + offset.x},${point.y + offset.y}`,
-              )
-              .join(' ');
+            return roundedConnection(
+              points.map((point) => ({ x: point.x + offset.x, y: point.y + offset.y })),
+            );
           })
           .join(' '),
         labels: (edge.labels ?? []).map((label) => ({
           text: label.text ?? '',
+          lines: labelLines(label.text ?? '', 16),
           x: (label.x ?? 0) + offset.x,
           y: (label.y ?? 0) + offset.y,
           width: label.width ?? 0,

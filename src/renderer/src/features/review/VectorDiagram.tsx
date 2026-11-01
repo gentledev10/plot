@@ -1,8 +1,10 @@
 import type { Architecture, CodeLocation } from '@shared/review';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useT } from '../language/LanguageProvider';
+import { DiagramCanvas } from './DiagramCanvas';
+import { DiagramGlyph } from './DiagramGlyph';
 import styles from './VisualWalkthrough.module.css';
-import { layoutVectorGraph, type VectorLayout } from './vector-layout';
+import { labelLines, layoutVectorGraph, type VectorLayout } from './vector-layout';
 
 export function VectorDiagram({
   graph,
@@ -18,98 +20,107 @@ export function VectorDiagram({
   changedPaths: ReadonlySet<string>;
 }) {
   const t = useT();
-  const id = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [layout, setLayout] = useState<VectorLayout>();
   const [failed, setFailed] = useState(false);
-  const [readable, setReadable] = useState(false);
-  const canvas = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(300);
+  const [active, setActive] = useState<number>();
   useEffect(() => {
-    if (!layout || !canvas.current) return;
-    const observer = new ResizeObserver(([entry]) => setWidth(entry?.contentRect.width ?? 300));
-    observer.observe(canvas.current);
-    return () => observer.disconnect();
-  }, [layout]);
-  useEffect(() => {
-    let active = true;
+    let current = true;
     setLayout(undefined);
     setFailed(false);
-    setReadable(false);
+    setActive(undefined);
     layoutVectorGraph(graph, flow)
       .then((result) => {
-        if (active) setLayout(result);
+        if (current) setLayout(result);
       })
       .catch(() => {
-        if (active) setFailed(true);
+        if (current) setFailed(true);
       });
     return () => {
-      active = false;
+      current = false;
     };
   }, [graph, flow]);
   if (failed) return <p>{t('This diagram could not be drawn.')}</p>;
   if (!layout) return <p role="status">{t('Drawing diagram…')}</p>;
+  const selected = active === undefined ? undefined : graph.nodes[active]?.id;
+  const connected = new Set(
+    selected
+      ? [
+          selected,
+          ...graph.edges.flatMap((edge) =>
+            edge.from === selected ? [edge.to] : edge.to === selected ? [edge.from] : [],
+          ),
+        ]
+      : [],
+  );
   return (
-    <>
-      <fieldset className={styles.controls} aria-label={t('Diagram size')}>
-        <button type="button" aria-pressed={!readable} onClick={() => setReadable(false)}>
-          {t('Fit to panel')}
-        </button>
-        <button type="button" aria-pressed={readable} onClick={() => setReadable(true)}>
-          {t('Readable size')}
-        </button>
-      </fieldset>
-      <div ref={canvas} className={styles.canvas}>
-        <svg
-          role="img"
-          aria-label={label}
-          viewBox={`0 0 ${layout.width} ${layout.height}`}
-          style={{
-            width: `${layout.width * (readable ? 1 : Math.min(1, width / layout.width, 640 / layout.height))}px`,
-          }}
-        >
-          <title>{label}</title>
-          <defs>
-            <marker
-              id={`${id}-arrow`}
-              markerWidth="8"
-              markerHeight="8"
-              refX="7"
-              refY="4"
-              orient="auto"
-            >
-              <path d="M0,0 L8,4 L0,8 Z" fill="var(--color-text-muted)" />
-            </marker>
-          </defs>
+    <DiagramCanvas
+      width={layout.width}
+      height={layout.height}
+      label={label}
+      kind={flow ? 'flow' : 'architecture'}
+    >
+      {(id) => (
+        <>
           {layout.groups.map((group) => (
-            <g key={group.id} className={styles.area}>
-              <rect x={group.x} y={group.y} width={group.width} height={group.height} rx="12" />
-              <text x={group.x + 12} y={group.y + 23}>
-                {group.label.slice(0, 60)}
-              </text>
+            <g key={group.id} className={styles.area} data-palette={group.palette}>
+              <rect
+                className={styles.areaBody}
+                x={group.x}
+                y={group.y}
+                width={group.width}
+                height={group.height}
+                rx="20"
+              />
             </g>
           ))}
-          {layout.edges.map((edge) => (
-            <g
-              key={edge.index}
-              className={styles.edge}
-              data-inferred={graph.edges[edge.index]?.evidence === 'inferred'}
-            >
-              <path d={edge.path} markerEnd={`url(#${id}-arrow)`} />
-              {edge.labels.map((item) => (
-                <g key={`${item.x}-${item.y}-${item.text}`}>
-                  <rect
-                    x={item.x - 3}
-                    y={item.y - 1}
-                    width={item.width + 6}
-                    height={item.height + 2}
-                    rx="3"
-                  />
-                  <text x={item.x + item.width / 2} y={item.y + 13} textAnchor="middle">
-                    {item.text}
-                  </text>
-                </g>
-              ))}
-            </g>
+          {layout.edges.map((edge) => {
+            const source = graph.edges[edge.index];
+            const highlighted =
+              selected !== undefined && (source?.from === selected || source?.to === selected);
+            return (
+              <g
+                key={edge.index}
+                className={styles.edge}
+                data-active={highlighted}
+                data-dimmed={selected !== undefined && !highlighted}
+                data-inferred={source?.evidence === 'inferred'}
+              >
+                <path className={styles.wireHalo} d={edge.path} />
+                <path className={styles.wire} d={edge.path} markerEnd={`url(#${id}-arrow)`} />
+                {edge.labels.map((item) => (
+                  <g key={`${item.x}-${item.y}-${item.text}`}>
+                    <rect
+                      className={styles.edgeCaption}
+                      x={item.x}
+                      y={item.y}
+                      width={item.width}
+                      height={item.height}
+                      rx="8"
+                    />
+                    <text
+                      className={styles.edgeText}
+                      x={item.x + item.width / 2}
+                      y={item.y + 18}
+                      textAnchor="middle"
+                    >
+                      {item.lines.map((line, index) => (
+                        <tspan
+                          // biome-ignore lint/suspicious/noArrayIndexKey: static text fragments have no state
+                          key={`${index}-${line}`}
+                          x={item.x + item.width / 2}
+                          dy={index ? 18 : 0}
+                        >
+                          {line}
+                        </tspan>
+                      ))}
+                    </text>
+                  </g>
+                ))}
+              </g>
+            );
+          })}
+          {layout.groups.map((group) => (
+            <AreaHeading key={group.id} group={group} />
           ))}
           {layout.nodes.map((node) => {
             const source = graph.nodes[node.index];
@@ -118,16 +129,31 @@ export function VectorDiagram({
               location && onOpen && changedPaths.has(location.path)
                 ? () => onOpen(location)
                 : undefined;
+            const radius = node.role === 'app' ? 42 : 16;
+            const textX = node.x + 73;
+            const textY = node.y + node.height / 2 - (node.lines.length - 1) * 9.5;
+            const decision = node.role === 'decision';
+            const shape = decision
+              ? `M${node.x + 22},${node.y} H${node.x + node.width - 22} L${node.x + node.width},${node.y + 24} V${node.y + node.height - 24} L${node.x + node.width - 22},${node.y + node.height} H${node.x + 22} L${node.x},${node.y + node.height - 24} V${node.y + 24} Z`
+              : undefined;
             return (
-              // biome-ignore lint/a11y/noStaticElementInteractions: handlers and button semantics are present together only for navigable current-code locations
+              // biome-ignore lint/a11y/noStaticElementInteractions: current-code locations alone receive button semantics and navigation; hover only traces relationships
               <g
                 key={node.index}
                 className={styles.node}
+                data-role={node.role}
+                data-palette={node.palette}
                 data-status={source?.status}
+                data-active={active === node.index}
+                data-dimmed={selected !== undefined && !connected.has(source?.id ?? '')}
                 data-inferred={source?.evidence === 'inferred'}
                 role={open ? 'button' : undefined}
                 tabIndex={open ? 0 : undefined}
                 aria-label={open ? source?.label : undefined}
+                onPointerEnter={() => setActive(node.index)}
+                onPointerLeave={() => setActive(undefined)}
+                onFocus={() => setActive(node.index)}
+                onBlur={() => setActive(undefined)}
                 onClick={open}
                 onKeyDown={
                   open
@@ -141,31 +167,105 @@ export function VectorDiagram({
                 }
               >
                 <title>{source?.label}</title>
+                {shape ? (
+                  <path className={styles.nodeBody} d={shape} filter={`url(#${id}-shadow)`} />
+                ) : (
+                  <rect
+                    className={styles.nodeBody}
+                    x={node.x}
+                    y={node.y}
+                    width={node.width}
+                    height={node.height}
+                    rx={radius}
+                    filter={`url(#${id}-shadow)`}
+                  />
+                )}
+                {node.role !== 'app' && (
+                  <rect
+                    className={styles.nodeAccent}
+                    x={node.x + 1}
+                    y={node.y + 19}
+                    width="3"
+                    height={node.height - 38}
+                    rx="2"
+                  />
+                )}
                 <rect
-                  x={node.x}
-                  y={node.y}
-                  width={node.width}
-                  height={node.height}
-                  rx={flow ? 6 : 10}
+                  className={styles.nodeIcon}
+                  x={node.x + 16}
+                  y={node.y + node.height / 2 - 21}
+                  width="42"
+                  height="42"
+                  rx={node.role === 'app' ? 21 : 12}
                 />
-                <text
-                  x={node.x + node.width / 2}
-                  y={node.y + node.height / 2 - (node.lines.length - 1) * 8.5}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                >
+                <g className={styles.glyph}>
+                  <DiagramGlyph
+                    role={node.role}
+                    x={node.x + 25}
+                    y={node.y + node.height / 2 - 12}
+                  />
+                </g>
+                <text className={styles.nodeText} x={textX} y={textY} dominantBaseline="central">
                   {node.lines.map((line, index) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: immutable text fragments have no component state; repeated lines need distinct keys
-                    <tspan key={`${index}-${line}`} x={node.x + node.width / 2} dy={index ? 17 : 0}>
+                    // biome-ignore lint/suspicious/noArrayIndexKey: immutable label fragments can repeat
+                    <tspan key={`${index}-${line}`} x={textX} dy={index ? 19 : 0}>
                       {line}
                     </tspan>
                   ))}
                 </text>
+                {source?.status === 'added' && (
+                  <g className={styles.addedMark}>
+                    <circle cx={node.x + node.width - 7} cy={node.y + 7} r="9" />
+                    <path
+                      d={`M${node.x + node.width - 11},${node.y + 7} h8 M${node.x + node.width - 7},${node.y + 3} v8`}
+                    />
+                  </g>
+                )}
               </g>
             );
           })}
-        </svg>
-      </div>
-    </>
+        </>
+      )}
+    </DiagramCanvas>
+  );
+}
+
+function AreaHeading({ group }: { group: VectorLayout['groups'][number] }) {
+  const lines = labelLines(group.label, (group.width - 72) / 15).slice(0, 2);
+  return (
+    <g className={styles.area} data-palette={group.palette}>
+      <rect
+        className={styles.areaHeader}
+        x={group.x + 9}
+        y={group.y + 9}
+        width={group.width - 18}
+        height="42"
+        rx="12"
+      />
+      <rect
+        className={styles.areaIcon}
+        x={group.x + 17}
+        y={group.y + 17}
+        width="26"
+        height="26"
+        rx="8"
+      />
+      <g className={styles.glyph}>
+        <DiagramGlyph role={group.role} x={group.x + 22} y={group.y + 22} size={16} />
+      </g>
+      <text
+        className={styles.areaTitle}
+        x={group.x + 53}
+        y={group.y + 30 - (lines.length - 1) * 8}
+        dominantBaseline="central"
+      >
+        {lines.map((line, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static lines can repeat and have no state
+          <tspan key={`${index}-${line}`} x={group.x + 53} dy={index ? 16 : 0}>
+            {line}
+          </tspan>
+        ))}
+      </text>
+    </g>
   );
 }

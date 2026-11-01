@@ -60,6 +60,13 @@ describe('vector layout', () => {
       }
     }
   });
+  it('keeps API identifiers together when they fit on a line', () => {
+    expect(labelLines('ViteBuilder·BuildEnvironment')).toEqual([
+      'ViteBuilder·',
+      'BuildEnvironment',
+    ]);
+    expect(labelLines('환경별 플러그인 컨테이너')).toEqual(['환경별 플러그인', '컨테이너']);
+  });
   it('wraps long identifiers and Korean labels without losing their content', () => {
     const label = '아주긴이름의EnvironmentConfiguration';
     expect(labelLines(label).length).toBeGreaterThan(1);
