@@ -6,6 +6,9 @@ directories:
 files:
   - out/**/*
   - package.json
+extraResources:
+  - LICENSE
+  - THIRD_PARTY_NOTICES.md
 mac:
   category: public.app-category.developer-tools
   hardenedRuntime: true

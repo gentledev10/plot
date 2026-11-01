@@ -99,4 +99,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines, and [docs/ARCHI
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Plot includes fonts and theme colors from other projects under their own licenses, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
