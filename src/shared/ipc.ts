@@ -1,5 +1,5 @@
 import type { Account, AccountList, BrowserSignIn, TokenSignIn } from './accounts';
-import type { AiProviderId, AiProviderStatus, AiSettings } from './ai';
+import type { AiModelOption, AiProviderId, AiProviderStatus, AiSettings } from './ai';
 import type { ThemeSource } from './appearance';
 import type { BlobContent, PullRequestDiff } from './diff';
 import type { ErrorPayload } from './errors';
@@ -38,6 +38,7 @@ export interface PlotApi {
   getAiSettings(): Promise<AiSettings>;
   updateAiSettings(settings: AiSettings): Promise<AiSettings>;
   detectAiProviders(): Promise<AiProviderStatus[]>;
+  listAiModels(provider: AiProviderId): Promise<AiModelOption[]>;
   saveAiApiKey(provider: AiProviderId, key: string): Promise<void>;
   removeAiApiKey(provider: AiProviderId): Promise<void>;
   setThemeSource(source: ThemeSource): Promise<void>;
@@ -79,6 +80,7 @@ const METHODS: Record<IpcMethod, true> = {
   getAiSettings: true,
   updateAiSettings: true,
   detectAiProviders: true,
+  listAiModels: true,
   saveAiApiKey: true,
   removeAiApiKey: true,
   setThemeSource: true,

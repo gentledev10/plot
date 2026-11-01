@@ -37,7 +37,7 @@ export function withApiKey(env: NodeJS.ProcessEnv, apiKey: string): NodeJS.Proce
 }
 
 export function claudeArguments(
-  input: Pick<AgentRunInput, 'prompt' | 'schema' | 'contextDir' | 'model'>,
+  input: Pick<AgentRunInput, 'prompt' | 'schema' | 'contextDir' | 'model' | 'effort'>,
 ) {
   return [
     '--print',
@@ -57,6 +57,7 @@ export function claudeArguments(
     '--add-dir',
     input.contextDir,
     ...(input.model ? [`--model=${input.model}`] : []),
+    ...(input.effort ? [`--effort=${input.effort}`] : []),
   ];
 }
 

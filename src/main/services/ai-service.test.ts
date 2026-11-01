@@ -17,6 +17,8 @@ function setup() {
     store: { read: async () => DEFAULT_AI_SETTINGS, write: async () => {} },
     keys,
     detect: async (id) => ({ id, installed: true, signedIn: id === 'claude-code' }),
+    listModels: async (id) =>
+      id === 'codex' ? [{ id: 'gpt-6-sol', name: 'GPT-6-Sol', efforts: ['low'] }] : [],
   });
   return { service, keys };
 }
@@ -36,5 +38,12 @@ describe('createAiService', () => {
     await service.removeAiApiKey('codex');
     expect(keys.save).toHaveBeenCalledWith('claude-code', 'sk-ant-api03-secret-value');
     expect(keys.remove).toHaveBeenCalledWith('codex');
+  });
+
+  it('lists the models each tool offers', async () => {
+    const { service } = setup();
+    await expect(service.listAiModels('codex')).resolves.toEqual([
+      { id: 'gpt-6-sol', name: 'GPT-6-Sol', efforts: ['low'] },
+    ]);
   });
 });

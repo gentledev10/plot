@@ -52,6 +52,7 @@ export const argumentParsers: ArgumentParsers = {
   getAiSettings: () => [],
   updateAiSettings: ([settings]) => [aiSettings(settings)],
   detectAiProviders: () => [],
+  listAiModels: ([provider]) => [aiProvider(provider)],
   saveAiApiKey: ([provider, key]) => [aiProvider(provider), apiKey(key)],
   removeAiApiKey: ([provider]) => [aiProvider(provider)],
   setThemeSource: ([source]) => [themeSource(source)],

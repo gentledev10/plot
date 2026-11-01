@@ -57,12 +57,12 @@ describe('argumentParsers', () => {
   it('accepts known AI providers and plain model names only', () => {
     expect(
       argumentParsers.updateAiSettings([{ provider: 'codex', models: { codex: 'gpt-5.1-codex' } }]),
-    ).toEqual([{ provider: 'codex', models: { codex: 'gpt-5.1-codex' }, auth: {} }]);
+    ).toEqual([{ provider: 'codex', models: { codex: 'gpt-5.1-codex' }, efforts: {}, auth: {} }]);
     expect(
       argumentParsers.updateAiSettings([
         { provider: 'claude-code', models: { 'claude-code': '--dangerously-skip-permissions' } },
       ]),
-    ).toEqual([{ provider: 'claude-code', models: {}, auth: {} }]);
+    ).toEqual([{ provider: 'claude-code', models: {}, efforts: {}, auth: {} }]);
     expect(() => argumentParsers.updateAiSettings([{ provider: 'gpt', models: {} }])).toThrow(
       expect.objectContaining({ code: 'invalid-argument' }),
     );

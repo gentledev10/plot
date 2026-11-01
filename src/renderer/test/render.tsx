@@ -33,6 +33,7 @@ export function fakeApi(overrides: Partial<PlotApi> = {}): PlotApi {
     getAiSettings: vi.fn().mockResolvedValue({ provider: 'claude-code', models: {} }),
     updateAiSettings: notStubbed('updateAiSettings'),
     detectAiProviders: notStubbed('detectAiProviders'),
+    listAiModels: vi.fn().mockResolvedValue([]),
     saveAiApiKey: notStubbed('saveAiApiKey'),
     removeAiApiKey: notStubbed('removeAiApiKey'),
     setThemeSource: vi.fn().mockResolvedValue(undefined),

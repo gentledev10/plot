@@ -21,6 +21,7 @@ export type ReviewService = Pick<PlotApi, 'getReviewStatus' | 'startReview' | 'c
 export interface SelectedAgent {
   provider: AiProviderId;
   model?: string;
+  effort?: string;
   apiKey?: string;
   agent: ReviewAgent;
 }
@@ -103,13 +104,14 @@ export function createReviewService({
       );
       checkpoint();
 
-      const { provider, model, apiKey, agent } = await resolveAgent();
+      const { provider, model, effort, apiKey, agent } = await resolveAgent();
       const result = await agent.run({
         cwd: repoDir,
         contextDir,
         prompt: buildReviewPrompt({ files, contextDir, language }),
         schema: REVIEW_SCHEMA,
         model,
+        effort,
         apiKey,
         signal: controller.signal,
         onActivity: note,

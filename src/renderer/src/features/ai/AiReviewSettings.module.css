@@ -80,7 +80,51 @@
 .model {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.modelRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
   gap: 4px;
+  font-size: var(--font-size-small);
+}
+
+.select {
+  min-width: 180px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-input);
+  font-size: var(--font-size);
+}
+
+.select:focus-visible {
+  border-color: var(--color-focus);
+}
+
+.other {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 .input {

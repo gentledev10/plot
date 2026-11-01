@@ -5,7 +5,17 @@ import { useApi } from '../../app/providers';
 export const aiKeys = {
   settings: ['ai', 'settings'] as const,
   providers: ['ai', 'providers'] as const,
+  models: (provider: AiProviderId) => ['ai', 'models', provider] as const,
 };
+
+export function useAiModels(provider: AiProviderId) {
+  const api = useApi();
+  return useQuery({
+    queryKey: aiKeys.models(provider),
+    queryFn: () => api.listAiModels(provider),
+    staleTime: 5 * 60_000,
+  });
+}
 
 export function useAiSettings() {
   const api = useApi();

@@ -15,6 +15,7 @@ import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
 import styles from './AiReviewSettings.module.css';
 import {
+  useAiModels,
   useAiProviders,
   useAiSettings,
   useRemoveAiApiKey,
@@ -97,7 +98,7 @@ export function AiReviewSettings() {
         status={statusOf(current.provider)}
         onChange={(next) => update.mutate(next)}
       />
-      <ModelField
+      <ModelFields
         key={`model-${current.provider}`}
         settings={current}
         onSave={(next) => update.mutate(next)}
@@ -268,52 +269,155 @@ function SignInField({ settings, status, onChange }: SignInFieldProps) {
   );
 }
 
-interface ModelFieldProps {
+const OTHER = '__other';
+
+const EFFORT_NAMES: Record<string, string> = {
+  none: 'None',
+  minimal: 'Minimal',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  xhigh: 'Extra high',
+  max: 'Max',
+  ultra: 'Ultra',
+  persistent: 'Persistent',
+};
+
+interface ModelFieldsProps {
   settings: AiSettings;
   onSave(settings: AiSettings): void;
 }
 
-function ModelField({ settings, onSave }: ModelFieldProps) {
-  const saved = settings.models[settings.provider] ?? '';
-  const [value, setValue] = useState(saved);
+function ModelFields({ settings, onSave }: ModelFieldsProps) {
+  const { provider } = settings;
+  const tool = AI_PROVIDERS[provider];
+  const models = useAiModels(provider);
+  const options = models.data ?? [];
+  const model = settings.models[provider];
+  const effort = settings.efforts[provider];
+  const listed = options.find((option) => option.id === model);
+  const efforts = listed?.efforts.length ? listed.efforts : tool.efforts;
+  const [typing, setTyping] = useState(false);
+  const modelId = useId();
+  const effortId = useId();
+
+  function save(next: { model?: string; effort?: string }) {
+    const nextModels = { ...settings.models, [provider]: next.model };
+    const nextEfforts = { ...settings.efforts, [provider]: next.effort };
+    if (next.model === undefined) {
+      delete nextModels[provider];
+    }
+    if (next.effort === undefined) {
+      delete nextEfforts[provider];
+    }
+    onSave({ ...settings, models: nextModels, efforts: nextEfforts });
+  }
+
+  function chooseModel(value: string) {
+    if (value === OTHER) {
+      setTyping(true);
+      return;
+    }
+    setTyping(false);
+    const next = value === '' ? undefined : value;
+    const supported = options.find((option) => option.id === next)?.efforts ?? tool.efforts;
+    save({ model: next, effort: effort && supported.includes(effort) ? effort : undefined });
+  }
+
+  return (
+    <fieldset className={styles.model}>
+      <legend className={styles.legend}>Model for {tool.name}</legend>
+      <div className={styles.modelRow}>
+        <label className={styles.field} htmlFor={modelId}>
+          <span>Model</span>
+          <select
+            id={modelId}
+            className={styles.select}
+            value={typing ? OTHER : (model ?? '')}
+            onChange={(event) => chooseModel(event.target.value)}
+          >
+            <option value="">Default</option>
+            {options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+            {model && !listed && <option value={model}>{model}</option>}
+            <option value={OTHER}>Other…</option>
+          </select>
+        </label>
+        <label className={styles.field} htmlFor={effortId}>
+          <span>Reasoning effort</span>
+          <select
+            id={effortId}
+            className={styles.select}
+            value={effort ?? ''}
+            onChange={(event) => save({ model, effort: event.target.value || undefined })}
+          >
+            <option value="">Default</option>
+            {efforts.map((level) => (
+              <option key={level} value={level}>
+                {EFFORT_NAMES[level] ?? level}
+              </option>
+            ))}
+            {effort && !efforts.includes(effort) && <option value={effort}>{effort}</option>}
+          </select>
+        </label>
+      </div>
+      {typing && (
+        <OtherModelField
+          initial={listed ? '' : (model ?? '')}
+          onSave={(name) => {
+            setTyping(false);
+            save({ model: name, effort });
+          }}
+        />
+      )}
+      <span className={styles.hint}>
+        {provider === 'claude-code'
+          ? 'Each name uses the newest version of that model.'
+          : options.length > 0
+            ? 'The models your installed Codex offers.'
+            : 'Install Codex to choose from its models, or pick Other to type a name.'}{' '}
+        Default uses the setting of {tool.name} itself. Higher effort thinks longer and costs more.
+      </span>
+    </fieldset>
+  );
+}
+
+function OtherModelField({ initial, onSave }: { initial: string; onSave(name: string): void }) {
+  const [value, setValue] = useState(initial);
   const inputId = useId();
   const trimmed = value.trim();
   const invalid = trimmed !== '' && !isModelName(trimmed);
 
-  function save(event?: FormEvent) {
+  function submit(event?: FormEvent) {
     event?.preventDefault();
-    if (invalid || trimmed === saved) {
-      return;
+    if (trimmed !== '' && !invalid) {
+      onSave(trimmed);
     }
-    const models = { ...settings.models };
-    if (trimmed === '') {
-      delete models[settings.provider];
-    } else {
-      models[settings.provider] = trimmed;
-    }
-    onSave({ ...settings, models });
   }
 
   return (
-    <form className={styles.model} onSubmit={save}>
-      <label htmlFor={inputId} className={styles.legend}>
-        Model for {AI_PROVIDERS[settings.provider].name}
+    <form className={styles.other} onSubmit={submit}>
+      <label className={styles.hidden} htmlFor={inputId}>
+        Model name
       </label>
       <input
         id={inputId}
         className={styles.input}
-        placeholder="The tool's default"
+        placeholder="Model name, such as claude-opus-5-5"
         spellCheck={false}
+        // biome-ignore lint/a11y/noAutofocus: the field appears because Other was just chosen
+        autoFocus
         value={value}
         aria-invalid={invalid}
         onChange={(event) => setValue(event.target.value)}
-        onBlur={() => save()}
+        onBlur={() => submit()}
       />
-      <span className={styles.hint}>
-        {invalid
-          ? 'Use a model name such as the ones the tool lists, without spaces.'
-          : 'Leave empty to use the model the tool picks.'}
-      </span>
+      {invalid && (
+        <span className={styles.hint}>Use a model name the tool lists, without spaces.</span>
+      )}
     </form>
   );
 }

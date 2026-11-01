@@ -1,4 +1,4 @@
-import type { AiSettings } from '@shared/ai';
+import { type AiSettings, CLAUDE_CODE_MODELS } from '@shared/ai';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -8,7 +8,10 @@ import { AiReviewSettings } from './AiReviewSettings';
 function setup(overrides: Parameters<typeof renderWithApi>[1] = {}) {
   const updateAiSettings = vi.fn(async (settings: AiSettings) => settings);
   const rendered = renderWithApi(<AiReviewSettings />, {
-    getAiSettings: vi.fn().mockResolvedValue({ provider: 'claude-code', models: {}, auth: {} }),
+    getAiSettings: vi
+      .fn()
+      .mockResolvedValue({ provider: 'claude-code', models: {}, efforts: {}, auth: {} }),
+    listAiModels: vi.fn().mockResolvedValue(CLAUDE_CODE_MODELS),
     detectAiProviders: vi.fn().mockResolvedValue([
       {
         id: 'claude-code',
@@ -51,7 +54,12 @@ describe('AiReviewSettings', () => {
     const codex = await screen.findByRole('radio', { name: /^Codex CLI/ });
     await userEvent.click(codex);
     expect(codex).toBeChecked();
-    expect(updateAiSettings).toHaveBeenCalledWith({ provider: 'codex', models: {}, auth: {} });
+    expect(updateAiSettings).toHaveBeenCalledWith({
+      provider: 'codex',
+      models: {},
+      efforts: {},
+      auth: {},
+    });
   });
 
   it('puts the previous choice back when saving fails', async () => {
@@ -64,9 +72,108 @@ describe('AiReviewSettings', () => {
     expect(screen.getByRole('radio', { name: /^Claude Code/ })).toBeChecked();
   });
 
-  it('saves a model for the selected tool and ignores names that are not models', async () => {
+  it('saves the model picked from the list the tool offers', async () => {
     const { updateAiSettings } = setup();
-    const field = await screen.findByLabelText('Model for Claude Code');
+    const model = await screen.findByRole('combobox', { name: 'Model' });
+    await screen.findByRole('option', { name: 'Opus' });
+
+    await userEvent.selectOptions(model, 'Opus');
+
+    expect(updateAiSettings).toHaveBeenCalledWith({
+      provider: 'claude-code',
+      models: { 'claude-code': 'opus' },
+      efforts: {},
+      auth: {},
+    });
+    expect(model).toHaveValue('opus');
+  });
+
+  it('offers the efforts the chosen model accepts and drops one the next model does not', async () => {
+    const { updateAiSettings } = setup({
+      getAiSettings: vi.fn().mockResolvedValue({
+        provider: 'codex',
+        models: { codex: 'gpt-6' },
+        efforts: {},
+        auth: {},
+      }),
+      listAiModels: vi.fn().mockResolvedValue([
+        { id: 'gpt-6', name: 'GPT-6', efforts: ['low', 'medium', 'high', 'xhigh'] },
+        { id: 'gpt-6-mini', name: 'GPT-6 mini', efforts: ['low', 'medium'] },
+      ]),
+    });
+    const effort = await screen.findByRole('combobox', { name: 'Reasoning effort' });
+    await screen.findByRole('option', { name: 'Extra high' });
+
+    await userEvent.selectOptions(effort, 'Extra high');
+    expect(updateAiSettings).toHaveBeenLastCalledWith({
+      provider: 'codex',
+      models: { codex: 'gpt-6' },
+      efforts: { codex: 'xhigh' },
+      auth: {},
+    });
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'GPT-6 mini');
+    expect(updateAiSettings).toHaveBeenLastCalledWith({
+      provider: 'codex',
+      models: { codex: 'gpt-6-mini' },
+      efforts: {},
+      auth: {},
+    });
+    expect(screen.queryByRole('option', { name: 'Extra high' })).not.toBeInTheDocument();
+  });
+
+  it('keeps a supported effort when the model changes', async () => {
+    const { updateAiSettings } = setup({
+      getAiSettings: vi.fn().mockResolvedValue({
+        provider: 'claude-code',
+        models: { 'claude-code': 'opus' },
+        efforts: { 'claude-code': 'high' },
+        auth: {},
+      }),
+    });
+    await screen.findByRole('option', { name: 'Sonnet' });
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'Sonnet');
+
+    expect(updateAiSettings).toHaveBeenCalledWith({
+      provider: 'claude-code',
+      models: { 'claude-code': 'sonnet' },
+      efforts: { 'claude-code': 'high' },
+      auth: {},
+    });
+  });
+
+  it('goes back to the default of the tool', async () => {
+    const { updateAiSettings } = setup({
+      getAiSettings: vi.fn().mockResolvedValue({
+        provider: 'claude-code',
+        models: { 'claude-code': 'opus' },
+        efforts: { 'claude-code': 'max' },
+        auth: {},
+      }),
+    });
+    await screen.findByRole('option', { name: 'Opus' });
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Model' }), 'Default');
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Reasoning effort' }),
+      'Default',
+    );
+
+    expect(updateAiSettings).toHaveBeenLastCalledWith({
+      provider: 'claude-code',
+      models: {},
+      efforts: {},
+      auth: {},
+    });
+  });
+
+  it('takes a model name that is not listed and ignores text that is not one', async () => {
+    const { updateAiSettings } = setup();
+    const model = await screen.findByRole('combobox', { name: 'Model' });
+    await userEvent.selectOptions(model, 'Other…');
+    const field = screen.getByRole('textbox', { name: 'Model name' });
+    expect(field).toHaveFocus();
 
     await userEvent.type(field, '--dangerously-skip-permissions');
     await userEvent.tab();
@@ -78,8 +185,23 @@ describe('AiReviewSettings', () => {
     expect(updateAiSettings).toHaveBeenCalledWith({
       provider: 'claude-code',
       models: { 'claude-code': 'claude-sonnet-5-5' },
+      efforts: {},
       auth: {},
     });
+    expect(screen.queryByRole('textbox', { name: 'Model name' })).not.toBeInTheDocument();
+    expect(model).toHaveValue('claude-sonnet-5-5');
+  });
+
+  it('says how to get a list of models when Codex is not installed', async () => {
+    setup({
+      getAiSettings: vi
+        .fn()
+        .mockResolvedValue({ provider: 'codex', models: {}, efforts: {}, auth: {} }),
+      listAiModels: vi.fn().mockResolvedValue([]),
+    });
+
+    expect(await screen.findByText(/Install Codex to choose from its models/)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveTextContent('Other…');
   });
 
   it('switches a tool to an API key and saves the key without showing it again', async () => {
@@ -112,6 +234,7 @@ describe('AiReviewSettings', () => {
     expect(updateAiSettings).toHaveBeenCalledWith({
       provider: 'claude-code',
       models: {},
+      efforts: {},
       auth: { 'claude-code': 'api-key' },
     });
     expect(await screen.findByText(/Needs an API key\./)).toBeInTheDocument();
@@ -133,9 +256,12 @@ describe('AiReviewSettings', () => {
   it('does not save text that is not an API key', async () => {
     const saveAiApiKey = vi.fn();
     setup({
-      getAiSettings: vi
-        .fn()
-        .mockResolvedValue({ provider: 'codex', models: {}, auth: { codex: 'api-key' } }),
+      getAiSettings: vi.fn().mockResolvedValue({
+        provider: 'codex',
+        models: {},
+        efforts: {},
+        auth: { codex: 'api-key' },
+      }),
       saveAiApiKey,
     });
 
@@ -148,9 +274,12 @@ describe('AiReviewSettings', () => {
   it('removes a saved key', async () => {
     const removeAiApiKey = vi.fn().mockResolvedValue(undefined);
     setup({
-      getAiSettings: vi
-        .fn()
-        .mockResolvedValue({ provider: 'codex', models: {}, auth: { codex: 'api-key' } }),
+      getAiSettings: vi.fn().mockResolvedValue({
+        provider: 'codex',
+        models: {},
+        efforts: {},
+        auth: { codex: 'api-key' },
+      }),
       detectAiProviders: vi.fn().mockResolvedValue([
         { id: 'claude-code', installed: true, apiKeySaved: false },
         { id: 'codex', installed: true, version: 'codex-cli 0.166.0', apiKeySaved: true },

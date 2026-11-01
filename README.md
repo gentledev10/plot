@@ -18,7 +18,7 @@ Many developers now open a full IDE only to read diffs, often of code an AI wrot
 
 ## AI overviews and your code
 
-Overviews are made by an AI coding tool on your Mac: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. The tool can use its own sign-in, or an Anthropic or OpenAI API key that you add there, which your provider bills for each overview. Plot keeps the key in your macOS keychain and gives it only to that tool while it makes an overview. Plot has no server and no API key of its own.
+Overviews are made by an AI coding tool on your Mac: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. Pick its model and reasoning effort there too, from the lists the tool offers. The tool can use its own sign-in, or an Anthropic or OpenAI API key that you add there, which your provider bills for each overview. Plot keeps the key in your macOS keychain and gives it only to that tool while it makes an overview. Plot has no server and no API key of its own.
 
 The tool reads the pull request's diff and description, the list of file paths in the repository, and the directories the pull request touches. It only gets to read:
 

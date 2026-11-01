@@ -82,7 +82,7 @@ describe('createApiKeyStore', () => {
 });
 
 describe('apiKeyFor', () => {
-  const settings = { provider: 'claude-code' as const, models: {} };
+  const settings = { provider: 'claude-code' as const, models: {}, efforts: {} };
 
   it('gives no key when the tool uses its own sign-in', async () => {
     const keys = { read: async () => 'sk-ant-api03-secret-value' };

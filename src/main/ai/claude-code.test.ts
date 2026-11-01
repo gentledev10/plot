@@ -63,6 +63,18 @@ describe('claudeArguments', () => {
   it('gives access to the context directory', () => {
     expect(args[args.indexOf('--add-dir') + 1]).toBe('/ctx');
   });
+
+  it('passes the chosen model and effort as single tokens, and nothing when unset', () => {
+    const chosen = claudeArguments({
+      prompt: 'p',
+      schema: {},
+      contextDir: '/ctx',
+      model: 'opus',
+      effort: 'xhigh',
+    });
+    expect(chosen).toEqual(expect.arrayContaining(['--model=opus', '--effort=xhigh']));
+    expect(args.some((arg) => arg.startsWith('--effort'))).toBe(false);
+  });
 });
 
 describe('parseStreamLine', () => {

@@ -10,6 +10,7 @@ import { createClaudeCodeAgent } from './ai/claude-code';
 import { createCodexAgent } from './ai/codex';
 import { detectProvider } from './ai/detect';
 import { languageName } from './ai/language';
+import { listAiModels } from './ai/models';
 import { createFileReviewStore } from './ai/review-store';
 import { keychainCipher } from './app/keychain';
 import { applicationMenu } from './app/menu';
@@ -118,6 +119,7 @@ function createApi(): PlotApi {
       return {
         provider,
         model: settings.models[provider],
+        effort: settings.efforts[provider],
         apiKey: await apiKeyFor(apiKeys, settings),
         agent: agents[provider],
       };
@@ -142,6 +144,7 @@ function createApi(): PlotApi {
       store: aiSettings,
       keys: apiKeys,
       detect: (id) => detectProvider(runCommand, id),
+      listModels: (id) => listAiModels(runCommand, id),
     }),
     async setThemeSource(source) {
       nativeTheme.themeSource = source;

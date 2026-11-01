@@ -33,6 +33,7 @@ function setup(api: Partial<PlotApi> = {}) {
     getAiSettings: vi.fn(),
     updateAiSettings: vi.fn(),
     detectAiProviders: vi.fn(),
+    listAiModels: vi.fn(),
     saveAiApiKey: vi.fn(),
     removeAiApiKey: vi.fn(),
     setThemeSource: vi.fn(),

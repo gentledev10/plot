@@ -26,7 +26,7 @@ interface CodexFiles {
 export type CodexEvent = { kind: 'activity'; text: string } | { kind: 'failed'; message: string };
 
 export function codexArguments(
-  input: Pick<AgentRunInput, 'prompt' | 'cwd' | 'model'>,
+  input: Pick<AgentRunInput, 'prompt' | 'cwd' | 'model' | 'effort'>,
   files: CodexFiles,
 ): string[] {
   return [
@@ -51,6 +51,7 @@ export function codexArguments(
     '--config',
     'shell_environment_policy.inherit="core"',
     ...(input.model ? [`--model=${input.model}`] : []),
+    ...(input.effort ? ['--config', `model_reasoning_effort="${input.effort}"`] : []),
     '--',
     input.prompt,
   ];

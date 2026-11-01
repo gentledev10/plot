@@ -4,7 +4,12 @@ import { authOf, isApiKey, parseAiSettings } from './ai';
 describe('parseAiSettings', () => {
   it('reads settings saved before the sign-in choice existed', () => {
     const settings = parseAiSettings({ provider: 'codex', models: { codex: 'gpt-5' } });
-    expect(settings).toEqual({ provider: 'codex', models: { codex: 'gpt-5' }, auth: {} });
+    expect(settings).toEqual({
+      provider: 'codex',
+      models: { codex: 'gpt-5' },
+      efforts: {},
+      auth: {},
+    });
     expect(settings && authOf(settings, 'codex')).toBe('cli');
   });
 
@@ -15,7 +20,12 @@ describe('parseAiSettings', () => {
         models: {},
         auth: { 'claude-code': 'api-key', codex: 'magic', other: 'api-key' },
       }),
-    ).toEqual({ provider: 'claude-code', models: {}, auth: { 'claude-code': 'api-key' } });
+    ).toEqual({
+      provider: 'claude-code',
+      models: {},
+      efforts: {},
+      auth: { 'claude-code': 'api-key' },
+    });
   });
 
   it('refuses an unknown tool', () => {
@@ -33,5 +43,15 @@ describe('isApiKey', () => {
     expect(isApiKey('sk-ant short')).toBe(false);
     expect(isApiKey(`sk-ant-${'a'.repeat(30)}\nrm -rf /`)).toBe(false);
     expect(isApiKey('sk-123')).toBe(false);
+  });
+
+  it('keeps a plain effort level for each tool and drops anything that could become a flag', () => {
+    expect(
+      parseAiSettings({
+        provider: 'claude-code',
+        models: {},
+        efforts: { 'claude-code': 'xhigh', codex: 'high"; rm' },
+      })?.efforts,
+    ).toEqual({ 'claude-code': 'xhigh' });
   });
 });

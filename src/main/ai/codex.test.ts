@@ -70,6 +70,18 @@ describe('codexArguments', () => {
       codexArguments({ prompt: 'p', cwd: '/r' }, { schemaFile: 's', outputFile: 'o' }),
     ).not.toContain('--model=undefined');
   });
+
+  it('sets the reasoning effort through the config, and only when one is chosen', () => {
+    const configs = (input: { effort?: string }) => {
+      const list = codexArguments(
+        { prompt: 'p', cwd: '/r', ...input },
+        { schemaFile: 's', outputFile: 'o' },
+      );
+      return list.flatMap((arg, index) => (list[index - 1] === '--config' ? [arg] : []));
+    };
+    expect(configs({ effort: 'high' })).toContain('model_reasoning_effort="high"');
+    expect(configs({}).some((config) => config.startsWith('model_reasoning_effort'))).toBe(false);
+  });
 });
 
 describe('parseCodexLine', () => {

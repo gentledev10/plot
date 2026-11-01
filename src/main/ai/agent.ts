@@ -10,6 +10,7 @@ export interface AgentRunInput {
   prompt: string;
   schema: object;
   model?: string;
+  effort?: string;
   apiKey?: string;
   signal: AbortSignal;
   onActivity(activity: string): void;
