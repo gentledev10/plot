@@ -2,7 +2,7 @@
   "name": "plot",
   "productName": "Plot",
   "version": "0.1.0",
-  "description": "The story behind every change: IntelliJ-style diffs for pull requests and local work, with AI overviews of what a pull request changes and why.",
+  "description": "Understand pull requests and local code changes with readable diffs and optional AI overviews.",
   "license": "MIT",
   "private": true,
   "main": "./out/main/index.js",
@@ -20,7 +20,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dist:mac": "electron-vite build && electron-builder --mac",
-    "test:e2e": "npm run build && node e2e/smoke.mjs"
+    "test:e2e": "npm run build && node e2e/smoke.mjs",
+    "capture:docs": "npm run build && node e2e/capture-demo.mjs",
+    "release:prepare": "node scripts/prepare-release.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",

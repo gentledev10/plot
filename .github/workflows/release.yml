@@ -1,0 +1,105 @@
+name: macOS release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    permissions:
+      contents: write
+    env:
+      CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Require distribution signing and notarization credentials
+        shell: bash
+        run: |
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing release credential: $name. See docs/RELEASING.md."
+              exit 1
+            fi
+          done
+      - name: Validate release version
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "::error::Tag does not match package.json version"
+            exit 1
+          fi
+          echo "RELEASE_TAG=v$version" >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Build application
+        env:
+          MAIN_VITE_GITHUB_CLIENT_ID: ${{ vars.MAIN_VITE_GITHUB_CLIENT_ID }}
+          MAIN_VITE_GITHUB_CLIENT_SECRET: ${{ secrets.MAIN_VITE_GITHUB_CLIENT_SECRET }}
+        run: npm run build
+      - name: Package, sign and notarize both architectures
+        run: npx electron-builder --mac --arm64 --x64 --publish never -c.forceCodeSigning=true -c.mac.notarize=true
+      - name: Verify signed apps and notarization tickets
+        shell: bash
+        run: |
+          for app in dist/mac-arm64/Plot.app dist/mac/Plot.app; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+            spctl --assess --type execute --verbose=2 "$app"
+            xcrun stapler validate "$app"
+          done
+      - name: Smoke-test native packaged app
+        shell: bash
+        run: |
+          if [[ "$(uname -m)" == arm64 ]]; then
+            export PLOT_E2E_EXECUTABLE="$PWD/dist/mac-arm64/Plot.app/Contents/MacOS/Plot"
+          else
+            export PLOT_E2E_EXECUTABLE="$PWD/dist/mac/Plot.app/Contents/MacOS/Plot"
+          fi
+          node e2e/smoke.mjs
+      - run: npm run release:prepare
+      - name: Retain release files
+        uses: actions/upload-artifact@v6
+        with:
+          name: plot-release
+          path: |
+            dist/Plot-*.dmg
+            dist/Plot-*.zip
+            dist/SHA256SUMS.txt
+            dist/homebrew/Casks/plot.rb
+      - name: Create or update draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          notes="docs/releases/$RELEASE_TAG.md"
+          if [[ ! -f "$notes" ]]; then
+            echo "::error::Missing release notes: $notes"
+            exit 1
+          fi
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)
+            [[ "$draft" == true ]] || { echo "::error::Refusing to replace a published release"; exit 1; }
+          else
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --draft --title "Plot $RELEASE_TAG" --notes-file "$notes"
+          fi
+          gh release upload "$RELEASE_TAG" dist/Plot-*.dmg dist/Plot-*.zip dist/SHA256SUMS.txt dist/homebrew/Casks/plot.rb --clobber

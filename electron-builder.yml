@@ -1,5 +1,6 @@
 appId: io.github.gentledev10.plot
 productName: Plot
+artifactName: Plot-${version}-${arch}.${ext}
 directories:
   output: dist
   buildResources: build
@@ -13,6 +14,7 @@ extraResources:
     to: THIRD_PARTY_LICENSES.txt
 mac:
   icon: build/icon.icns
+  minimumSystemVersion: "13.0"
   category: public.app-category.developer-tools
   hardenedRuntime: true
   target:

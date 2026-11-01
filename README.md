@@ -2,123 +2,110 @@
 
 **The story behind every change.**
 
-Plot is a lightweight Mac app for reading code changes, made for developers who are used to IntelliJ's diff viewer. It opens GitHub pull requests and the work in your local repositories, and for pull requests an AI overview explains what the change does, why, and how the code flows differently from before.
+A Mac app for understanding pull requests and local code changes. Read side-by-side diffs, follow the code, and use optional AI overviews to see what changed and why.
 
-> Status: early development. Expect rough edges, and please report them.
+[![CI](https://github.com/gentledev10/plot/actions/workflows/ci.yml/badge.svg)](https://github.com/gentledev10/plot/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Why
+![Plot showing a pull request with side-by-side code changes and an AI overview in English](docs/media/pull-request.png)
 
-Many developers now open a full IDE only to read diffs, often of code an AI wrote. Plot does just that part, and opens fast:
+[Get started](#get-started) · [Watch the demo](#demo) · [User guide](docs/GUIDE.md) · [Report a bug](https://github.com/gentledev10/plot/issues/new/choose)
 
-- **Pull requests in one click.** See the pull requests waiting for your review, browse and filter all pull requests of the repositories you add, or paste any pull request URL.
-- **IntelliJ's diff, outside IntelliJ.** Side-by-side diffs with IntelliJ's colors, collapsed unchanged fragments, and the same keyboard shortcuts.
-- **Understand a change before you read it.** An AI overview explains what the pull request changes, compares how the code flowed before and after in sequence diagrams, draws the components around it, and lists what else it affects. Every item links to the line it is about. Bring your own Claude Code or Codex CLI.
-- **Your own work, too.** Open a local repository in the Local changes window to see everything on your branch, including work you have not committed, with the same diff and shortcuts. It refreshes as files change, which suits checking code an AI agent just wrote, and links to the branch's pull request when there is one.
-- **Fast on large repositories.** Plot fetches only the two commits a pull request compares, not the whole repository.
+> Early development. A signed macOS release and Homebrew distribution are being prepared. For now, run Plot from source using the steps below.
 
-## AI overviews and your code
+## Why Plot
 
-New profiles automatically choose an installed, compatible tool that is signed in using the selected sign-in method. Choosing a tool yourself keeps that choice; existing saved choices stay manual. Toggle automatic selection in Settings > AI overview at any time. The Codex model picker shows the model currently used by Default as well as the account's available models.
+- **Read the change in context.** Browse GitHub pull requests or paste a PR URL. Navigate side-by-side or unified diffs with a file tree, collapsed unchanged lines and configurable shortcuts.
+- **Understand the story.** Optional AI overviews explain the purpose, key changes and review questions, with before-and-after diagrams and links back to the code. Use your own Claude Code or Codex CLI account.
+- **Check your work as it happens.** Open a local repository to inspect branch changes, including uncommitted files. The diff refreshes as you or an AI agent edits files.
 
-Overviews are made by an AI coding tool on your Mac: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. Pick its model and reasoning effort there too. Codex models are loaded for the selected sign-in; API-key discovery uses a temporary, isolated Codex profile and does not change your CLI sign-in. If an older Codex returns only retired models, update it and reload the list. The tool can use its own sign-in, or an Anthropic or OpenAI API key that you add there, which your provider bills for each overview. Plot keeps the key in your macOS keychain and gives it only to that tool while it makes an overview. Plot has no server and no API key of its own.
+## Get started
 
-The tool reads the pull request's diff and description, the list of file paths in the repository, and the directories the pull request touches. It only gets to read:
+### Run from source
 
-- **Claude Code** runs with the `Read`, `Grep`, and `Glob` tools only, inside the checkout, without commands, the web, or your MCP servers.
-- **Codex CLI** runs in its read-only sandbox: it can run commands that read files, but cannot change them or use the network. Those commands see only basic environment variables such as `PATH` and `HOME`, so keys in your environment do not reach them. Web search, your Codex configuration, and its MCP servers are turned off.
-
-Instructions hidden in a pull request therefore cannot make the tool change files or send code elsewhere. Lines the AI cites are checked against the code, and anything it made up is marked as unverified.
-
-Code sent for an overview is processed by your chosen AI provider under that account’s terms. The changed directories, diff, description, and repository file list are provided. When a change map or custom diagram is configured, Plot also reads a bounded sample of repository READMEs, architecture documentation and manifests at the exact PR commit: up to eight files, 16 KB per file and 32,000 characters total. Files that are unavailable, too large or truncated are recorded in the context; the map explains its analysis scope. Impacts outside this inspected context may be incomplete.
-
-Overviews are saved on your Mac per commit and language, so reopening a pull request does not run the tool again.
-
-Settings > AI overview > Review format starts with five steps: At a glance, Change map, Key changes, Review focus, and Code walkthrough. The overview is short, the most important changes are shown first, and additional details can be expanded. Review focus separates code references, the PR description and inferences, without giving a merge verdict. Untouched older defaults migrate automatically; edited plans are retained. Apply five-step flow keeps custom steps and edited instructions, and the built-in picker can add back optional execution flows or impacts. Drag the cards or use the arrow buttons to reorder them, rename built-in cards, or hide their results. You can delete any step, including the defaults, and undo deletions. Deleted steps stay removed after restarting and are excluded from future analyses. These changes immediately rearrange saved overviews without another AI call. Each result card can also be collapsed while reading.
-
-The picture step chooses the views that explain the change: system architecture, processing/data flow, or a sequence of calls. It usually produces one or two complementary pictures, with a short explanation of what each shows. Before, After, and Side by side compare the actual structure or behavior at the merge base and PR head. After is shown first to preserve legibility; switch to Before or choose Side by side for comparison. The views use styled SVG: architecture groups components into tinted subsystem panels with role icons, processing flows emphasize paths and branches, and call sequences use participant lanes and numbered messages. Hovering a component or message traces its relationships; verified current-code elements open their source. Fit to panel keeps the whole drawing visible, while Readable size preserves labels in a scrollable viewport. These views reuse the same analysis without another AI call. Before diagrams never link to current code. Scope and current-code evidence remain available below each picture. Custom diagrams keep their chosen format, and older saved maps remain readable until regenerated.
-
-Adjust each step's detail and instructions, or add up to six custom steps as explanations, checklists, or diagrams. Diagram steps can show flowcharts, chronological calls, or component relationships according to your instructions. New steps start with empty title and instruction fields; example hints are never sent as instructions. All configured steps are generated in one analysis, including cards hidden with Show in results. Removing a step excludes it from analysis. Add a title or instructions to each custom step before generating. Changes to instructions, detail, or custom steps show a reminder to generate again and keep the previous analysis readable until you do; changing settings never starts an AI request automatically. Settings are saved locally and apply across pull requests.
-
-## Languages
-
-Settings > Language offers Korean and English for the app. The default follows the system's preferred language, using English for unsupported languages. AI reviews follow the app language by default, or you can select their language separately—for example, English controls with Korean explanations. Changes take effect immediately and are saved across restarts.
-
-Code, paths, branch names, and pull request titles stay in their original language. AI prose and diagram descriptions use the review language. Reviews are cached separately by language; changing a language never starts an AI request automatically. A previously saved review without language information stays on disk but must be generated again for the selected language.
-
-## Keyboard shortcuts
-
-| Action                         | Default shortcut               |
-| ------------------------------ | ------------------------------ |
-| Next / previous difference     | F7 / ⇧F7                       |
-| Next / previous file           | ⌃⇧→ / ⌃⇧←                      |
-| Go to line                     | ⌘L                             |
-| Extend / shrink selection      | ⌥↑ / ⌥↓                        |
-| Find in file                   | ⌘F                             |
-| Move in the changed files tree | ↑ ↓, ← → to collapse or expand |
-| Show or hide pull requests     | ⌘1                             |
-| Show or hide local changes     | ⌘0                             |
-| Show or hide the AI review     | ⌘2                             |
-| Hide or restore all panels     | ⇧⌘F12                          |
-| Resize a side panel            | Drag its edge                  |
-| Maximize or restore the AI     | ⇧⌘'                            |
-| Open a pull request by URL     | ⌘O                             |
-| Back to the list               | ⌘[                             |
-| Refresh                        | ⌘R                             |
-| Settings                       | ⌘,                             |
-
-The defaults follow IntelliJ IDEA's macOS keymap. At the last difference of a file, press F7 again to open the next file, as in IntelliJ.
-
-Change any shortcut in Settings > Keymap. Actions such as switching to the unified view or explaining a change have no default shortcut, and you can give them one there.
-
-## Make it yours
-
-Drag the bottom-right corner of Settings to resize it, or use its expand/restore button. The fixed-width font filter narrows the list of fonts installed on your Mac to those suited to aligned code columns.
-
-Settings > Appearance offers Light, Dark, and IntelliJ's classic Darcula theme, or System to follow macOS. Change the code font and size, and the diff and accent colors of each theme, while a preview shows which part of the window each one changes. Plot comes with JetBrains Mono, Fira Code, Geist Mono, Inconsolata, Iosevka, and Roboto Mono, and can use any font installed on your Mac or font files you add. Panels can be hidden, resized by dragging their edge, and the AI overview can take the whole window.
-
-## Connecting GitHub
-
-Plot connects to nothing until you choose how to sign in:
-
-- **Browser.** Plot opens GitHub in your browser, and you approve it there. Works with single sign-on.
-- **Personal access token.** A classic token with the `repo` scope, or a fine-grained token with read access to contents and pull requests.
-- **GitHub CLI.** Uses the account you signed in to with `gh auth login`. Plot asks `gh` for the token when it needs one and stores no copy.
-
-Accounts on GitHub Enterprise Cloud live on github.com, so choose GitHub.com for them. Choose Company server for GitHub Enterprise Server or GHE.com. Browser sign-in works only on github.com, so for a company server, run `gh auth login --hostname <server> --web` once and connect with the GitHub CLI, or use a token.
-
-You can connect several accounts, including accounts on company servers, and switch between them in Settings > Accounts. Pull requests on a company server open with the account connected for that server. Tokens are encrypted with your macOS keychain and only sent to the server they belong to.
-
-## Requirements
-
-- macOS
-- Git
-- A GitHub account on github.com or GitHub Enterprise Server
-- Claude Code 2.1.248 or later, or an up-to-date Codex CLI, signed in, for AI overviews. Everything else works without them.
-
-## Development
-
-Requires Node.js 22.12 or later.
+You need **macOS 13 or later**, **Git**, and **Node.js 22.12 or later**.
 
 ```sh
-npm install
+git clone https://github.com/gentledev10/plot.git
+cd plot
+npm ci
 npm run dev
 ```
 
-| Script              | Purpose                                         |
-| ------------------- | ----------------------------------------------- |
-| `npm run typecheck` | Type-check the main, preload, and renderer code |
-| `npm run lint`      | Lint and check formatting with Biome            |
-| `npm test`          | Run unit and component tests with Vitest        |
-| `npm run dist:mac`  | Build a macOS app into `dist/`                  |
+A GitHub account is needed for pull requests. Local changes work without signing in. AI tools are optional.
 
-For a deterministic check in the real Electron app on macOS, run `npm run test:e2e`. It uses a temporary profile, real temporary Git repositories, and fixture GitHub/AI responses. It never signs in to GitHub or calls an AI provider. It also checks narrow-window layout, automatic refresh, diagrams, sanitizer versions, notices, and accessibility.
+### Read your first change
 
-The Plot icon connects three events into one storyline: follow the plot. Its navy tile, blue connection, and ivory nodes have subtle gradients, edges, and contact shadows. SVG, PNG, and macOS ICNS assets live in `build/`. Run `npm run icons` on macOS with the Swift command-line tools to regenerate all sizes from `build/generate-icon.swift`, or `npm run icons -- --compare` to preview flat, soft, and satin finishes in `dist/`. Packaged apps use the satin ICNS asset; development runs use the same icon in the Dock.
+1. **Open local work:** choose **Open a local folder…** on the start screen, or **Local changes → Choose a folder…**, and pick a Git repository.
+2. **Or connect GitHub:** open **Settings → Accounts** and connect through your browser, a personal access token or the GitHub CLI. Development builds use a one-time browser code.
+3. **Open a pull request:** choose one from the list, or press **⌘O** and paste its URL. Select a file; use **F7 / ⇧F7** to move between changes.
+4. **Add an AI overview, if you want one:** configure an installed, signed-in tool in **Settings → AI overview**, then choose **Explain this change**. Select a cited code location to inspect its source.
 
-## Contributing
+See the [user guide](docs/GUIDE.md) for GitHub Enterprise, tokens, AI settings, languages, themes and the full shortcut list.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the app is structured. Report security issues as described in [SECURITY.md](SECURITY.md).
+### Downloads and Homebrew
+
+There is no public installer yet. Release builds will provide separate **Apple Silicon** and **Intel** downloads on [GitHub Releases](https://github.com/gentledev10/plot/releases).
+
+Homebrew installation will use a project-maintained tap after the first signed release; it is not available yet. The [release guide](docs/RELEASING.md) covers signing, notarization, checksums and generating the cask. An official Homebrew Cask listing is a separate submission.
+
+## Demo
+
+[Watch the English demo](https://github.com/gentledev10/plot/blob/main/docs/media/plot-demo.mp4): open a PR, inspect the diff, compare diagrams and open local work.
+
+Screenshots and the demo are captured from the real app in English using an illustrative repository and a prepared overview. They do not show a live AI request or its generation speed.
+
+### See how the structure changes
+
+![English before-and-after diagram showing a retry policy added between a notification service and its provider](docs/media/change-map.png)
+
+Compare the structure before and after a change, then follow verified current-code links. Architecture, processing flow and call-sequence views explain different kinds of changes.
+
+### Keep up with local work
+
+![Plot showing uncommitted retry-policy changes in a local repository, in English](docs/media/local-changes.png)
+
+Use the same diff viewer for your own branch and work produced by coding agents.
+
+## AI, your code and cost
+
+Plot is free and open source. **AI usage is handled by your chosen provider under your account's plan or API pricing.** Plot does not include an AI subscription.
+
+- **Optional:** read PRs and local diffs without AI. Overviews require Claude Code 2.1.248 or later, or an up-to-date Codex CLI, with a supported sign-in or your API key.
+- **Data:** analysis runs through the CLI on your Mac, which sends analysis input to its AI provider. Inputs include the PR diff and description, changed directories, repository file paths and bounded architecture context. Plot has no analysis server of its own; this is not offline AI.
+- **Credentials:** API keys and stored GitHub tokens are encrypted using the macOS keychain. GitHub CLI connections request the token when needed without storing a copy.
+- **Controls:** AI tools run with file-write and tool/network restrictions. Cited locations are checked against source; the explanation can still be wrong. You make the review decision.
+- **Reuse:** overviews are cached locally per commit and language. Reopening one does not generate another AI request.
+
+Read [AI setup and data access](docs/GUIDE.md#ai-overviews-and-your-code) and the [trust boundaries](docs/ARCHITECTURE.md#trust-boundaries) for the exact restrictions and their limits.
+
+## Supported today
+
+| Area           | Support                                                                             |
+| -------------- | ----------------------------------------------------------------------------------- |
+| Platform       | macOS 13+; Windows and Linux are not supported                                      |
+| Pull requests  | GitHub.com and GitHub Enterprise Server; GitLab and Bitbucket PRs are not supported |
+| Local work     | Git repositories, branch changes, uncommitted and untracked files                   |
+| AI overview    | Pull requests; local-only changes do not have AI overviews                          |
+| Review actions | Read and understand changes; comments, approvals and merging stay on GitHub         |
+| Languages      | English and Korean; the overview language can be selected separately                |
+| Appearance     | Light, Dark and Darcula, code fonts, colors and resizable panels                    |
+
+For setup problems, see [Troubleshooting](docs/TROUBLESHOOTING.md). Report a reproducible bug or suggest a feature in [Issues](https://github.com/gentledev10/plot/issues/new/choose). Planned distribution work is tracked in the [release guide](docs/RELEASING.md).
+
+## Development and contributing
+
+[CONTRIBUTING.md](CONTRIBUTING.md) covers setup and checks. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the app structure, [MEDIA.md](docs/MEDIA.md) to reproduce the English captures, and [RELEASING.md](docs/RELEASING.md) for packaging.
+
+```sh
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+On macOS, `npm run test:e2e` checks the real Electron app with isolated GitHub and AI fixtures. Report security issues privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE). Plot includes fonts and theme colors from other projects under their own licenses, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Builds generate `THIRD_PARTY_LICENSES.txt` with the bundled packages’ full notices, including Monaco’s embedded components and ELK source instructions. Open it from Help > Open Source Licenses in the packaged app.
+[MIT](LICENSE). Bundled libraries, fonts and adapted theme colors retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Packaged builds include full notices under **Help → Open Source Licenses**.
