@@ -2,17 +2,22 @@ import type { PullRequestRef } from '@shared/github';
 import { GITHUB_HOST } from '@shared/hosts';
 import type { LocalRepository } from '@shared/local';
 import { ChevronsUpDown, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 import { Avatar } from '../../components/Avatar';
 import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
+import { usePreference } from '../../lib/preferences';
 import { ConnectGitHub } from '../accounts/ConnectGitHub';
 import { useAccounts } from '../accounts/queries';
 import { useCommand } from '../keymap/KeymapProvider';
 import { LocalRepositoryList } from '../local/LocalRepositoryList';
+import { filterPullRequests, newestFirst } from './grouping';
 import styles from './InboxPanel.module.css';
-import { OpenPullRequestForm } from './OpenPullRequestForm';
 import { PullRequestList } from './PullRequestList';
+import { PullRequestSearch } from './PullRequestSearch';
 import { useInbox } from './queries';
+
+type Section = 'review-requested' | 'authored';
 
 interface InboxPanelProps {
   selected?: PullRequestRef;
@@ -36,12 +41,34 @@ export function InboxPanel({
   const accounts = useAccounts();
   const current = accounts.data?.accounts.find((account) => account.id === accounts.data.currentId);
   const inbox = useInbox(current?.id);
+  const [query, setQuery] = useState('');
+  const [collapsed, setCollapsed] = usePreference<string[]>('inbox.collapsed', [], parseStringList);
+  const filtering = query.trim() !== '';
+  const reviewRequested = filterPullRequests(inbox.data?.reviewRequested ?? [], query);
+  const authored = filterPullRequests(inbox.data?.authored ?? [], query);
+  const firstMatch = filtering
+    ? (newestFirst(reviewRequested)[0] ?? newestFirst(authored)[0])?.ref
+    : undefined;
 
   function refresh() {
     void accounts.refetch();
     if (current) {
       void inbox.refetch();
     }
+  }
+
+  function collapsedIn(section: Section): ReadonlySet<string> {
+    const prefix = `${section}/`;
+    return new Set(
+      collapsed.filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length)),
+    );
+  }
+
+  function toggleGroup(section: Section, group: string) {
+    const key = `${section}/${group}`;
+    setCollapsed(
+      collapsed.includes(key) ? collapsed.filter((item) => item !== key) : [...collapsed, key],
+    );
   }
 
   useCommand('pullRequest.refresh', refresh);
@@ -59,7 +86,10 @@ export function InboxPanel({
         </IconButton>
       </header>
       {current && (
-        <OpenPullRequestForm
+        <PullRequestSearch
+          query={query}
+          onQueryChange={setQuery}
+          firstMatch={firstMatch}
           defaultHost={current.host}
           onOpen={onSelect}
           focus={focusOpenField}
@@ -127,19 +157,33 @@ export function InboxPanel({
       <>
         <PullRequestList
           title="Review requested"
-          pulls={inbox.data.reviewRequested}
-          emptyText="Nothing is waiting for your review."
+          pulls={reviewRequested}
+          emptyText={filtering ? 'No pull requests match.' : 'Nothing is waiting for your review.'}
           selected={selected}
+          collapsed={filtering ? NONE : collapsedIn('review-requested')}
+          collapsible={!filtering}
+          onToggleGroup={(group) => toggleGroup('review-requested', group)}
           onSelect={onSelect}
         />
         <PullRequestList
           title="Your pull requests"
-          pulls={inbox.data.authored}
-          emptyText="You have no open pull requests."
+          pulls={authored}
+          emptyText={filtering ? 'No pull requests match.' : 'You have no open pull requests.'}
           selected={selected}
+          collapsed={filtering ? NONE : collapsedIn('authored')}
+          collapsible={!filtering}
+          onToggleGroup={(group) => toggleGroup('authored', group)}
           onSelect={onSelect}
         />
       </>
     );
   }
+}
+
+const NONE: ReadonlySet<string> = new Set();
+
+function parseStringList(stored: unknown): string[] | undefined {
+  return Array.isArray(stored) && stored.every((item) => typeof item === 'string')
+    ? stored
+    : undefined;
 }

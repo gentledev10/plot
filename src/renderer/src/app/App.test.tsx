@@ -257,7 +257,9 @@ describe('App', () => {
 
     fireEvent.keyDown(document.body, { key: 'o', code: 'KeyO', metaKey: true });
 
-    expect(await screen.findByRole('textbox', { name: 'Pull request URL' })).toHaveFocus();
+    expect(
+      await screen.findByRole('searchbox', { name: 'Find or open a pull request' }),
+    ).toHaveFocus();
   });
 
   it('shows the changes in a local repository, including uncommitted work', async () => {
@@ -311,7 +313,7 @@ describe('App', () => {
     renderWithApi(<App />, fake);
 
     await userEvent.type(
-      await screen.findByRole('textbox', { name: 'Pull request URL' }),
+      await screen.findByRole('searchbox', { name: 'Find or open a pull request' }),
       'https://github.com/acme/api/pull/9{Enter}',
     );
 

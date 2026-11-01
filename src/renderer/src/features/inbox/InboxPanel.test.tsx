@@ -8,6 +8,19 @@ import { InboxPanel } from './InboxPanel';
 
 const signedIn = vi.fn().mockResolvedValue(anAccountList([anAccount('octocat')]));
 
+const twoRepositories = [
+  aPullRequestSummary(1, {
+    ref: { host: 'github.com', owner: 'acme', repo: 'api', number: 1 },
+    title: 'Fix login',
+    updatedAt: '2026-10-02T00:00:00Z',
+  }),
+  aPullRequestSummary(2, {
+    ref: { host: 'github.com', owner: 'acme', repo: 'web', number: 2 },
+    title: 'Add dark mode',
+    updatedAt: '2026-10-01T00:00:00Z',
+  }),
+];
+
 describe('InboxPanel', () => {
   it('lists review requests and authored pull requests', async () => {
     renderWithApi(<InboxPanel onSelect={vi.fn()} />, {
@@ -20,12 +33,69 @@ describe('InboxPanel', () => {
 
     const review = await screen.findByRole('region', { name: /Review requested/ });
     expect(within(review).getByText('Fix login')).toBeInTheDocument();
-    expect(within(review).getByText('1')).toBeInTheDocument();
+    expect(
+      within(review).getByRole('button', { name: /octocat\/hello-world/, expanded: true }),
+    ).toBeInTheDocument();
 
     const authored = screen.getByRole('region', { name: /Your pull requests/ });
     expect(within(authored).getByText('Add cache')).toBeInTheDocument();
     expect(within(authored).getByText('Draft')).toBeInTheDocument();
     expect(screen.getByText('octocat')).toBeInTheDocument();
+  });
+
+  it('groups pull requests by repository and remembers the ones folded away', async () => {
+    const api = {
+      listAccounts: signedIn,
+      listInbox: vi.fn().mockResolvedValue({ reviewRequested: twoRepositories, authored: [] }),
+    };
+    const { unmount } = renderWithApi(<InboxPanel onSelect={vi.fn()} />, api);
+
+    const review = await screen.findByRole('region', { name: /Review requested/ });
+    expect(
+      within(review)
+        .getAllByRole('button', { expanded: true })
+        .map((header) => header.textContent),
+    ).toEqual(['acme/api1', 'acme/web1']);
+
+    await userEvent.click(within(review).getByRole('button', { name: /acme\/api/ }));
+    expect(within(review).getByRole('button', { name: /acme\/api/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(screen.getByText('Fix login')).not.toBeVisible();
+
+    unmount();
+    renderWithApi(<InboxPanel onSelect={vi.fn()} />, api);
+    expect(await screen.findByRole('button', { name: /acme\/api/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+  });
+
+  it('filters by what is typed, even in folded repositories, and opens the first match', async () => {
+    const onSelect = vi.fn();
+    renderWithApi(<InboxPanel onSelect={onSelect} />, {
+      listAccounts: signedIn,
+      listInbox: vi.fn().mockResolvedValue({ reviewRequested: twoRepositories, authored: [] }),
+    });
+    await userEvent.click(await screen.findByRole('button', { name: /acme\/web/ }));
+
+    await userEvent.type(
+      screen.getByRole('searchbox', { name: 'Find or open a pull request' }),
+      'dark',
+    );
+
+    expect(screen.queryByText('Fix login')).not.toBeInTheDocument();
+    expect(screen.getByText('Add dark mode')).toBeVisible();
+    expect(screen.getByText('No pull requests match.')).toBeInTheDocument();
+
+    await userEvent.keyboard('{Enter}');
+    expect(onSelect).toHaveBeenCalledWith({
+      host: 'github.com',
+      owner: 'acme',
+      repo: 'web',
+      number: 2,
+    });
   });
 
   it('selects a pull request when it is clicked', async () => {
@@ -89,7 +159,9 @@ describe('InboxPanel', () => {
     expect(await screen.findByRole('heading', { name: 'Connect GitHub' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sign in with your browser/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Use the GitHub CLI/ })).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: 'Pull request URL' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('searchbox', { name: 'Find or open a pull request' }),
+    ).not.toBeInTheDocument();
     expect(listInbox).not.toHaveBeenCalled();
   });
 
@@ -118,7 +190,7 @@ describe('InboxPanel', () => {
     });
 
     await userEvent.type(
-      await screen.findByRole('textbox', { name: 'Pull request URL' }),
+      await screen.findByRole('searchbox', { name: 'Find or open a pull request' }),
       'platform/api#7{Enter}',
     );
     expect(onSelect).toHaveBeenCalledWith({

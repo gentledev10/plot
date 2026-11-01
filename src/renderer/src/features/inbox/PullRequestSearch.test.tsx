@@ -1,15 +1,35 @@
+import type { PullRequestRef } from '@shared/github';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { OpenPullRequestForm } from './OpenPullRequestForm';
+import { PullRequestSearch } from './PullRequestSearch';
 
-function setup() {
-  const onOpen = vi.fn();
-  render(<OpenPullRequestForm onOpen={onOpen} />);
-  return { onOpen, input: screen.getByRole('textbox', { name: 'Pull request URL' }) };
+function Search({
+  firstMatch,
+  onOpen,
+}: {
+  firstMatch?: PullRequestRef;
+  onOpen(ref: PullRequestRef): void;
+}) {
+  const [query, setQuery] = useState('');
+  return (
+    <PullRequestSearch
+      query={query}
+      onQueryChange={setQuery}
+      firstMatch={firstMatch}
+      onOpen={onOpen}
+    />
+  );
 }
 
-describe('OpenPullRequestForm', () => {
+function setup(firstMatch?: PullRequestRef) {
+  const onOpen = vi.fn();
+  render(<Search firstMatch={firstMatch} onOpen={onOpen} />);
+  return { onOpen, input: screen.getByRole('searchbox', { name: 'Find or open a pull request' }) };
+}
+
+describe('PullRequestSearch', () => {
   it('opens a pasted pull request URL and clears the field', async () => {
     const { onOpen, input } = setup();
 
@@ -35,7 +55,17 @@ describe('OpenPullRequestForm', () => {
     });
   });
 
-  it('explains the expected format for anything else and keeps the text', async () => {
+  it('opens the first pull request that matches what was typed, keeping the filter', async () => {
+    const match = { host: 'github.com', owner: 'acme', repo: 'api', number: 12 };
+    const { onOpen, input } = setup(match);
+
+    await userEvent.type(input, 'login{Enter}');
+
+    expect(onOpen).toHaveBeenCalledWith(match);
+    expect(input).toHaveValue('login');
+  });
+
+  it('explains how to open a pull request when nothing matches, and keeps the text', async () => {
     const { onOpen, input } = setup();
 
     await userEvent.type(input, 'https://github.com/octocat/hello-world/issues/1{Enter}');

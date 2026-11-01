@@ -1,0 +1,42 @@
+import type { PullRequestRef, PullRequestSummary } from '@shared/github';
+import { GITHUB_HOST } from '@shared/hosts';
+
+export interface RepositoryGroup {
+  key: string;
+  name: string;
+  pulls: PullRequestSummary[];
+}
+
+export function repositoryName(ref: PullRequestRef): string {
+  const name = `${ref.owner}/${ref.repo}`;
+  return ref.host === GITHUB_HOST ? name : `${ref.host}/${name}`;
+}
+
+export function newestFirst(pulls: readonly PullRequestSummary[]): PullRequestSummary[] {
+  return [...pulls].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+}
+
+export function groupByRepository(pulls: readonly PullRequestSummary[]): RepositoryGroup[] {
+  const groups = new Map<string, RepositoryGroup>();
+  for (const pull of newestFirst(pulls)) {
+    const name = repositoryName(pull.ref);
+    const key = name.toLowerCase();
+    const group = groups.get(key) ?? { key, name, pulls: [] };
+    group.pulls.push(pull);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
+}
+
+export function filterPullRequests(
+  pulls: readonly PullRequestSummary[],
+  query: string,
+): PullRequestSummary[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  return pulls.filter((pull) => {
+    const text = [repositoryName(pull.ref), `#${pull.ref.number}`, pull.title, pull.author.login]
+      .join(' ')
+      .toLowerCase();
+    return words.every((word) => text.includes(word));
+  });
+}
