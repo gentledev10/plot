@@ -1,6 +1,5 @@
 import type { PullRequestRef } from '@shared/github';
 import { GITHUB_HOST } from '@shared/hosts';
-import type { LocalRepository } from '@shared/local';
 import { ChevronsUpDown, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar } from '../../components/Avatar';
@@ -10,7 +9,6 @@ import { usePreference } from '../../lib/preferences';
 import { ConnectGitHub } from '../accounts/ConnectGitHub';
 import { useAccounts } from '../accounts/queries';
 import { useCommand } from '../keymap/KeymapProvider';
-import { LocalRepositoryList } from '../local/LocalRepositoryList';
 import { filterPullRequests, newestFirst } from './grouping';
 import styles from './InboxPanel.module.css';
 import { PullRequestList } from './PullRequestList';
@@ -25,8 +23,6 @@ interface InboxPanelProps {
   focusOpenField?: boolean;
   onOpenFieldFocused?(): void;
   onManageAccounts?(): void;
-  selectedLocalId?: string;
-  onOpenLocal?(repository: LocalRepository): void;
 }
 
 export function InboxPanel({
@@ -35,8 +31,6 @@ export function InboxPanel({
   focusOpenField,
   onOpenFieldFocused,
   onManageAccounts,
-  selectedLocalId,
-  onOpenLocal = () => {},
 }: InboxPanelProps) {
   const accounts = useAccounts();
   const current = accounts.data?.accounts.find((account) => account.id === accounts.data.currentId);
@@ -96,10 +90,7 @@ export function InboxPanel({
           onFocused={onOpenFieldFocused}
         />
       )}
-      <div className={styles.content}>
-        {renderContent()}
-        <LocalRepositoryList selectedId={selectedLocalId} onOpen={onOpenLocal} />
-      </div>
+      <div className={styles.content}>{renderContent()}</div>
       {current && (
         <footer className={styles.footer}>
           <button

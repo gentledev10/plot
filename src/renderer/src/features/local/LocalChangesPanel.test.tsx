@@ -2,20 +2,29 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithApi } from '../../../test/render';
-import { LocalRepositoryList } from './LocalRepositoryList';
+import { LocalChangesPanel } from './LocalChangesPanel';
 
 const repository = { id: '0123456789abcdef', name: 'api', path: '/work/api' };
 
-describe('LocalRepositoryList', () => {
-  it('explains what local repositories are for before any is opened', async () => {
-    renderWithApi(<LocalRepositoryList onOpen={vi.fn()} />);
+describe('LocalChangesPanel', () => {
+  it('explains what local repositories are for and offers to open one', async () => {
+    const onOpen = vi.fn();
+    const openLocalRepository = vi.fn().mockResolvedValue(repository);
+    renderWithApi(<LocalChangesPanel onOpen={onOpen} />, {
+      listLocalRepositories: vi.fn().mockResolvedValue([]),
+      openLocalRepository,
+    });
+
     expect(await screen.findByText(/including work you have not committed/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Choose a folder…' }));
+
+    await vi.waitFor(() => expect(onOpen).toHaveBeenCalledWith(repository));
   });
 
   it('opens a repository the user picks and remembers it', async () => {
     const onOpen = vi.fn();
     const openLocalRepository = vi.fn().mockResolvedValue(repository);
-    renderWithApi(<LocalRepositoryList onOpen={onOpen} />, { openLocalRepository });
+    renderWithApi(<LocalChangesPanel onOpen={onOpen} />, { openLocalRepository });
 
     await userEvent.click(screen.getByRole('button', { name: 'Open a local repository' }));
 
@@ -24,7 +33,7 @@ describe('LocalRepositoryList', () => {
 
   it('does nothing when the folder picker is cancelled', async () => {
     const onOpen = vi.fn();
-    renderWithApi(<LocalRepositoryList onOpen={onOpen} />, {
+    renderWithApi(<LocalChangesPanel onOpen={onOpen} />, {
       openLocalRepository: vi.fn().mockResolvedValue(null),
     });
     await userEvent.click(screen.getByRole('button', { name: 'Open a local repository' }));
@@ -34,7 +43,7 @@ describe('LocalRepositoryList', () => {
   it('lists recent repositories, opens them, and removes them', async () => {
     const onOpen = vi.fn();
     const removeLocalRepository = vi.fn().mockResolvedValue(undefined);
-    renderWithApi(<LocalRepositoryList selectedId={repository.id} onOpen={onOpen} />, {
+    renderWithApi(<LocalChangesPanel selectedId={repository.id} onOpen={onOpen} />, {
       listLocalRepositories: vi.fn().mockResolvedValue([repository]),
       removeLocalRepository,
     });
@@ -50,7 +59,7 @@ describe('LocalRepositoryList', () => {
 
   it('shows why a folder could not be opened', async () => {
     const { PlotError } = await import('../../lib/api');
-    renderWithApi(<LocalRepositoryList onOpen={vi.fn()} />, {
+    renderWithApi(<LocalChangesPanel onOpen={vi.fn()} />, {
       openLocalRepository: vi
         .fn()
         .mockRejectedValue(

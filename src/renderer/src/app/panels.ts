@@ -18,6 +18,31 @@ export function togglePanel(layout: PanelLayout, panel: PanelId): PanelLayout {
   return { ...layout, [panel]: !layout[panel] };
 }
 
+export const TOOL_WINDOWS = ['pull-requests', 'local-changes'] as const;
+
+export type ToolWindowId = (typeof TOOL_WINDOWS)[number];
+
+export const DEFAULT_TOOL_WINDOW: ToolWindowId = 'pull-requests';
+
+export function parseToolWindow(stored: unknown): ToolWindowId | undefined {
+  return TOOL_WINDOWS.find((id) => id === stored);
+}
+
+export interface ToolWindowState {
+  layout: PanelLayout;
+  window: ToolWindowId;
+}
+
+export function toggleToolWindow(
+  { layout, window }: ToolWindowState,
+  target: ToolWindowId,
+): ToolWindowState {
+  if (layout.sidebar && window === target) {
+    return { layout: { ...layout, sidebar: false }, window };
+  }
+  return { layout: { ...layout, sidebar: true }, window: target };
+}
+
 export interface ToggleAllResult {
   layout: PanelLayout;
   restore?: PanelLayout;

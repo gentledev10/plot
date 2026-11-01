@@ -37,6 +37,7 @@ describe('FilesPanel', () => {
         target={{ kind: 'pull-request', ref: target }}
         title="octocat/hello-world#42"
         onSelectFile={vi.fn()}
+        backLabel="Pull requests"
         onBack={vi.fn()}
       />,
       {
@@ -57,6 +58,7 @@ describe('FilesPanel', () => {
         target={{ kind: 'pull-request', ref: target }}
         title="octocat/hello-world#42"
         onSelectFile={vi.fn()}
+        backLabel="Pull requests"
         onBack={vi.fn()}
       />,
       {
@@ -76,6 +78,7 @@ describe('FilesPanel', () => {
         target={{ kind: 'pull-request', ref: target }}
         title="octocat/hello-world#42"
         onSelectFile={onSelectFile}
+        backLabel="Pull requests"
         onBack={vi.fn()}
       />,
       {
@@ -86,12 +89,13 @@ describe('FilesPanel', () => {
     expect(onSelectFile).toHaveBeenCalledWith('README.md');
   });
 
-  it('goes back to the pull request list', async () => {
+  it('goes back to the list it was opened from', async () => {
     const onBack = vi.fn();
     renderWithApi(
       <FilesPanel
         target={{ kind: 'pull-request', ref: target }}
         title="octocat/hello-world#42"
+        backLabel="Local changes"
         onSelectFile={vi.fn()}
         onBack={onBack}
       />,
@@ -99,7 +103,7 @@ describe('FilesPanel', () => {
         getPullRequestDiff: vi.fn().mockResolvedValue(diff),
       },
     );
-    await userEvent.click(screen.getByRole('button', { name: /Pull requests/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Local changes' }));
     expect(onBack).toHaveBeenCalledOnce();
   });
 
@@ -113,6 +117,7 @@ describe('FilesPanel', () => {
         target={{ kind: 'pull-request', ref: target }}
         title="octocat/hello-world#42"
         onSelectFile={vi.fn()}
+        backLabel="Pull requests"
         onBack={vi.fn()}
       />,
       {

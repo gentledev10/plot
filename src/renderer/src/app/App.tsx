@@ -2,7 +2,7 @@ import type { PullRequestRef } from '@shared/github';
 import type { LocalRepository } from '@shared/local';
 import { formatPullRequestRef } from '@shared/pull-request-ref';
 import type { CodeLocation } from '@shared/review';
-import { FolderTree, GitPullRequest, Settings, Sparkles } from 'lucide-react';
+import { FolderGit2, GitPullRequest, Settings, Sparkles } from 'lucide-react';
 import { type CSSProperties, useRef, useState } from 'react';
 import { StatusMessage } from '../components/StatusMessage';
 import type { LocationRequest } from '../features/diff/DiffWorkspace';
@@ -11,6 +11,7 @@ import { FilesPanel } from '../features/files/FilesPanel';
 import { InboxPanel } from '../features/inbox/InboxPanel';
 import { useCommand, useShortcutLabel } from '../features/keymap/KeymapProvider';
 import { formatStroke } from '../features/keymap/keystroke';
+import { LocalChangesPanel } from '../features/local/LocalChangesPanel';
 import { LocalWorkspace } from '../features/local/LocalWorkspace';
 import { useLocalRepositories, useLocalRepositoryActions } from '../features/local/queries';
 import { PullRequestWorkspace } from '../features/pull-request/PullRequestWorkspace';
@@ -21,13 +22,17 @@ import styles from './App.module.css';
 import {
   DEFAULT_LAYOUT,
   DEFAULT_SIZES,
+  DEFAULT_TOOL_WINDOW,
   type PanelId,
   type PanelLayout,
   parseLayout,
   parseSizes,
+  parseToolWindow,
   SIZE_LIMITS,
+  type ToolWindowId,
   toggleAllPanels,
   togglePanel,
+  toggleToolWindow,
 } from './panels';
 import { useMenuCommand, usePlatform } from './providers';
 import { ResizeHandle } from './ResizeHandle';
@@ -42,6 +47,11 @@ export function App() {
   const [selectedPath, setSelectedPath] = useState<string>();
   const [reveal, setReveal] = useState<LocationRequest>();
   const [layout, setLayout] = usePreference('layout.panels', DEFAULT_LAYOUT, parseLayout);
+  const [toolWindow, setToolWindow] = usePreference(
+    'layout.toolWindow',
+    DEFAULT_TOOL_WINDOW,
+    parseToolWindow,
+  );
   const [restore, setRestore] = useState<PanelLayout>();
   const [sizes, setSizes] = usePreference('layout.sizes', DEFAULT_SIZES, parseSizes);
   const [maximized, setMaximized] = useState(false);
@@ -49,12 +59,14 @@ export function App() {
   const shell = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<SettingsSection>();
   const [focusOpenField, setFocusOpenField] = useState(false);
-  const sidebarShortcut = useShortcutLabel('view.toggleSidebar');
+  const pullRequestsShortcut = useShortcutLabel('view.togglePullRequests');
+  const localChangesShortcut = useShortcutLabel('view.toggleLocalChanges');
   const reviewShortcut = useShortcutLabel('view.toggleReview');
 
   function show(target: DiffTarget) {
     setOpen(target);
     setLastOpened(target);
+    setToolWindow(target.kind === 'local' ? 'local-changes' : 'pull-requests');
     setSelectedPath(undefined);
     setReveal(undefined);
   }
@@ -104,6 +116,14 @@ export function App() {
     setRestore(undefined);
   }
 
+  function toggleWindow(id: ToolWindowId) {
+    setMaximized(false);
+    const next = toggleToolWindow({ layout, window: toolWindow }, id);
+    setLayout(next.layout);
+    setToolWindow(next.window);
+    setRestore(undefined);
+  }
+
   function toggleAll() {
     setMaximized(false);
     const next = toggleAllPanels(layout, restore);
@@ -135,15 +155,17 @@ export function App() {
     if (!layout.sidebar) {
       setLayout({ ...layout, sidebar: true });
     }
+    setToolWindow('pull-requests');
     setFocusOpenField(true);
   }
 
-  useCommand('view.toggleSidebar', () => toggle('sidebar'));
+  useCommand('view.togglePullRequests', () => toggleWindow('pull-requests'));
+  useCommand('view.toggleLocalChanges', () => toggleWindow('local-changes'));
   useCommand('view.toggleReview', () => toggle('review'));
   useCommand('view.maximizeReview', () => setMaximized(!maximized));
   useCommand('view.toggleAllPanels', toggleAll);
   useCommand('pullRequest.open', startOpeningPullRequest);
-  useCommand('pullRequest.back', backToList, open !== undefined);
+  useCommand('navigation.back', backToList, open !== undefined);
   useCommand('local.open', chooseAndOpenLocalRepository);
   useMenuCommand('open-local-repository', chooseAndOpenLocalRepository);
   useMenuCommand('open-settings', () => setSettings('accounts'));
@@ -179,36 +201,62 @@ export function App() {
           }
         >
           <ToolWindowButton
-            label={open ? 'Changed files' : 'Pull requests'}
-            shortcut={sidebarShortcut}
-            pressed={layout.sidebar}
-            onClick={() => toggle('sidebar')}
+            label="Pull requests"
+            shortcut={pullRequestsShortcut}
+            pressed={layout.sidebar && toolWindow === 'pull-requests'}
+            onClick={() => toggleWindow('pull-requests')}
           >
-            {open ? <FolderTree size={16} /> : <GitPullRequest size={16} />}
+            <GitPullRequest size={16} />
+          </ToolWindowButton>
+          <ToolWindowButton
+            label="Local changes"
+            shortcut={localChangesShortcut}
+            pressed={layout.sidebar && toolWindow === 'local-changes'}
+            onClick={() => toggleWindow('local-changes')}
+          >
+            <FolderGit2 size={16} />
           </ToolWindowButton>
         </ToolWindowBar>
       </div>
       <div className={styles.sidebar} hidden={!layout.sidebar || maximized}>
         {resizeHandle('sidebar', 'Resize the sidebar', 'right')}
-        {open ? (
-          <FilesPanel
-            target={open}
-            title={titleOf(open)}
-            selectedPath={selectedPath}
-            onSelectFile={setSelectedPath}
-            onBack={backToList}
-          />
-        ) : (
-          <InboxPanel
-            selected={lastOpened?.kind === 'pull-request' ? lastOpened.ref : undefined}
-            selectedLocalId={lastOpened?.kind === 'local' ? lastOpened.repositoryId : undefined}
-            onSelect={openPullRequest}
-            onOpenLocal={openLocalRepository}
-            focusOpenField={focusOpenField}
-            onOpenFieldFocused={() => setFocusOpenField(false)}
-            onManageAccounts={() => setSettings('accounts')}
-          />
-        )}
+        <div className={styles.toolWindow} hidden={toolWindow !== 'pull-requests'}>
+          {open?.kind === 'pull-request' ? (
+            <FilesPanel
+              target={open}
+              title={titleOf(open)}
+              backLabel="Pull requests"
+              selectedPath={selectedPath}
+              onSelectFile={setSelectedPath}
+              onBack={backToList}
+            />
+          ) : (
+            <InboxPanel
+              selected={lastOpened?.kind === 'pull-request' ? lastOpened.ref : undefined}
+              onSelect={openPullRequest}
+              focusOpenField={focusOpenField}
+              onOpenFieldFocused={() => setFocusOpenField(false)}
+              onManageAccounts={() => setSettings('accounts')}
+            />
+          )}
+        </div>
+        <div className={styles.toolWindow} hidden={toolWindow !== 'local-changes'}>
+          {open?.kind === 'local' ? (
+            <FilesPanel
+              target={open}
+              title={titleOf(open)}
+              backLabel="Local changes"
+              selectedPath={selectedPath}
+              onSelectFile={setSelectedPath}
+              onBack={backToList}
+            />
+          ) : (
+            <LocalChangesPanel
+              selectedId={lastOpened?.kind === 'local' ? lastOpened.repositoryId : undefined}
+              onOpen={openLocalRepository}
+            />
+          )}
+        </div>
       </div>
       <main className={styles.workspace} hidden={maximized}>
         {open?.kind === 'pull-request' && (
@@ -237,7 +285,7 @@ export function App() {
               action={
                 layout.sidebar
                   ? undefined
-                  : { label: 'Show pull requests', run: () => toggle('sidebar') }
+                  : { label: 'Show pull requests', run: () => toggleWindow('pull-requests') }
               }
             >
               Select a pull request or a local repository to see what changed.

@@ -12,11 +12,12 @@ function items(menu: MenuItemConstructorOptions[]): MenuItemConstructorOptions[]
 function build(isDevelopment = false) {
   const send = vi.fn();
   const openExternal = vi.fn();
-  const menu = applicationMenu({ appName: 'Plot', isDevelopment, send, openExternal });
+  const resetZoom = vi.fn();
+  const menu = applicationMenu({ appName: 'Plot', isDevelopment, send, openExternal, resetZoom });
   const find = (label: string) => items(menu).find((item) => item.label === label);
   const click = (label: string) =>
     (find(label)?.click as (() => void) | undefined)?.call(undefined);
-  return { menu, send, openExternal, find, click };
+  return { menu, send, openExternal, resetZoom, find, click };
 }
 
 describe('applicationMenu', () => {
@@ -31,6 +32,14 @@ describe('applicationMenu', () => {
     const { click, send } = build();
     click('Open Local Repository…');
     expect(send).toHaveBeenCalledWith('open-local-repository');
+  });
+
+  it('leaves ⌘0 to the local changes window', () => {
+    const { menu, find, click, resetZoom } = build();
+    expect(items(menu).map((item) => item.role)).not.toContain('resetZoom');
+    expect(find('Actual Size')?.accelerator).toBeUndefined();
+    click('Actual Size');
+    expect(resetZoom).toHaveBeenCalledOnce();
   });
 
   it('lists the keyboard shortcuts under Help', () => {

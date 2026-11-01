@@ -51,7 +51,18 @@ export const COMMANDS = [
     group: 'Editor',
     keys: ['Alt+ArrowDown'],
   },
-  { id: 'view.toggleSidebar', title: 'Show or hide the sidebar', group: 'View', keys: ['Meta+1'] },
+  {
+    id: 'view.togglePullRequests',
+    title: 'Show or hide pull requests',
+    group: 'View',
+    keys: ['Meta+1'],
+  },
+  {
+    id: 'view.toggleLocalChanges',
+    title: 'Show or hide local changes',
+    group: 'View',
+    keys: ['Meta+0'],
+  },
   {
     id: 'view.toggleReview',
     title: 'Show or hide the AI overview',
@@ -76,12 +87,7 @@ export const COMMANDS = [
     group: 'Navigation',
     keys: ['Meta+O'],
   },
-  {
-    id: 'pullRequest.back',
-    title: 'Back to the pull request list',
-    group: 'Navigation',
-    keys: ['Meta+['],
-  },
+  { id: 'navigation.back', title: 'Back to the list', group: 'Navigation', keys: ['Meta+['] },
   { id: 'pullRequest.refresh', title: 'Refresh', group: 'Navigation', keys: ['Meta+R'] },
   { id: 'pullRequest.openOnGitHub', title: 'Open on GitHub', group: 'Navigation', keys: [] },
   { id: 'local.open', title: 'Open a local repository', group: 'Navigation', keys: [] },

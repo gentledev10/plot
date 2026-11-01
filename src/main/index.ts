@@ -204,6 +204,7 @@ app.whenReady().then(async () => {
         isDevelopment: !app.isPackaged,
         send: sendMenuCommand,
         openExternal: (url) => void shell.openExternal(url),
+        resetZoom: () => BrowserWindow.getFocusedWindow()?.webContents.setZoomLevel(0),
       }),
     ),
   );

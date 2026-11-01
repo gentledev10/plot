@@ -10,12 +10,20 @@ import { buildFileTree, filesInTreeOrder } from './file-tree';
 interface FilesPanelProps {
   target: DiffTarget;
   title: string;
+  backLabel: string;
   selectedPath?: string;
   onSelectFile(path: string): void;
   onBack(): void;
 }
 
-export function FilesPanel({ target, title, selectedPath, onSelectFile, onBack }: FilesPanelProps) {
+export function FilesPanel({
+  target,
+  title,
+  backLabel,
+  selectedPath,
+  onSelectFile,
+  onBack,
+}: FilesPanelProps) {
   const diff = useTargetDiff(target);
   const tree = useMemo(() => (diff.data ? buildFileTree(diff.data.files) : []), [diff.data]);
   const current = selectedPath ?? filesInTreeOrder(tree)[0]?.path;
@@ -31,7 +39,7 @@ export function FilesPanel({ target, title, selectedPath, onSelectFile, onBack }
     <aside className={styles.panel} aria-label="Changed files">
       <header className={styles.header}>
         <button type="button" className={styles.back} onClick={onBack}>
-          <ChevronLeft size={14} /> Pull requests
+          <ChevronLeft size={14} /> {backLabel}
         </button>
       </header>
       <p className={styles.target}>{title}</p>

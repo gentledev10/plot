@@ -8,6 +8,7 @@ interface ApplicationMenuOptions {
   isDevelopment: boolean;
   send(command: MenuCommand): void;
   openExternal(url: string): void;
+  resetZoom(): void;
 }
 
 export function applicationMenu({
@@ -15,6 +16,7 @@ export function applicationMenu({
   isDevelopment,
   send,
   openExternal,
+  resetZoom,
 }: ApplicationMenuOptions): MenuItemConstructorOptions[] {
   const development: MenuItemConstructorOptions[] = isDevelopment
     ? [{ role: 'forceReload' }, { role: 'toggleDevTools' }, { type: 'separator' }]
@@ -49,7 +51,8 @@ export function applicationMenu({
       label: 'View',
       submenu: [
         ...development,
-        { role: 'resetZoom' },
+        // Without the role's ⌘0, which shows or hides local changes.
+        { label: 'Actual Size', click: resetZoom },
         { role: 'zoomIn' },
         { role: 'zoomOut' },
         { type: 'separator' },

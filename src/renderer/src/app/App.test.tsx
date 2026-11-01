@@ -63,7 +63,8 @@ describe('App', () => {
     renderWithApi(<App />, api());
 
     await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
-    await userEvent.click(await screen.findByRole('button', { name: /Pull requests/ }));
+    const files = await screen.findByRole('complementary', { name: 'Changed files' });
+    await userEvent.click(within(files).getByRole('button', { name: 'Pull requests' }));
 
     expect(await screen.findByRole('button', { name: /Fix login redirect/ })).toHaveAttribute(
       'aria-current',
@@ -216,14 +217,14 @@ describe('App', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Settings' });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Keymap' }));
     await userEvent.click(
-      within(dialog).getByRole('button', { name: 'Remove ⌘1 from Show or hide the sidebar' }),
+      within(dialog).getByRole('button', { name: 'Remove ⌘1 from Show or hide pull requests' }),
     );
     await userEvent.click(
-      within(dialog).getByRole('button', { name: 'Add a shortcut for Show or hide the sidebar' }),
+      within(dialog).getByRole('button', { name: 'Add a shortcut for Show or hide pull requests' }),
     );
     fireEvent.keyDown(
       within(dialog).getByRole('button', {
-        name: 'Press the new shortcut for Show or hide the sidebar',
+        name: 'Press the new shortcut for Show or hide pull requests',
       }),
       { key: 'b', code: 'KeyB', ctrlKey: true, altKey: true },
     );
@@ -288,6 +289,7 @@ describe('App', () => {
       readLocalFile: vi.fn().mockResolvedValue({ kind: 'text', text: 'listen(8080)' }),
     });
 
+    await userEvent.click(screen.getByRole('button', { name: 'Local changes' }));
     await userEvent.click(await screen.findByRole('button', { name: /^api/ }));
 
     expect(await screen.findByRole('heading', { name: 'api', level: 1 })).toBeInTheDocument();
@@ -306,6 +308,69 @@ describe('App', () => {
       repositoryId: repository.id,
       compare: 'uncommitted',
     });
+
+    const files = screen.getByRole('complementary', { name: 'Changed files' });
+    await userEvent.click(within(files).getByRole('button', { name: 'Local changes' }));
+    expect(await screen.findByRole('button', { name: /^api/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
+  it('keeps pull requests and local changes in separate tool windows', async () => {
+    renderWithApi(<App />, {
+      ...api(),
+      listLocalRepositories: vi
+        .fn()
+        .mockResolvedValue([{ id: '0123456789abcdef', name: 'api', path: '/work/api' }]),
+    });
+    const pullRequests = () => screen.queryByRole('complementary', { name: 'Pull requests' });
+    const localChanges = () => screen.queryByRole('complementary', { name: 'Local changes' });
+    expect(pullRequests()).toBeInTheDocument();
+    expect(localChanges()).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document.body, { key: '0', code: 'Digit0', metaKey: true });
+    expect(localChanges()).toBeInTheDocument();
+    expect(pullRequests()).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^api/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Local changes' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    fireEvent.keyDown(document.body, { key: '0', code: 'Digit0', metaKey: true });
+    expect(localChanges()).not.toBeInTheDocument();
+
+    fireEvent.keyDown(document.body, { key: '1', code: 'Digit1', metaKey: true });
+    expect(pullRequests()).toBeInTheDocument();
+  });
+
+  it('shows a folder opened from the File menu in the local changes window', async () => {
+    const repository = { id: '0123456789abcdef', name: 'api', path: '/work/api' };
+    const { menu } = renderWithApi(<App />, {
+      ...api(),
+      openLocalRepository: vi.fn().mockResolvedValue(repository),
+      listLocalRepositories: vi.fn().mockResolvedValue([repository]),
+      getLocalDiff: vi.fn().mockResolvedValue({ branch: 'main', base: null, files: [] }),
+      getLocalSignature: vi.fn().mockResolvedValue('same'),
+    });
+
+    act(() => menu.send('open-local-repository'));
+
+    const files = await screen.findByRole('complementary', { name: 'Changed files' });
+    expect(within(files).getByRole('button', { name: 'Local changes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Local changes', pressed: true })).toBeVisible();
+  });
+
+  it('remembers which tool window was showing', async () => {
+    const { unmount } = renderWithApi(<App />, api());
+    await userEvent.click(screen.getByRole('button', { name: 'Local changes' }));
+    unmount();
+
+    renderWithApi(<App />, api());
+
+    expect(screen.getByRole('complementary', { name: 'Local changes' })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Pull requests' })).not.toBeInTheDocument();
   });
 
   it('opens a pull request pasted as a URL', async () => {

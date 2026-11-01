@@ -1,10 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LAYOUT, parseLayout, toggleAllPanels, togglePanel } from './panels';
+import {
+  DEFAULT_LAYOUT,
+  parseLayout,
+  parseToolWindow,
+  toggleAllPanels,
+  togglePanel,
+  toggleToolWindow,
+} from './panels';
 
 describe('togglePanel', () => {
   it('flips one panel and leaves the other alone', () => {
     expect(togglePanel(DEFAULT_LAYOUT, 'sidebar')).toEqual({ sidebar: false, review: true });
     expect(togglePanel({ sidebar: false, review: true }, 'sidebar')).toEqual(DEFAULT_LAYOUT);
+  });
+});
+
+describe('toggleToolWindow', () => {
+  it('brings another tool window forward without hiding the sidebar', () => {
+    expect(
+      toggleToolWindow({ layout: DEFAULT_LAYOUT, window: 'pull-requests' }, 'local-changes'),
+    ).toEqual({ layout: DEFAULT_LAYOUT, window: 'local-changes' });
+  });
+
+  it('hides the sidebar when its tool window is already showing', () => {
+    expect(
+      toggleToolWindow({ layout: DEFAULT_LAYOUT, window: 'local-changes' }, 'local-changes'),
+    ).toEqual({ layout: { sidebar: false, review: true }, window: 'local-changes' });
+  });
+
+  it('shows a hidden sidebar with the tool window that was asked for', () => {
+    expect(
+      toggleToolWindow(
+        { layout: { sidebar: false, review: false }, window: 'local-changes' },
+        'pull-requests',
+      ),
+    ).toEqual({ layout: { sidebar: true, review: false }, window: 'pull-requests' });
+  });
+});
+
+describe('parseToolWindow', () => {
+  it('accepts a known tool window and rejects anything else', () => {
+    expect(parseToolWindow('local-changes')).toBe('local-changes');
+    expect(parseToolWindow('repositories')).toBeUndefined();
+    expect(parseToolWindow(1)).toBeUndefined();
   });
 });
 
