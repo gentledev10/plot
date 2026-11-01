@@ -159,6 +159,20 @@
   opacity: 0.5;
   cursor: default;
 }
+.template {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  font-size: var(--font-size-small);
+}
+.template select {
+  padding: 7px 34px 7px 9px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-input);
+  color: var(--color-text);
+  font: inherit;
+}
 .srOnly {
   position: absolute;
   width: 1px;

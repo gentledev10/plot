@@ -1,29 +1,40 @@
 export const REVIEW_PLAN_PREFERENCE = 'review-plan';
 export const MAX_CUSTOM_STEPS = 6;
 export const BUILTIN_STEPS = [
-  { id: 'summary', title: 'Summary', description: 'The purpose and overall effect of the change.' },
   {
-    id: 'changes',
-    title: 'What changed',
-    description: 'The important differences, before and after.',
+    id: 'summary',
+    title: 'At a glance',
+    description: 'The purpose and effect in two or three sentences.',
   },
-  { id: 'flows', title: 'Execution flows', description: 'Diagrams showing how behavior changes.' },
   {
     id: 'architecture',
-    title: 'Architecture',
-    description: 'The components and their relationships.',
+    title: 'Change map',
+    description: 'Where this change sits in the wider system.',
   },
+  {
+    id: 'changes',
+    title: 'Key changes',
+    description: 'The important differences, before and after.',
+  },
+  {
+    id: 'reviewPoints',
+    title: 'Review focus',
+    description: 'Conditions, exceptions and tests worth checking, with evidence.',
+  },
+  {
+    id: 'readingOrder',
+    title: 'Code walkthrough',
+    description: 'The first few files to inspect and why.',
+  },
+  { id: 'flows', title: 'Execution flows', description: 'Diagrams showing how behavior changes.' },
   {
     id: 'impacts',
     title: 'What else it affects',
     description: 'Effects on callers, data, configuration and performance.',
   },
-  {
-    id: 'readingOrder',
-    title: 'Where to start reading',
-    description: 'An order for reading the changed files.',
-  },
 ] as const;
+const DEFAULT_IDS = ['summary', 'architecture', 'changes', 'reviewPoints', 'readingOrder'] as const;
+const LEGACY_IDS = ['summary', 'changes', 'flows', 'architecture', 'impacts', 'readingOrder'];
 export type BuiltinStep = (typeof BUILTIN_STEPS)[number]['id'];
 export type ReviewDetail = 'brief' | 'balanced' | 'detailed';
 export type ReviewFormat = 'text' | 'checklist' | 'diagram';
@@ -37,10 +48,12 @@ export interface ReviewStep {
   format: ReviewFormat;
 }
 export interface ReviewPlan {
+  version?: 2;
   steps: ReviewStep[];
 }
 export const defaultReviewPlan = (): ReviewPlan => ({
-  steps: BUILTIN_STEPS.map(({ id }) => ({
+  version: 2,
+  steps: DEFAULT_IDS.map((id) => ({
     id,
     kind: id,
     title: '',
@@ -58,12 +71,28 @@ export function parseReviewPlan(value: unknown): ReviewPlan {
   const defaults = defaultReviewPlan();
   if (!value || typeof value !== 'object' || !('steps' in value) || !Array.isArray(value.steps))
     return defaults;
+  if (
+    !('version' in value) &&
+    value.steps.length === LEGACY_IDS.length &&
+    value.steps.every(
+      (step, i) =>
+        step &&
+        step.id === LEGACY_IDS[i] &&
+        step.kind === step.id &&
+        step.title === '' &&
+        step.instructions === '' &&
+        step.visible === true &&
+        step.detail === 'balanced' &&
+        step.format === 'text',
+    )
+  )
+    return defaults;
   const seen = new Set<string>();
   let custom = 0;
   const steps: ReviewStep[] = [];
   for (const raw of value.steps.slice(0, 30)) {
     if (!raw || typeof raw !== 'object') continue;
-    const builtin = defaults.steps.find(({ id }) => id === raw.id);
+    const builtin = BUILTIN_STEPS.find(({ id }) => id === raw.id);
     if (
       !builtin &&
       !(
@@ -79,7 +108,7 @@ export function parseReviewPlan(value: unknown): ReviewPlan {
     if (!builtin) custom++;
     steps.push({
       id: raw.id,
-      kind: builtin?.kind ?? 'custom',
+      kind: builtin?.id ?? 'custom',
       title: typeof raw.title === 'string' ? raw.title.slice(0, 100) : '',
       visible: raw.visible !== false,
       instructions: typeof raw.instructions === 'string' ? raw.instructions.slice(0, 1500) : '',
@@ -88,13 +117,36 @@ export function parseReviewPlan(value: unknown): ReviewPlan {
         !builtin && ['text', 'checklist', 'diagram'].includes(raw.format) ? raw.format : 'text',
     });
   }
-  return { steps };
+  return { version: 2, steps };
+}
+
+export function applyRecommendedReviewPlan(plan: ReviewPlan): ReviewPlan {
+  const defaults = defaultReviewPlan();
+  const ids = new Set(defaults.steps.map((step) => step.id));
+  return {
+    version: 2,
+    steps: [
+      ...defaults.steps.map(
+        (step) => plan.steps.find((existing) => existing.id === step.id) ?? step,
+      ),
+      ...plan.steps.filter(
+        (step) =>
+          !ids.has(step.id) &&
+          (step.kind === 'custom' ||
+            step.title.trim() ||
+            step.instructions.trim() ||
+            step.detail !== 'balanced' ||
+            !step.visible),
+      ),
+    ],
+  };
 }
 
 // Presentation changes reuse the same analysis. Sort by id so dragging never invalidates it.
 export function reviewContentKey(plan: ReviewPlan): string {
-  return JSON.stringify(
-    plan.steps
+  return JSON.stringify({
+    version: 2,
+    steps: plan.steps
       .map((step) => ({
         id: step.id,
         kind: step.kind,
@@ -103,7 +155,7 @@ export function reviewContentKey(plan: ReviewPlan): string {
         ...(step.kind === 'custom' ? { title: stepTitle(step), format: step.format } : {}),
       }))
       .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
-  );
+  });
 }
 
 export function moveReviewStep(
@@ -117,5 +169,5 @@ export function moveReviewStep(
   if (!step) return plan;
   const steps = plan.steps.filter((s) => s.id !== id);
   steps.splice(steps.findIndex((s) => s.id === target) + Number(after), 0, step);
-  return { steps };
+  return { version: 2, steps };
 }

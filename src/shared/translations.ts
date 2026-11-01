@@ -1,6 +1,28 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  'At a glance': '한눈 요약',
+  'Change map': '변경 지도',
+  'Key changes': '핵심 변경',
+  'Review focus': '검토할 지점',
+  'Code walkthrough': '코드 따라보기',
+  'The purpose and effect in two or three sentences.':
+    '무엇을 왜 바꿨고 어떤 효과가 있는지 두세 문장으로 설명합니다.',
+  'Where this change sits in the wider system.': '전체 구조 안에서 이번 변경의 위치를 보여줍니다.',
+  'Conditions, exceptions and tests worth checking, with evidence.':
+    '확인할 조건, 예외, 테스트를 근거와 함께 안내합니다.',
+  'The first few files to inspect and why.': '먼저 볼 파일과 그 이유를 안내합니다.',
+  'Apply five-step flow': '추천 5단계 적용',
+  'Add a built-in step': '기본 단계 추가',
+  'Choose a step…': '단계 선택…',
+  'Show less': '접어 보기',
+  'Show {count} more': '나머지 {count}개 보기',
+  'No specific review checks were identified. Use the code walkthrough to inspect the change.':
+    '별도로 제안할 검토 지점은 없습니다. 코드 따라보기에서 변경 내용을 확인해 주세요.',
+  'Code reference': '코드 근거',
+  'PR description': 'PR 설명',
+  'Inference — check this': '추론 · 확인 필요',
+  'Check: {what}': '확인할 내용: {what}',
   'Show in results': '결과에 표시',
   'Show {title} in results': '{title} 결과에 표시',
   'Hide this result card without removing the step from analysis.':

@@ -389,7 +389,10 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
         );
       case 'changes':
         return review.changes.length > 0 ? (
-          <ul className={styles.changes}>
+          <ProgressiveList
+            className={styles.changes}
+            limit={step.detail === 'detailed' ? 15 : step.detail === 'brief' ? 1 : 3}
+          >
             {review.changes.map((change, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: stored analysis order is fixed
               <li key={`${index}-${change.title}`} className={styles.change}>
@@ -411,7 +414,7 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
                 </dl>
               </li>
             ))}
-          </ul>
+          </ProgressiveList>
         ) : null;
       case 'flows':
         return review.flows.length > 0
@@ -422,6 +425,37 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
           : null;
       case 'architecture':
         return review.architecture.nodes.length > 0 ? graph(review.architecture) : null;
+      case 'reviewPoints':
+        return review.reviewPoints === undefined ? (
+          <p className={styles.muted}>{t('Generate again to fill this step.')}</p>
+        ) : review.reviewPoints.length === 0 ? (
+          <p className={styles.muted}>
+            {t(
+              'No specific review checks were identified. Use the code walkthrough to inspect the change.',
+            )}
+          </p>
+        ) : (
+          <ProgressiveList limit={step.detail === 'detailed' ? 8 : 3}>
+            {review.reviewPoints.map((point, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: stored analysis order is fixed
+              <li key={`${index}-${point.title}`}>
+                <strong>{point.title}</strong>
+                <span className={styles.evidence}>
+                  {t(
+                    point.evidence === 'code'
+                      ? 'Code reference'
+                      : point.evidence === 'description'
+                        ? 'PR description'
+                        : 'Inference — check this',
+                  )}
+                </span>
+                {link(point.location)}
+                <span className={styles.reason}>{point.reason}</span>
+                <p className={styles.check}>{t('Check: {what}', { what: point.check })}</p>
+              </li>
+            ))}
+          </ProgressiveList>
+        );
       case 'impacts':
         return review.impacts.length > 0 ? (
           <ul className={styles.list}>
@@ -437,14 +471,14 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
         ) : null;
       case 'readingOrder':
         return review.readingOrder.length > 0 ? (
-          <ol className={styles.list}>
+          <ProgressiveList ordered limit={5}>
             {review.readingOrder.map((item) => (
               <li key={item.path}>
                 {link({ path: item.path, line: 1, verified: true })}
                 <span className={styles.reason}>{item.reason}</span>
               </li>
             ))}
-          </ol>
+          </ProgressiveList>
         ) : null;
       case 'custom': {
         const section = review.customSections?.find((item) => item.id === step.id);
@@ -507,6 +541,37 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
         </ReviewCard>
       ))}
     </div>
+  );
+}
+
+function ProgressiveList({
+  children,
+  limit,
+  ordered = false,
+  className = styles.list,
+}: {
+  children: ReactNode[];
+  limit: number;
+  ordered?: boolean;
+  className?: string;
+}) {
+  const t = useT();
+  const [expanded, setExpanded] = useState(false);
+  const List = ordered ? 'ol' : 'ul';
+  return (
+    <>
+      <List className={className}>{expanded ? children : children.slice(0, limit)}</List>
+      {children.length > limit && (
+        <button
+          type="button"
+          className={styles.link}
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {t(expanded ? 'Show less' : 'Show {count} more', { count: children.length - limit })}
+        </button>
+      )}
+    </>
   );
 }
 

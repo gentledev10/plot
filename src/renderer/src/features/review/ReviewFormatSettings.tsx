@@ -1,4 +1,5 @@
 import {
+  applyRecommendedReviewPlan,
   BUILTIN_STEPS,
   defaultReviewPlan,
   MAX_CUSTOM_STEPS,
@@ -88,6 +89,16 @@ export function ReviewFormatSettings() {
             {t('Undo')}
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => {
+            setUndo(plan);
+            change(applyRecommendedReviewPlan(plan));
+            setExpanded(undefined);
+          }}
+        >
+          {t('Apply five-step flow')}
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -297,6 +308,44 @@ export function ReviewFormatSettings() {
           );
         })}
       </ol>
+      {BUILTIN_STEPS.some((step) => !plan.steps.some((existing) => existing.id === step.id)) && (
+        <label className={styles.template} htmlFor="review-step-template">
+          {t('Add a built-in step')}
+          <Select
+            id="review-step-template"
+            value=""
+            onChange={(event) => {
+              const builtin = BUILTIN_STEPS.find((step) => step.id === event.target.value);
+              if (builtin)
+                change({
+                  steps: [
+                    ...plan.steps,
+                    {
+                      id: builtin.id,
+                      kind: builtin.id,
+                      title: '',
+                      instructions: '',
+                      visible: true,
+                      detail: 'balanced',
+                      format: 'text',
+                    },
+                  ],
+                });
+            }}
+          >
+            <option value="" disabled>
+              {t('Choose a step…')}
+            </option>
+            {BUILTIN_STEPS.filter(
+              (step) => !plan.steps.some((existing) => existing.id === step.id),
+            ).map((step) => (
+              <option key={step.id} value={step.id}>
+                {t(step.title)}
+              </option>
+            ))}
+          </Select>
+        </label>
+      )}
       <button
         className={styles.add}
         type="button"

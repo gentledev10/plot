@@ -65,7 +65,7 @@ export function ReviewPlanProvider({ api, children }: { api: PlotApi; children: 
     return task;
   }, [api]);
   const change = (next: ReviewPlan) => {
-    latest.current = parseReviewPlan(next);
+    latest.current = parseReviewPlan({ ...next, version: 2 });
     setPlan(latest.current);
     setSaving(true);
     clearTimeout(timer.current);

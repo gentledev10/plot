@@ -164,6 +164,9 @@ export function createReviewService({
           flows: kinds.has('flows') ? parsed.flows : [],
           architecture: kinds.has('architecture') ? parsed.architecture : { nodes: [], edges: [] },
           impacts: kinds.has('impacts') ? parsed.impacts : [],
+          ...(parsed.reviewPoints
+            ? { reviewPoints: kinds.has('reviewPoints') ? parsed.reviewPoints : [] }
+            : {}),
           readingOrder: kinds.has('readingOrder') ? parsed.readingOrder : [],
         },
         lineCounter(repoDir),

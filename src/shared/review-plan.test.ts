@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyRecommendedReviewPlan,
   defaultReviewPlan,
   moveReviewStep,
   parseReviewPlan,
@@ -7,6 +8,64 @@ import {
 } from './review-plan';
 
 describe('review plans', () => {
+  it('uses the five-step flow and only migrates untouched legacy defaults', () => {
+    expect(defaultReviewPlan().steps.map((s) => s.id)).toEqual([
+      'summary',
+      'architecture',
+      'changes',
+      'reviewPoints',
+      'readingOrder',
+    ]);
+    const legacy = {
+      steps: ['summary', 'changes', 'flows', 'architecture', 'impacts', 'readingOrder'].map(
+        (id) => ({
+          id,
+          kind: id,
+          title: '',
+          instructions: '',
+          detail: 'balanced',
+          format: 'text',
+          visible: true,
+        }),
+      ),
+    };
+    expect(parseReviewPlan(legacy)).toEqual(defaultReviewPlan());
+    const edited = structuredClone(legacy);
+    if (edited.steps[0]) edited.steps[0].instructions = 'Explain failures';
+    expect(parseReviewPlan(edited).steps).toHaveLength(6);
+    expect(parseReviewPlan({ ...legacy, version: 2 }).steps).toHaveLength(6);
+    expect(parseReviewPlan({ steps: [...legacy.steps].reverse() }).steps.map((s) => s.id)).toEqual(
+      [...legacy.steps].reverse().map((s) => s.id),
+    );
+  });
+  it('applies recommendations while retaining custom and edited optional steps', () => {
+    const plan = parseReviewPlan({
+      steps: [
+        { id: 'summary', title: 'Mine', instructions: 'Focus on users' },
+        { id: 'flows', kind: 'flows', instructions: 'Show failures' },
+        {
+          id: 'custom_tests',
+          kind: 'custom',
+          title: 'Tests',
+          instructions: 'Inspect coverage',
+          format: 'checklist',
+          visible: false,
+        },
+      ],
+    });
+    const next = applyRecommendedReviewPlan(plan);
+    expect(next.steps.slice(0, 5).map((s) => s.id)).toEqual(
+      defaultReviewPlan().steps.map((s) => s.id),
+    );
+    expect(next.steps[0]).toMatchObject({ title: 'Mine', instructions: 'Focus on users' });
+    expect(next.steps.at(-1)).toMatchObject({
+      id: 'custom_tests',
+      visible: false,
+      format: 'checklist',
+    });
+    expect(next.steps.find((s) => s.id === 'flows')?.instructions).toBe('Show failures');
+  });
+
   it('preserves exactly the configured steps and rejects duplicate or unknown ids', () => {
     const plan = parseReviewPlan({
       steps: [
@@ -32,7 +91,7 @@ describe('review plans', () => {
       })),
     ].map((s) => ({ ...s, visible: false }));
     const plan = parseReviewPlan({ steps });
-    expect(plan.steps).toHaveLength(12);
+    expect(plan.steps).toHaveLength(11);
     expect(plan.steps.filter((s) => s.visible)).toHaveLength(0);
     expect(plan.steps[6]).toMatchObject({
       title: 'x'.repeat(100),
@@ -41,7 +100,7 @@ describe('review plans', () => {
     });
   });
   it('preserves deletion of every built-in across saving and parsing', () => {
-    const empty = { steps: [] };
+    const empty = { version: 2, steps: [] };
     expect(parseReviewPlan(JSON.parse(JSON.stringify(empty)))).toEqual(empty);
     const plan = defaultReviewPlan();
     plan.steps = plan.steps.filter((step) => step.id !== 'summary');

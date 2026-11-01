@@ -49,6 +49,7 @@ describe('REVIEW_SCHEMA', () => {
       'impacts',
       'readingOrder',
       'customSections',
+      'reviewPoints',
     ]);
   });
 

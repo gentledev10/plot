@@ -136,6 +136,16 @@
   color: var(--color-text-muted);
 }
 
+.evidence {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+.check {
+  margin: 4px 0 10px;
+}
+
 .location {
   display: inline-flex;
   min-width: 0;

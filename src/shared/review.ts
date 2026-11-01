@@ -49,6 +49,14 @@ export interface Impact {
   location?: CodeLocation;
 }
 
+export interface ReviewPoint {
+  title: string;
+  reason: string;
+  check: string;
+  evidence: 'code' | 'description' | 'inferred';
+  location?: CodeLocation;
+}
+
 export interface ReadingStep {
   path: string;
   reason: string;
@@ -77,6 +85,7 @@ export interface ReviewMap {
   flows: Flow[];
   architecture: Architecture;
   impacts: Impact[];
+  reviewPoints?: ReviewPoint[];
   readingOrder: ReadingStep[];
   customSections?: CustomReviewSection[];
 }

@@ -11,6 +11,7 @@ import type {
   KeyChange,
   ReadingStep,
   ReviewMap,
+  ReviewPoint,
 } from '@shared/review';
 import { isCustomStepId } from '@shared/review-plan';
 import { AppError } from '../errors';
@@ -93,6 +94,21 @@ export const REVIEW_SCHEMA = {
       },
     },
     architecture: architectureSchema,
+    reviewPoints: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          title: text,
+          reason: text,
+          check: text,
+          evidence: { type: 'string', enum: ['code', 'description', 'inferred'] },
+          location: optionalLocation,
+        },
+        required: ['title', 'reason', 'check', 'evidence', 'location'],
+        additionalProperties: false,
+      },
+    },
     impacts: {
       type: 'array',
       items: {
@@ -154,6 +170,7 @@ export const REVIEW_SCHEMA = {
     'impacts',
     'readingOrder',
     'customSections',
+    'reviewPoints',
   ],
   additionalProperties: false,
 } as const;
@@ -184,6 +201,9 @@ export function parseReviewMap(value: unknown): ReviewMap {
     flows: list(value.flows, LIMITS.flows, toFlow),
     architecture: toArchitecture(value.architecture),
     impacts: list(value.impacts, LIMITS.impacts, toImpact),
+    ...(Array.isArray(value.reviewPoints)
+      ? { reviewPoints: list(value.reviewPoints, 8, toReviewPoint) }
+      : {}),
     readingOrder: list(value.readingOrder, LIMITS.readingOrder, toReadingStep),
     ...(Array.isArray(value.customSections)
       ? {
@@ -306,6 +326,21 @@ function toEdge(item: Json): ArchitectureEdge | undefined {
     edge.label = clip(item.label, LIMITS.label);
   }
   return edge;
+}
+
+function toReviewPoint(item: Json): ReviewPoint | undefined {
+  if (!nonEmpty(item.title) || !nonEmpty(item.reason) || !nonEmpty(item.check)) return undefined;
+  return withLocation(
+    {
+      title: clip(item.title, LIMITS.label),
+      reason: clip(item.reason, LIMITS.text),
+      check: clip(item.check, LIMITS.text),
+      evidence: ['code', 'description', 'inferred'].includes(String(item.evidence))
+        ? (item.evidence as ReviewPoint['evidence'])
+        : 'inferred',
+    },
+    item.location,
+  );
 }
 
 function toImpact(item: Json): Impact | undefined {

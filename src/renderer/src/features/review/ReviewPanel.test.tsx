@@ -1,8 +1,10 @@
 import type { ReviewMap, ReviewStatus } from '@shared/review';
+import { BUILTIN_STEPS } from '@shared/review-plan';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithApi } from '../../../test/render';
+import { initializePreferences } from '../../lib/preferences';
 import { ReviewPanel } from './ReviewPanel';
 
 vi.mock('./MermaidDiagram', () => ({
@@ -78,6 +80,23 @@ const done: ReviewStatus = {
 };
 
 function setup(statuses: ReviewStatus[], overrides = {}) {
+  initializePreferences(
+    {
+      'review-plan': {
+        version: 2,
+        steps: BUILTIN_STEPS.map(({ id }) => ({
+          id,
+          kind: id,
+          title: '',
+          instructions: '',
+          visible: true,
+          detail: 'balanced',
+          format: 'text',
+        })),
+      },
+    },
+    () => {},
+  );
   const getReviewStatus = vi.fn();
   for (const status of statuses.slice(0, -1)) {
     getReviewStatus.mockResolvedValueOnce(status);
@@ -95,6 +114,45 @@ function setup(statuses: ReviewStatus[], overrides = {}) {
 }
 
 describe('ReviewPanel', () => {
+  it('shows the five-step flow, actionable checks and progressively disclosed changes', async () => {
+    renderWithApi(<ReviewPanel target={target} onOpenLocation={() => {}} />, {
+      getReviewStatus: vi.fn().mockResolvedValue({
+        ...done,
+        review: {
+          ...review,
+          changes: Array.from({ length: 5 }, (_, i) => ({
+            title: `Change ${i}`,
+            before: 'Before',
+            after: 'After',
+          })),
+          reviewPoints: [
+            {
+              title: 'Rollback behavior',
+              reason: 'Stored state can differ',
+              check: 'Inspect the migration test',
+              evidence: 'inferred',
+              location: { path: 'src/app.ts', line: 12, verified: true },
+            },
+          ],
+        },
+      }),
+      getPullRequestDiff: vi.fn().mockResolvedValue(diff),
+    });
+    await screen.findByText('Greets users by name.');
+    expect(screen.getAllByRole('article').map((card) => card.dataset.stepId)).toEqual([
+      'summary',
+      'architecture',
+      'changes',
+      'reviewPoints',
+      'readingOrder',
+    ]);
+    expect(screen.getAllByTestId('diagram')).toHaveLength(1);
+    expect(screen.getByText('Inference — check this')).toBeInTheDocument();
+    expect(screen.getByText('Check: Inspect the migration test')).toBeInTheDocument();
+    expect(screen.queryByText('Change 4')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Show 2 more' }));
+    expect(screen.getByText('Change 4')).toBeInTheDocument();
+  });
   it('asks for a pull request when none is open', () => {
     renderWithApi(<ReviewPanel onOpenLocation={vi.fn()} />);
     expect(
@@ -174,7 +232,7 @@ describe('ReviewPanel', () => {
     setup([done]);
 
     expect(await screen.findByText('Greets users by name.')).toBeInTheDocument();
-    const [before, now, architecture] = screen.getAllByTestId('diagram');
+    const [architecture, before, now] = screen.getAllByTestId('diagram');
     expect(before).toHaveTextContent('rect rgba(219, 92, 92, 0.18) p0->>p1: greet()');
     expect(now).toHaveTextContent('rect rgba(95, 184, 101, 0.2) p0->>p1: greet(name)');
     expect(architecture).toHaveTextContent('n0["App shell"]:::changed');
@@ -237,7 +295,9 @@ describe('ReviewPanel', () => {
   it('regenerates a finished review on request', async () => {
     const { api } = setup([done]);
     await screen.findByText('Greets users by name.');
-    await userEvent.click(screen.getByRole('button', { name: 'Generate again' }));
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Generate again' })[0] as HTMLElement,
+    );
     expect(api.startReview).toHaveBeenCalledWith(target);
   });
 });

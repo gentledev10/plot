@@ -20,7 +20,10 @@ const review = {
   changes: [],
   flows: [],
   architecture: { nodes: [], edges: [] },
-  impacts: [{ area: 'Callers', detail: 'Check callers' }],
+  impacts: [],
+  reviewPoints: [
+    { title: 'Callers', reason: 'Callers change', check: 'Check callers', evidence: 'code' },
+  ],
   readingOrder: [],
 };
 function setup(setPreference = vi.fn().mockResolvedValue(undefined)) {
@@ -47,12 +50,12 @@ describe('review format', () => {
   it('removes built-in steps, persists the deletion and can remove every step', async () => {
     const first = setup();
     await screen.findByText('Saved overview');
-    await userEvent.click(screen.getByRole('button', { name: 'Remove Summary' }));
-    expect(screen.queryByRole('article', { name: /Summary/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Remove At a glance' }));
+    expect(screen.queryByRole('article', { name: /At a glance/ })).not.toBeInTheDocument();
     await waitFor(() => expect(first.api.setPreference).toHaveBeenCalled());
     first.unmount();
     const second = setup();
-    expect(screen.queryByRole('button', { name: 'Drag Summary' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Drag At a glance' })).not.toBeInTheDocument();
     for (const button of screen.getAllByRole('button', { name: /^Remove / }))
       await userEvent.click(button);
     expect(
@@ -133,7 +136,7 @@ describe('review format', () => {
       getData: (key: string) => data.get(key),
       types: ['application/x-plot-review-step'],
     };
-    fireEvent.dragStart(screen.getByRole('button', { name: 'Drag What else it affects' }), {
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Drag Review focus' }), {
       dataTransfer,
     });
     const destination = screen
@@ -143,7 +146,7 @@ describe('review format', () => {
     fireEvent.dragOver(destination, { dataTransfer, clientY: -1 });
     fireEvent.drop(destination, { dataTransfer });
     expect(screen.getAllByRole('article').map((element) => element.dataset.stepId)).toEqual([
-      'impacts',
+      'reviewPoints',
       'summary',
     ]);
     expect(screen.queryByText(/Your review instructions changed/)).not.toBeInTheDocument();
@@ -153,11 +156,11 @@ describe('review format', () => {
   it('supports keyboard-friendly movement, visibility and collapsible review cards', async () => {
     const { api } = setup();
     await screen.findByText('Saved overview');
-    await userEvent.click(screen.getByRole('button', { name: 'Move Summary down' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Move At a glance down' }));
     expect(
       within(screen.getByRole('list', { name: 'Review steps' })).getAllByRole('listitem')[1],
     ).toHaveAttribute('data-step-id', 'summary');
-    const summary = screen.getByRole('article', { name: /Summary/ });
+    const summary = screen.getByRole('article', { name: /At a glance/ });
     await userEvent.click(within(summary).getByRole('button'));
     expect(screen.getByText('Saved overview')).not.toBeVisible();
     const editor = screen
@@ -165,7 +168,7 @@ describe('review format', () => {
       .querySelector('[data-step-id="summary"]');
     if (!editor) throw new Error('Missing summary');
     await userEvent.click(within(editor as HTMLElement).getByRole('checkbox'));
-    expect(screen.queryByRole('article', { name: /Summary/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('article', { name: /At a glance/ })).not.toBeInTheDocument();
     expect(api.startReview).not.toHaveBeenCalled();
   });
   it('adds a checklist, preserves old results and flushes latest edits before generating', async () => {
@@ -241,8 +244,8 @@ describe('review format', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Add step' }));
     await userEvent.click(screen.getByRole('button', { name: 'Restore default steps' }));
-    expect(screen.getAllByRole('checkbox')).toHaveLength(6);
+    expect(screen.getAllByRole('checkbox')).toHaveLength(5);
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(screen.getAllByRole('checkbox')).toHaveLength(7);
+    expect(screen.getAllByRole('checkbox')).toHaveLength(6);
   });
 });
