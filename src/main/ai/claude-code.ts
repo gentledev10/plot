@@ -20,6 +20,22 @@ type StreamEvent =
 
 const { name, installUrl, apiKeyVendor } = AI_PROVIDERS['claude-code'];
 
+// Claude Code prefers these over ANTHROPIC_API_KEY, so a chosen key would be ignored while they are set.
+const AHEAD_OF_API_KEY = [
+  'ANTHROPIC_AUTH_TOKEN',
+  'CLAUDE_CODE_USE_BEDROCK',
+  'CLAUDE_CODE_USE_VERTEX',
+  'CLAUDE_CODE_USE_FOUNDRY',
+];
+
+export function withApiKey(env: NodeJS.ProcessEnv, apiKey: string): NodeJS.ProcessEnv {
+  const result: NodeJS.ProcessEnv = { ...env, ANTHROPIC_API_KEY: apiKey };
+  for (const variable of AHEAD_OF_API_KEY) {
+    delete result[variable];
+  }
+  return result;
+}
+
 export function claudeArguments(
   input: Pick<AgentRunInput, 'prompt' | 'schema' | 'contextDir' | 'model'>,
 ) {
@@ -115,7 +131,7 @@ export function createClaudeCodeAgent({
         command,
         args: claudeArguments(input),
         cwd: input.cwd,
-        env: input.apiKey ? { ...env, ANTHROPIC_API_KEY: input.apiKey } : env,
+        env: input.apiKey ? withApiKey(env, input.apiKey) : env,
         timeoutMs,
         spawnProcess,
         signal: input.signal,

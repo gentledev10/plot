@@ -7,6 +7,7 @@ import {
   createClaudeCodeAgent,
   describeToolUse,
   parseStreamLine,
+  withApiKey,
 } from './claude-code';
 
 const fakeClaude = [process.execPath, join(__dirname, 'fixtures', 'fake-claude.mjs')];
@@ -154,6 +155,20 @@ describe('createClaudeCodeAgent', () => {
     await expect(
       run('success', { apiKey: 'sk-ant-test-0000000000000000' }).promise,
     ).resolves.toMatchObject({ output: { apiKey: 'sk-ant-test-0000000000000000' } });
+  });
+
+  it('drops the credentials Claude Code would prefer over a chosen API key', () => {
+    const env = withApiKey(
+      {
+        PATH: '/usr/bin',
+        ANTHROPIC_AUTH_TOKEN: 'gateway-token',
+        CLAUDE_CODE_USE_BEDROCK: '1',
+        CLAUDE_CODE_USE_VERTEX: '1',
+        CLAUDE_CODE_USE_FOUNDRY: '1',
+      },
+      'sk-ant-test-0000000000000000',
+    );
+    expect(env).toEqual({ PATH: '/usr/bin', ANTHROPIC_API_KEY: 'sk-ant-test-0000000000000000' });
   });
 
   it('says when Anthropic does not accept the API key', async () => {
