@@ -1,6 +1,55 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  'Saving…': '저장 중…',
+  Retry: '다시 시도',
+  'The AI overview did not include every custom step. Generate it again.':
+    'AI 리뷰에 일부 사용자 단계가 빠졌습니다. 다시 생성해 주세요.',
+  'Review format': '리뷰 구성',
+  'Execution flows': '실행 흐름',
+  'The purpose and overall effect of the change.': '변경의 목적과 전체적인 효과를 설명합니다.',
+  'The important differences, before and after.': '주요 변경 사항을 이전과 이후로 비교합니다.',
+  'Diagrams showing how behavior changes.': '동작이 어떻게 달라지는지 그림으로 보여줍니다.',
+  'The components and their relationships.': '구성 요소와 서로의 관계를 보여줍니다.',
+  'Effects on callers, data, configuration and performance.':
+    '호출하는 코드, 데이터, 설정, 성능에 미치는 영향을 설명합니다.',
+  'An order for reading the changed files.': '변경된 파일을 읽기 좋은 순서로 안내합니다.',
+  'One AI analysis, arranged your way. Drag cards to change the reading order, or use the arrow buttons.':
+    '한 번 분석한 결과를 원하는 순서로 읽어 보세요. 카드를 끌거나 화살표 버튼으로 순서를 바꿀 수 있습니다.',
+  'Order, titles of built-in steps and visibility update saved reviews immediately. Instructions, detail and custom steps apply when you generate again. Hidden steps are still analyzed.':
+    '순서, 기본 단계의 제목, 표시 여부는 저장된 리뷰에 바로 적용됩니다. 지침·분량·사용자 단계 변경은 리뷰를 다시 생성할 때 반영됩니다. 숨긴 단계도 분석에는 포함됩니다.',
+  'Saved automatically': '자동 저장됨',
+  'Could not save the review format. Retry before generating.':
+    '리뷰 구성을 저장하지 못했습니다. 리뷰 생성 전에 다시 시도해 주세요.',
+  'Restore default steps': '기본 단계로 복원',
+  'Review steps': '리뷰 단계',
+  '{title} moved to position {position}.': '{title} 단계를 {position}번째로 옮겼습니다.',
+  'Drag {title}': '{title} 끌어서 이동',
+  'Move {title} up': '{title} 위로 이동',
+  'Move {title} down': '{title} 아래로 이동',
+  Show: '표시',
+  'Card title': '카드 제목',
+  Detail: '설명 분량',
+  Brief: '간결하게',
+  Balanced: '보통',
+  Detailed: '자세하게',
+  Format: '표현 방식',
+  Explanation: '설명',
+  Checklist: '체크리스트',
+  'Component diagram': '구조 그림',
+  'Additional AI instructions': 'AI에게 추가로 요청할 내용',
+  'For example: explain the tradeoffs and edge cases in plain language.':
+    '예: 설계에서 고려한 점과 예외 상황을 쉬운 말로 설명해 주세요.',
+  'Remove step': '단계 삭제',
+  'Additional perspective': '추가 관점',
+  'Check assumptions and unanswered questions, and link them to the relevant code.':
+    '전제 조건과 확인이 필요한 질문을 정리하고 관련 코드를 연결해 주세요.',
+  'Add step': '단계 추가',
+  'Add up to {count} custom steps. Changes never start an AI analysis automatically.':
+    '사용자 단계를 최대 {count}개 추가할 수 있습니다. 구성을 바꿔도 AI 분석이 자동으로 실행되지 않습니다.',
+  'Your review instructions changed. Generate again to apply them. The previous analysis is shown below.':
+    '리뷰 지침이 바뀌었습니다. 다시 생성하면 반영됩니다. 아래에는 이전 분석을 표시합니다.',
+  'Generate again to fill this step.': '리뷰를 다시 생성하면 이 단계의 내용이 채워집니다.',
   ') come with the code editor.': ')은 코드 편집기에서 지원합니다.',
   '), and copy (': '), 복사 (',
   '), find next (': '), 다음 찾기 (',

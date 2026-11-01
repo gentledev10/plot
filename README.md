@@ -33,6 +33,10 @@ Code sent for an overview is processed by your chosen AI provider under that acc
 
 Overviews are saved on your Mac per commit and language, so reopening a pull request does not run the tool again.
 
+Settings > Review format starts with six steps: summary, before/after changes, execution flows, architecture, impacts, and reading order. Drag the cards or use the arrow buttons to reorder them, rename built-in cards, or hide them. These changes immediately rearrange saved overviews without another AI call. Each result card can also be collapsed while reading.
+
+Adjust each step's detail and instructions, or add up to six custom steps as explanations, checklists, or component diagrams. All steps are generated in one analysis, including hidden steps. Changes to instructions, detail, or custom steps show a reminder to generate again and keep the previous analysis readable until you do; changing settings never starts an AI request automatically. Settings are saved locally and apply across pull requests.
+
 ## Languages
 
 Settings > Language offers Korean and English for the app. The default follows the system's preferred language, using English for unsupported languages. AI reviews follow the app language by default, or you can select their language separately—for example, English controls with Korean explanations. Changes take effect immediately and are saved across restarts.

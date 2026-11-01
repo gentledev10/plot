@@ -8,8 +8,16 @@ import { useSuspendShortcuts } from '../keymap/KeymapProvider';
 import { KeymapSettings } from '../keymap/KeymapSettings';
 import { useT } from '../language/LanguageProvider';
 import { LanguageSettings } from '../language/LanguageSettings';
+import { ReviewFormatSettings } from '../review/ReviewFormatSettings';
+import { useReviewPlan } from '../review/ReviewPlanProvider';
 import styles from './SettingsDialog.module.css';
-export type SettingsSection = 'accounts' | 'ai' | 'appearance' | 'keymap' | 'language';
+export type SettingsSection =
+  | 'accounts'
+  | 'ai'
+  | 'appearance'
+  | 'keymap'
+  | 'language'
+  | 'review-format';
 const SECTIONS: readonly {
   id: SettingsSection;
   title: string;
@@ -30,6 +38,7 @@ const SECTIONS: readonly {
     title: 'AI overview',
     render: () => <AiReviewSettings />,
   },
+  { id: 'review-format', title: 'Review format', render: () => <ReviewFormatSettings /> },
   {
     id: 'appearance',
     title: 'Appearance',
@@ -48,6 +57,12 @@ interface SettingsDialogProps {
 }
 export function SettingsDialog({ section, onSectionChange, onClose }: SettingsDialogProps) {
   const t = useT();
+  const { flush } = useReviewPlan();
+  const close = () => {
+    void flush()
+      .then(() => dialog.current?.close())
+      .catch(() => onSectionChange('review-format'));
+  };
   const dialog = useRef<HTMLDialogElement>(null);
   const [expanded, setExpanded] = useState(false);
   const normalSize = useRef({
@@ -76,6 +91,10 @@ export function SettingsDialog({ section, onSectionChange, onClose }: SettingsDi
       }
       aria-labelledby="settings-title"
       onClose={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        close();
+      }}
     >
       <nav className={styles.nav} aria-label={t('Settings sections')}>
         <h2 id="settings-title" className={styles.title}>
@@ -112,7 +131,7 @@ export function SettingsDialog({ section, onSectionChange, onClose }: SettingsDi
             >
               {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             </IconButton>
-            <IconButton label={t('Close settings')} onClick={() => dialog.current?.close()}>
+            <IconButton label={t('Close settings')} onClick={close}>
               <X size={14} />
             </IconButton>
           </div>

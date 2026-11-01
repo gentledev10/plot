@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../app/providers';
 import { useLanguage } from '../language/LanguageProvider';
 import { pullRequestKeys } from '../pull-request/queries';
+import { useReviewPlan } from './ReviewPlanProvider';
 
 export const reviewKeys = {
   status: (ref: PullRequestRef) => [...pullRequestKeys.detail(ref), 'review'] as const,
@@ -21,8 +22,15 @@ export function useReviewStatus(ref: PullRequestRef) {
 export function useReviewActions(ref: PullRequestRef) {
   const api = useApi();
   const client = useQueryClient();
+  const { flush } = useReviewPlan();
   const refresh = () => client.invalidateQueries({ queryKey: reviewKeys.status(ref) });
-  const start = useMutation({ mutationFn: () => api.startReview(ref), onSettled: refresh });
+  const start = useMutation({
+    mutationFn: async () => {
+      await flush();
+      return api.startReview(ref);
+    },
+    onSettled: refresh,
+  });
   const cancel = useMutation({ mutationFn: () => api.cancelReview(ref), onSettled: refresh });
   return { start, cancel };
 }

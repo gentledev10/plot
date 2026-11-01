@@ -413,6 +413,7 @@ export function App() {
           }
           onOpenLocation={openLocation}
           onConfigureAi={() => setSettings('ai')}
+          onConfigurePlan={() => setSettings('review-format')}
           maximized={maximized}
           onToggleMaximize={() => setMaximized(!maximized)}
         />

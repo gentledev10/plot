@@ -1,7 +1,23 @@
 import { AI_PROVIDERS, type AiProviderId } from '@shared/ai';
 import type { PullRequestRef } from '@shared/github';
-import type { CodeLocation, Flow, ReviewMap, ReviewStatus } from '@shared/review';
-import { CircleAlert, LoaderCircle, Maximize2, Minimize2, RotateCw, Sparkles } from 'lucide-react';
+import type { Architecture, CodeLocation, Flow, ReviewMap, ReviewStatus } from '@shared/review';
+import {
+  defaultReviewPlan,
+  type ReviewStep,
+  reviewContentKey,
+  stepTitle,
+} from '@shared/review-plan';
+import {
+  ChevronDown,
+  ChevronRight,
+  CircleAlert,
+  LoaderCircle,
+  Maximize2,
+  Minimize2,
+  RotateCw,
+  SlidersHorizontal,
+  Sparkles,
+} from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
@@ -20,11 +36,13 @@ import {
 } from './mermaid-source';
 import { useReviewActions, useReviewStatus } from './queries';
 import styles from './ReviewPanel.module.css';
+import { useReviewPlan } from './ReviewPlanProvider';
 
 interface ReviewPanelProps {
   target?: PullRequestRef;
   onOpenLocation(location: CodeLocation): void;
   onConfigureAi?(): void;
+  onConfigurePlan?(): void;
   maximized?: boolean;
   onToggleMaximize?(): void;
   notice?: string;
@@ -37,6 +55,7 @@ export function ReviewPanel({
   target,
   onOpenLocation,
   onConfigureAi,
+  onConfigurePlan,
   maximized = false,
   onToggleMaximize,
   notice = 'Open a pull request to get an overview of its changes.',
@@ -53,11 +72,12 @@ export function ReviewPanel({
           target={target}
           onOpenLocation={onOpenLocation}
           onConfigureAi={onConfigureAi}
+          onConfigurePlan={onConfigurePlan}
           {...maximizing}
         />
       ) : (
         <>
-          <PanelHeader {...maximizing} />
+          <PanelHeader onConfigurePlan={onConfigurePlan} {...maximizing} />
           <StatusMessage>{notice}</StatusMessage>
         </>
       )}
@@ -66,10 +86,12 @@ export function ReviewPanel({
 }
 function PanelHeader({
   onRegenerate,
+  onConfigurePlan,
   maximized,
   onToggleMaximize,
 }: Maximizing & {
   onRegenerate?(): void;
+  onConfigurePlan?(): void;
 }) {
   const t = useT();
   const shortcut = useShortcutLabel('view.maximizeReview');
@@ -77,6 +99,11 @@ function PanelHeader({
     <header className={styles.header}>
       <h2 className={styles.title}>{t('AI overview')}</h2>
       <span className={styles.headerActions}>
+        {onConfigurePlan && (
+          <IconButton label={t('Review format')} onClick={onConfigurePlan}>
+            <SlidersHorizontal size={14} />
+          </IconButton>
+        )}
         {onRegenerate && (
           <IconButton label={t('Generate again')} onClick={onRegenerate}>
             <RotateCw size={14} />
@@ -98,15 +125,18 @@ interface PullRequestReviewProps extends Maximizing {
   target: PullRequestRef;
   onOpenLocation(location: CodeLocation): void;
   onConfigureAi?(): void;
+  onConfigurePlan?(): void;
 }
 function PullRequestReview({
   target,
   onOpenLocation,
   onConfigureAi,
+  onConfigurePlan,
   ...maximizing
 }: PullRequestReviewProps) {
   const t = useT();
   const { language } = useLanguage();
+  const { plan } = useReviewPlan();
   const status = useReviewStatus(target);
   const ai = useAiSettings();
   const { start, cancel } = useReviewActions(target);
@@ -124,8 +154,19 @@ function PullRequestReview({
   );
   return (
     <>
-      <PanelHeader onRegenerate={done ? generate : undefined} {...maximizing} />
-      <div className={styles.content}>{renderBody()}</div>
+      <PanelHeader
+        onConfigurePlan={onConfigurePlan}
+        onRegenerate={done && !start.isPending ? generate : undefined}
+        {...maximizing}
+      />
+      <div className={styles.content}>
+        {start.isError && (
+          <StatusMessage tone="error" onRetry={generate}>
+            {start.error.message}
+          </StatusMessage>
+        )}
+        {renderBody()}
+      </div>
     </>
   );
   function renderBody() {
@@ -176,6 +217,24 @@ function PullRequestReview({
       case 'done':
         return (
           <>
+            {(current.planKey ?? reviewContentKey(defaultReviewPlan())) !==
+              reviewContentKey(plan) && (
+              <div className={styles.stale} role="status">
+                <p>
+                  {t(
+                    'Your review instructions changed. Generate again to apply them. The previous analysis is shown below.',
+                  )}
+                </p>
+                <button
+                  type="button"
+                  className={styles.link}
+                  disabled={start.isPending}
+                  onClick={generate}
+                >
+                  {t('Generate again')}
+                </button>
+              </div>
+            )}
             <ReviewMapView
               review={current.review}
               changedPaths={changedPaths}
@@ -288,28 +347,28 @@ interface ReviewMapViewProps {
 }
 function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewProps) {
   const t = useT();
-  const scheme = useAppearance().theme.kind;
-  const architecture = useMemo(
-    () => architectureToMermaid(review.architecture, scheme),
-    [review.architecture, scheme],
-  );
+  const { plan } = useReviewPlan();
   const link = (location: CodeLocation | undefined) =>
     location && (
       <LocationLink location={location} changedPaths={changedPaths} onOpen={onOpenLocation} />
     );
-  return (
-    <div className={styles.review}>
-      <section aria-labelledby="overview-summary">
-        <h3 id="overview-summary">{t('Summary')}</h3>
-        <p className={styles.text}>{review.summary}</p>
-      </section>
-
-      {review.changes.length > 0 && (
-        <section aria-labelledby="overview-changes">
-          <h3 id="overview-changes">{t('What changed')}</h3>
+  const graph = (architecture: Architecture) => (
+    <ArchitectureView
+      architecture={architecture}
+      changedPaths={changedPaths}
+      onOpenLocation={onOpenLocation}
+      link={link}
+    />
+  );
+  const content = (step: ReviewStep): ReactNode => {
+    switch (step.kind) {
+      case 'summary':
+        return <p className={styles.text}>{review.summary}</p>;
+      case 'changes':
+        return review.changes.length > 0 ? (
           <ul className={styles.changes}>
             {review.changes.map((change, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: a stored overview never changes order, and titles can repeat
+              // biome-ignore lint/suspicious/noArrayIndexKey: stored analysis order is fixed
               <li key={`${index}-${change.title}`} className={styles.change}>
                 <strong>{change.title}</strong>
                 {link(change.location)}
@@ -330,51 +389,21 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
               </li>
             ))}
           </ul>
-        </section>
-      )}
-
-      {review.flows.map((flow, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: a stored overview never changes order, and titles can repeat
-        <FlowView key={`${index}-${flow.title}`} flow={flow} link={link} />
-      ))}
-
-      {review.architecture.nodes.length > 0 && (
-        <section aria-labelledby="overview-architecture">
-          <h3 id="overview-architecture">{t('Architecture')}</h3>
-          <MermaidDiagram
-            source={architecture.source}
-            label={t('Components around this change')}
-            onElementClick={(elementId) => {
-              const index = nodeIndexFromElementId(elementId);
-              const location =
-                index === undefined ? undefined : review.architecture.nodes[index]?.location;
-              if (location && changedPaths.has(location.path)) {
-                onOpenLocation(location);
-              }
-            }}
-          />
-          <ul className={styles.list}>
-            {review.architecture.nodes.map((node) => (
-              <li key={node.id}>
-                <span>{node.label}</span>
-                {node.status !== 'unchanged' && (
-                  <span className={styles.status} data-status={t(node.status)}>
-                    {t(node.status)}
-                  </span>
-                )}
-                {link(node.location)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {review.impacts.length > 0 && (
-        <section aria-labelledby="overview-impacts">
-          <h3 id="overview-impacts">{t('What else it affects')}</h3>
+        ) : null;
+      case 'flows':
+        return review.flows.length > 0
+          ? review.flows.map((flow, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: stored analysis order is fixed
+              <FlowView key={`${index}-${flow.title}`} flow={flow} link={link} />
+            ))
+          : null;
+      case 'architecture':
+        return review.architecture.nodes.length > 0 ? graph(review.architecture) : null;
+      case 'impacts':
+        return review.impacts.length > 0 ? (
           <ul className={styles.list}>
             {review.impacts.map((impact, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: a stored overview never changes order, and areas can repeat
+              // biome-ignore lint/suspicious/noArrayIndexKey: stored analysis order is fixed
               <li key={`${index}-${impact.area}`}>
                 <strong>{impact.area}</strong>
                 {link(impact.location)}
@@ -382,27 +411,138 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
               </li>
             ))}
           </ul>
-        </section>
-      )}
-
-      {review.readingOrder.length > 0 && (
-        <section aria-labelledby="overview-reading-order">
-          <h3 id="overview-reading-order">{t('Where to start reading')}</h3>
+        ) : null;
+      case 'readingOrder':
+        return review.readingOrder.length > 0 ? (
           <ol className={styles.list}>
-            {review.readingOrder.map((step) => (
-              <li key={step.path}>
-                {link({
-                  path: step.path,
-                  line: 1,
-                  verified: true,
-                })}
-                <span className={styles.reason}>{step.reason}</span>
+            {review.readingOrder.map((item) => (
+              <li key={item.path}>
+                {link({ path: item.path, line: 1, verified: true })}
+                <span className={styles.reason}>{item.reason}</span>
               </li>
             ))}
           </ol>
-        </section>
-      )}
+        ) : null;
+      case 'custom': {
+        const section = review.customSections?.find((item) => item.id === step.id);
+        if (!section)
+          return <p className={styles.muted}>{t('Generate again to fill this step.')}</p>;
+        return (
+          <>
+            {section.body && <p className={styles.text}>{section.body}</p>}
+            {section.items.length > 0 && (
+              <ul className={styles.list}>
+                {section.items.map((item, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: stored analysis order is fixed
+                  <li key={`${index}-${item.area}`}>
+                    <strong>{item.area}</strong>
+                    {link(item.location)}
+                    <span className={styles.reason}>{item.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {section.diagram && section.diagram.nodes.length > 0 && graph(section.diagram)}
+          </>
+        );
+      }
+    }
+  };
+  const cards = plan.steps
+    .filter((step) => step.visible)
+    .map((step) => ({ step, body: content(step) }))
+    .filter(({ body }) => body !== null);
+  return (
+    <div className={styles.review}>
+      {cards.map(({ step, body }, index) => (
+        <ReviewCard
+          key={step.id}
+          id={step.id}
+          title={step.title.trim() || t(stepTitle(step))}
+          number={index + 1}
+        >
+          {body}
+        </ReviewCard>
+      ))}
     </div>
+  );
+}
+
+function ReviewCard({
+  id,
+  title,
+  number,
+  children,
+}: {
+  id: string;
+  title: string;
+  number: number;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <article className={styles.card} data-step-id={id} aria-labelledby={`review-title-${id}`}>
+      <h3 id={`review-title-${id}`}>
+        <button
+          type="button"
+          className={styles.cardToggle}
+          aria-expanded={open}
+          aria-controls={`review-body-${id}`}
+          onClick={() => setOpen(!open)}
+        >
+          <span className={styles.cardNumber} aria-hidden="true">
+            {number}
+          </span>
+          <span>{title}</span>
+          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </button>
+      </h3>
+      <div id={`review-body-${id}`} className={styles.cardBody} hidden={!open}>
+        {children}
+      </div>
+    </article>
+  );
+}
+
+function ArchitectureView({
+  architecture,
+  changedPaths,
+  onOpenLocation,
+  link,
+}: {
+  architecture: Architecture;
+  changedPaths: ReadonlySet<string>;
+  onOpenLocation(location: CodeLocation): void;
+  link(location: CodeLocation | undefined): ReactNode;
+}) {
+  const t = useT();
+  const scheme = useAppearance().theme.kind;
+  const source = useMemo(() => architectureToMermaid(architecture, scheme), [architecture, scheme]);
+  return (
+    <>
+      <MermaidDiagram
+        source={source.source}
+        label={t('Components around this change')}
+        onElementClick={(elementId) => {
+          const index = nodeIndexFromElementId(elementId);
+          const location = index === undefined ? undefined : architecture.nodes[index]?.location;
+          if (location && changedPaths.has(location.path)) onOpenLocation(location);
+        }}
+      />
+      <ul className={styles.list}>
+        {architecture.nodes.map((node) => (
+          <li key={node.id}>
+            <span>{node.label}</span>
+            {node.status !== 'unchanged' && (
+              <span className={styles.status} data-status={node.status}>
+                {t(node.status)}
+              </span>
+            )}
+            {link(node.location)}
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 interface FlowViewProps {

@@ -306,3 +306,58 @@
   display: flex;
   justify-content: center;
 }
+
+.card {
+  margin: 0 0 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.review .card h3 {
+  margin: 0;
+}
+.cardToggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  gap: 8px;
+  border: 0;
+  background: var(--color-bg-editor);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.cardToggle > span:nth-child(2) {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.cardNumber {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+.cardBody {
+  padding: 12px;
+}
+.cardBody[hidden] {
+  display: none;
+}
+.cardBody section:last-child {
+  margin-bottom: 0;
+}
+.cardBody > .text:not(:last-child) {
+  margin-bottom: 10px;
+}
+.stale {
+  margin: 0 12px 12px;
+  padding: 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+}
+.stale p {
+  margin: 0 0 6px;
+  color: var(--color-text-muted);
+}

@@ -4,6 +4,7 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef }
 import { AppearanceProvider } from '../features/appearance/AppearanceProvider';
 import { KeymapProvider } from '../features/keymap/KeymapProvider';
 import { LanguageProvider } from '../features/language/LanguageProvider';
+import { ReviewPlanProvider } from '../features/review/ReviewPlanProvider';
 import { isRetryable } from '../lib/api';
 
 type SubscribeToMenu = (listener: MenuCommandListener) => () => void;
@@ -80,7 +81,9 @@ export function AppProviders({
         <ShellContext.Provider value={shell}>
           <AppearanceProvider onThemeSource={(source) => void api.setThemeSource(source)}>
             <LanguageProvider api={api}>
-              <KeymapProvider platform={platform}>{children}</KeymapProvider>
+              <ReviewPlanProvider api={api}>
+                <KeymapProvider platform={platform}>{children}</KeymapProvider>
+              </ReviewPlanProvider>
             </LanguageProvider>
           </AppearanceProvider>
         </ShellContext.Provider>
