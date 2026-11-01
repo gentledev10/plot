@@ -1,5 +1,6 @@
 export const REVIEW_PLAN_PREFERENCE = 'review-plan';
 export const MAX_CUSTOM_STEPS = 6;
+const ANALYSIS_VERSION = 3;
 export const BUILTIN_STEPS = [
   {
     id: 'summary',
@@ -145,7 +146,7 @@ export function applyRecommendedReviewPlan(plan: ReviewPlan): ReviewPlan {
 // Presentation changes reuse the same analysis. Sort by id so dragging never invalidates it.
 export function reviewContentKey(plan: ReviewPlan): string {
   return JSON.stringify({
-    version: 2,
+    analysisVersion: ANALYSIS_VERSION,
     steps: plan.steps
       .map((step) => ({
         id: step.id,
