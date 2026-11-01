@@ -138,21 +138,26 @@
 
 .location {
   display: inline-flex;
+  min-width: 0;
+  max-width: calc(100% - 6px);
   align-items: center;
   gap: 6px;
   margin-left: 6px;
   color: var(--color-text-muted);
   font-family: var(--font-code);
   font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
 }
 
 .locationButton {
+  min-width: 0;
   padding: 0;
   border: none;
   background: none;
   color: var(--color-accent);
   font: inherit;
   text-align: left;
+  overflow-wrap: anywhere;
 }
 
 .locationButton:hover {

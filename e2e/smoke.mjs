@@ -19,6 +19,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'plot-smoke-')));
 const profile = join(scratch, 'profile');
 const repository = join(scratch, 'fixture');
+const longSourcePath =
+  'packages/review/src/features/understandingCodeChangesAndNavigatingToTheCorrectSourceLocation.ts';
 const bin = join(scratch, 'bin');
 const results = [];
 mkdirSync(join(root, 'dist'), { recursive: true });
@@ -45,6 +47,9 @@ git(repository, 'commit', '-qm', 'Base');
 const base = git(repository, 'rev-parse', 'HEAD');
 git(repository, 'switch', '-qc', 'feature');
 writeFileSync(join(repository, 'sample.ts'), 'export const result = 2;\n');
+mkdirSync(dirname(join(repository, longSourcePath)), { recursive: true });
+writeFileSync(join(repository, longSourcePath), 'export const evidence = "long-path";\n');
+git(repository, 'add', '.');
 git(repository, 'commit', '-qam', 'Change the result');
 const head = git(repository, 'rev-parse', 'HEAD');
 mkdirSync(join(repository, 'new-folder'));
@@ -62,7 +67,7 @@ const overview = {
       title: 'Change the result',
       before: 'Uses one.',
       after: 'Uses two.',
-      location: { path: 'sample.ts', line: 1 },
+      location: { path: longSourcePath, line: 1 },
     },
   ],
   flows: [
@@ -194,9 +199,9 @@ try {
             repo: { name: 'hello-world', owner: { login: 'octocat' } },
           },
           head: { ref: 'feature', sha: head },
-          additions: 1,
+          additions: 2,
           deletions: 1,
-          changed_files: 1,
+          changed_files: 2,
         };
         let value;
         if (address.pathname === '/user') value = user;
@@ -390,6 +395,21 @@ try {
   await page.getByText(overview.summary, { exact: true }).waitFor();
   await page.getByRole('img', { name: 'Components around this change', exact: true }).waitFor();
   pass('Recover from AI configuration errors and render an overview with diagrams');
+  const changesCard = page
+    .getByRole('article')
+    .filter({ has: page.getByRole('heading', { name: /What changed/ }) });
+  await changesCard.getByRole('button', { name: longSourcePath, exact: true }).click();
+  await page.waitForFunction(() =>
+    document.querySelector('.editor.modified .view-lines')?.textContent?.includes('long-path'),
+  );
+  const cardOverflow = await changesCard.evaluate((card) => ({
+    left: card.scrollLeft,
+    width: card.clientWidth,
+    content: card.scrollWidth,
+  }));
+  assert.equal(cardOverflow.left, 0, JSON.stringify(cardOverflow));
+  assert.ok(cardOverflow.content <= cardOverflow.width + 1, JSON.stringify(cardOverflow));
+  pass('Keep long evidence paths inside review cards after navigating to code');
   await page.getByRole('button', { name: 'sample.ts', exact: true }).first().click();
   await page.waitForFunction(() =>
     document.querySelector('.editor.modified .view-lines')?.textContent?.includes('result'),
