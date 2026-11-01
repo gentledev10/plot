@@ -54,16 +54,30 @@ export interface ReadingStep {
   reason: string;
 }
 
+export interface Architecture {
+  nodes: ArchitectureNode[];
+  edges: ArchitectureEdge[];
+}
+
+export interface CustomReviewSection {
+  id: string;
+  body: string;
+  items: Impact[];
+  diagram?: Architecture;
+}
+
 export interface ReviewMap {
   summary: string;
   changes: KeyChange[];
   flows: Flow[];
-  architecture: { nodes: ArchitectureNode[]; edges: ArchitectureEdge[] };
+  architecture: Architecture;
   impacts: Impact[];
   readingOrder: ReadingStep[];
+  customSections?: CustomReviewSection[];
 }
 
 export interface StoredReview {
+  planKey?: string;
   language?: Language;
   review: ReviewMap;
   head: string;

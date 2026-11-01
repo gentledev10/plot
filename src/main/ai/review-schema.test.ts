@@ -48,6 +48,7 @@ describe('REVIEW_SCHEMA', () => {
       'architecture',
       'impacts',
       'readingOrder',
+      'customSections',
     ]);
   });
 
@@ -78,6 +79,35 @@ describe('REVIEW_SCHEMA', () => {
 });
 
 describe('parseReviewMap', () => {
+  it('accepts bounded custom content while rejecting unsafe ids, paths and disconnected edges', () => {
+    const section = {
+      id: 'custom_checks',
+      body: 'x'.repeat(7000),
+      items: [{ area: 'Rollback', detail: 'Check data', location: { path: '../secret', line: 1 } }],
+      diagram: {
+        nodes: [
+          {
+            id: 'a',
+            label: 'Module',
+            status: 'changed',
+            location: { path: 'src/app.ts', line: 2 },
+          },
+        ],
+        edges: [{ from: 'a', to: 'missing' }],
+      },
+    };
+    const review = parseReviewMap(
+      output({ customSections: [section, section, { ...section, id: '<script>' }] }),
+    );
+    expect(review.customSections).toHaveLength(1);
+    expect(review.customSections?.[0]?.body).toHaveLength(6000);
+    expect(review.customSections?.[0]?.items[0]).not.toHaveProperty('location');
+    expect(review.customSections?.[0]?.diagram?.edges).toEqual([]);
+    expect(review.customSections?.[0]?.diagram?.nodes[0]?.location).toEqual({
+      path: 'src/app.ts',
+      line: 2,
+    });
+  });
   it('keeps a well-formed overview, dropping null locations', () => {
     const review = parseReviewMap(output());
     expect(review.changes[0]).toEqual({

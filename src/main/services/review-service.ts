@@ -8,6 +8,12 @@ import type { PullRequestRef } from '@shared/github';
 import type { PlotApi } from '@shared/ipc';
 import { type Language, promptLanguage } from '@shared/language';
 import { pullRequestKey } from '@shared/pull-request-ref';
+import {
+  defaultReviewPlan,
+  parseReviewPlan,
+  type ReviewPlan,
+  reviewContentKey,
+} from '@shared/review-plan';
 import type { ReviewAgent } from '../ai/agent';
 import { verifyLocations } from '../ai/review-locations';
 import { buildReviewPrompt, CONTEXT_FILES } from '../ai/review-prompt';
@@ -34,6 +40,7 @@ interface ReviewServiceOptions {
   store: ReviewStore;
   workspaceRoot: string;
   language: Language | (() => Promise<Language>);
+  plan?(): Promise<ReviewPlan>;
   now?(): Date;
   onUnexpectedError?(error: unknown): void;
 }
@@ -51,6 +58,7 @@ export function createReviewService({
   store,
   workspaceRoot,
   language,
+  plan = async () => defaultReviewPlan(),
   now = () => new Date(),
   onUnexpectedError = () => {},
 }: ReviewServiceOptions): ReviewService {
@@ -62,6 +70,7 @@ export function createReviewService({
     key: string,
     controller: AbortController,
     language: Language,
+    reviewPlan: ReviewPlan,
   ) {
     const job = jobs.get(key);
     const note = (activity: string) => {
@@ -117,7 +126,12 @@ export function createReviewService({
       const result = await agent.run({
         cwd: repoDir,
         contextDir,
-        prompt: buildReviewPrompt({ files, contextDir, language: promptLanguage(language) }),
+        prompt: buildReviewPrompt({
+          files,
+          contextDir,
+          language: promptLanguage(language),
+          plan: reviewPlan,
+        }),
         schema: REVIEW_SCHEMA,
         model,
         effort,
@@ -125,9 +139,26 @@ export function createReviewService({
         signal: controller.signal,
         onActivity: note,
       });
-      const review = verifyLocations(parseReviewMap(result.output), lineCounter(repoDir));
+      const parsed = parseReviewMap(result.output);
+      const customIds = new Set(
+        reviewPlan.steps.filter((step) => step.kind === 'custom').map((step) => step.id),
+      );
+      if (
+        [...customIds].some((id) => !parsed.customSections?.some((section) => section.id === id))
+      ) {
+        throw new AppError(
+          'ai-invalid-output',
+          'The AI overview did not include every custom step. Generate it again.',
+        );
+      }
+      if (parsed.customSections)
+        parsed.customSections = parsed.customSections.filter((section) =>
+          customIds.has(section.id),
+        );
+      const review = verifyLocations(parsed, lineCounter(repoDir));
       await store.write(ref, {
         language,
+        planKey: reviewContentKey(reviewPlan),
         review,
         head: pull.head.sha,
         createdAt: now().toISOString(),
@@ -177,10 +208,11 @@ export function createReviewService({
         return;
       }
       const language = await currentLanguage();
+      const reviewPlan = parseReviewPlan(await plan());
       if (jobs.get(key)?.state === 'running') return;
       const controller = new AbortController();
       jobs.set(key, { state: 'running', startedAt: now().toISOString(), activity: [], controller });
-      void execute(ref, key, controller, language);
+      void execute(ref, key, controller, language, reviewPlan);
     },
 
     async cancelReview(ref) {

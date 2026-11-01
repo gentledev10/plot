@@ -9,6 +9,7 @@ import {
   reviewLanguage,
   SYSTEM_LOCALE_PREFERENCE,
 } from '@shared/language';
+import { parseReviewPlan, REVIEW_PLAN_PREFERENCE } from '@shared/review-plan';
 import { createTranslator } from '@shared/translations';
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, shell } from 'electron';
 import { createAccountStore } from './accounts/account-store';
@@ -169,6 +170,7 @@ function createApi(): PlotApi {
     },
     store: createFileReviewStore(join(userData, 'reviews')),
     workspaceRoot: join(userData, 'review-workspaces'),
+    plan: async () => parseReviewPlan((await preferences.all())[REVIEW_PLAN_PREFERENCE]),
     language: async () =>
       reviewLanguage(
         parseLanguages((await preferences.all())[LANGUAGE_PREFERENCE]),

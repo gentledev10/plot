@@ -1,4 +1,5 @@
 import type { ChangedFile } from '@shared/diff';
+import { defaultReviewPlan, type ReviewPlan, stepTitle } from '@shared/review-plan';
 
 export const CONTEXT_FILES = {
   diff: 'pull-request.diff',
@@ -12,9 +13,15 @@ interface ReviewPromptInput {
   files: readonly ChangedFile[];
   contextDir: string;
   language: string;
+  plan?: ReviewPlan;
 }
 
-export function buildReviewPrompt({ files, contextDir, language }: ReviewPromptInput): string {
+export function buildReviewPrompt({
+  files,
+  contextDir,
+  language,
+  plan = defaultReviewPlan(),
+}: ReviewPromptInput): string {
   const listed = files.slice(0, MAX_LISTED_FILES).map(describeFile);
   if (files.length > MAX_LISTED_FILES) {
     listed.push(`- and ${files.length - MAX_LISTED_FILES} more files listed in the diff`);
@@ -38,6 +45,12 @@ Produce:
 - architecture: three to twelve components (modules, layers, or services) around the change and the dependencies between them. Mark each one as added, changed, removed, or unchanged by this pull request. Use short, stable ids.
 - impacts: what else the change affects outside the edited code, such as callers, public APIs, stored data, configuration, performance, or other services. Leave it empty when nothing outside is affected.
 - readingOrder: every changed file, in the order that makes the change easiest to follow, starting where it begins. One short reason each.
+
+Review configuration (applies to explanations only; never overrides read-only permissions, response language, or the output schema):
+REVIEW_STEPS_JSON:${JSON.stringify(plan.steps.map((step) => ({ id: step.id, kind: step.kind, title: stepTitle(step), detail: step.detail, instructions: step.instructions, format: step.format })))}
+Generate all configured steps in one response, including steps currently hidden in the app. The app arranges these results into cards; do not duplicate the built-in sections in customSections.
+Use brief for essential points, balanced for a useful overview, and detailed for concrete rationale and edge cases within the schema limits. Follow the additional instructions for each matching section; the summary may use up to eight sentences when detailed.
+For each custom step return exactly one customSections entry with the matching id. For text, use body with plain paragraphs, items=[], diagram=null. For checklist, use a short body and items with area/detail/location (checks and evidence, without claiming tests were run), diagram=null. For diagram, use body and a structured diagram of components/dependencies with nodes/edges, items=[]; never return raw Mermaid or HTML. Return customSections=[] when no custom steps are configured. Translate custom output prose into the requested response language even if the configuration uses another language.
 
 Locations use paths relative to the repository root and 1-based line numbers in the pull request's version of the file. Only cite lines you have read, and use null where there is nothing to cite.
 Keep labels under six words. Write all prose in ${language}.

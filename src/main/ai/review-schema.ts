@@ -1,8 +1,10 @@
 import type {
+  Architecture,
   ArchitectureEdge,
   ArchitectureNode,
   ChangeStatus,
   CodeLocation,
+  CustomReviewSection,
   Flow,
   FlowStep,
   Impact,
@@ -10,6 +12,7 @@ import type {
   ReadingStep,
   ReviewMap,
 } from '@shared/review';
+import { isCustomStepId } from '@shared/review-plan';
 import { AppError } from '../errors';
 
 const text = { type: 'string' } as const;
@@ -27,6 +30,37 @@ const step = {
   type: 'object',
   properties: { from: text, to: text, label: text, location: optionalLocation },
   required: ['from', 'to', 'label', 'location'],
+  additionalProperties: false,
+} as const;
+
+const architectureSchema = {
+  type: 'object',
+  properties: {
+    nodes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: text,
+          label: text,
+          status: { type: 'string', enum: ['added', 'changed', 'removed', 'unchanged'] },
+          location: optionalLocation,
+        },
+        required: ['id', 'label', 'status', 'location'],
+        additionalProperties: false,
+      },
+    },
+    edges: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: { from: text, to: text, label: { type: ['string', 'null'] } },
+        required: ['from', 'to', 'label'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['nodes', 'edges'],
   additionalProperties: false,
 } as const;
 
@@ -58,42 +92,35 @@ export const REVIEW_SCHEMA = {
         additionalProperties: false,
       },
     },
-    architecture: {
-      type: 'object',
-      properties: {
-        nodes: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: text,
-              label: text,
-              status: { type: 'string', enum: ['added', 'changed', 'removed', 'unchanged'] },
-              location: optionalLocation,
-            },
-            required: ['id', 'label', 'status', 'location'],
-            additionalProperties: false,
-          },
-        },
-        edges: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: { from: text, to: text, label: { type: ['string', 'null'] } },
-            required: ['from', 'to', 'label'],
-            additionalProperties: false,
-          },
-        },
-      },
-      required: ['nodes', 'edges'],
-      additionalProperties: false,
-    },
+    architecture: architectureSchema,
     impacts: {
       type: 'array',
       items: {
         type: 'object',
         properties: { area: text, detail: text, location: optionalLocation },
         required: ['area', 'detail', 'location'],
+        additionalProperties: false,
+      },
+    },
+    customSections: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: text,
+          body: text,
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: { area: text, detail: text, location: optionalLocation },
+              required: ['area', 'detail', 'location'],
+              additionalProperties: false,
+            },
+          },
+          diagram: { anyOf: [architectureSchema, { type: 'null' }] },
+        },
+        required: ['id', 'body', 'items', 'diagram'],
         additionalProperties: false,
       },
     },
@@ -107,7 +134,15 @@ export const REVIEW_SCHEMA = {
       },
     },
   },
-  required: ['summary', 'changes', 'flows', 'architecture', 'impacts', 'readingOrder'],
+  required: [
+    'summary',
+    'changes',
+    'flows',
+    'architecture',
+    'impacts',
+    'readingOrder',
+    'customSections',
+  ],
   additionalProperties: false,
 } as const;
 
@@ -131,21 +166,45 @@ export function parseReviewMap(value: unknown): ReviewMap {
   if (!isObject(value) || typeof value.summary !== 'string') {
     throw new AppError('ai-invalid-output', 'The AI overview did not have the expected shape.');
   }
-  const architecture = isObject(value.architecture) ? value.architecture : {};
-  const nodes = list(architecture.nodes, LIMITS.nodes, toNode);
-  const ids = new Set(nodes.map((node) => node.id));
   return {
     summary: clip(value.summary, LIMITS.text),
     changes: list(value.changes, LIMITS.changes, toKeyChange),
     flows: list(value.flows, LIMITS.flows, toFlow),
-    architecture: {
-      nodes,
-      edges: list(architecture.edges, LIMITS.edges, toEdge).filter(
-        (edge) => ids.has(edge.from) && ids.has(edge.to),
-      ),
-    },
+    architecture: toArchitecture(value.architecture),
     impacts: list(value.impacts, LIMITS.impacts, toImpact),
     readingOrder: list(value.readingOrder, LIMITS.readingOrder, toReadingStep),
+    ...(Array.isArray(value.customSections)
+      ? {
+          customSections: list(value.customSections, 6, toCustom).filter(
+            (item, index, all) => all.findIndex((other) => other.id === item.id) === index,
+          ),
+        }
+      : {}),
+  };
+}
+
+function toArchitecture(value: unknown): Architecture {
+  const graph = isObject(value) ? value : {};
+  const nodes = list(graph.nodes, LIMITS.nodes, toNode).filter(
+    (node, index, all) => all.findIndex((other) => other.id === node.id) === index,
+  );
+  const ids = new Set(nodes.map((node) => node.id));
+  return {
+    nodes,
+    edges: list(graph.edges, LIMITS.edges, toEdge).filter(
+      (edge) => ids.has(edge.from) && ids.has(edge.to),
+    ),
+  };
+}
+
+function toCustom(item: Json): CustomReviewSection | undefined {
+  if (typeof item.id !== 'string' || !isCustomStepId(item.id) || typeof item.body !== 'string')
+    return undefined;
+  return {
+    id: item.id,
+    body: clip(item.body, 6000),
+    items: list(item.items, LIMITS.impacts, toImpact),
+    ...(isObject(item.diagram) ? { diagram: toArchitecture(item.diagram) } : {}),
   };
 }
 

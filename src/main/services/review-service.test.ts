@@ -6,6 +6,7 @@ import type { ChangedFile } from '@shared/diff';
 import type { PullRequestDetail } from '@shared/github';
 import type { Language } from '@shared/language';
 import type { StoredReview } from '@shared/review';
+import { defaultReviewPlan, type ReviewPlan, reviewContentKey } from '@shared/review-plan';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentRunInput, ReviewAgent } from '../ai/agent';
 import type { ReviewStore } from '../ai/review-store';
@@ -74,6 +75,7 @@ afterEach(async () => {
 function setup(
   run: (input: AgentRunInput) => Promise<{ output: unknown; costUsd?: number }>,
   language: Language | (() => Promise<Language>) = 'ko',
+  plan?: () => Promise<ReviewPlan>,
 ) {
   const github = {
     getPullRequest: vi.fn().mockResolvedValue({
@@ -114,6 +116,7 @@ function setup(
     store,
     workspaceRoot: root,
     language,
+    plan,
     now: () => new Date('2026-10-31T00:00:00Z'),
   });
   const settled = () =>
@@ -124,6 +127,93 @@ function setup(
 }
 
 describe('createReviewService', () => {
+  it('captures the plan at start and produces every custom card in one AI run', async () => {
+    const plan = defaultReviewPlan();
+    plan.steps.push({
+      id: 'custom_checks',
+      kind: 'custom',
+      title: 'Checks',
+      visible: true,
+      detail: 'detailed',
+      format: 'checklist',
+      instructions: 'Check rollback',
+    });
+    let current = plan;
+    const complete = deferred<{ output: unknown }>();
+    const { service, agent, store, settled } = setup(
+      async (input) => {
+        expect(input.prompt).toContain('Check rollback');
+        return complete.promise;
+      },
+      'en',
+      async () => current,
+    );
+    await service.startReview(ref);
+    await vi.waitFor(() => expect(agent.run).toHaveBeenCalledOnce());
+    current = defaultReviewPlan();
+    complete.resolve({
+      output: {
+        ...reviewOutput,
+        customSections: [
+          {
+            id: 'custom_checks',
+            body: 'Check the caller',
+            items: [
+              {
+                area: 'Caller',
+                detail: 'Read the line',
+                location: { path: 'src/app.ts', line: 2 },
+              },
+            ],
+            diagram: null,
+          },
+        ],
+      },
+    });
+    await settled();
+    expect(agent.run).toHaveBeenCalledOnce();
+    expect(store.write).toHaveBeenCalledWith(
+      ref,
+      expect.objectContaining({
+        planKey: reviewContentKey(plan),
+        review: expect.objectContaining({
+          customSections: [
+            expect.objectContaining({
+              items: [
+                expect.objectContaining({
+                  location: { path: 'src/app.ts', line: 2, verified: true },
+                }),
+              ],
+            }),
+          ],
+        }),
+      }),
+    );
+  });
+  it('reports a missing custom step instead of saving an incomplete analysis', async () => {
+    const plan = defaultReviewPlan();
+    plan.steps.push({
+      id: 'custom_checks',
+      kind: 'custom',
+      title: 'Checks',
+      visible: true,
+      detail: 'balanced',
+      format: 'text',
+      instructions: '',
+    });
+    const { service, store, settled } = setup(
+      async () => ({ output: reviewOutput }),
+      'en',
+      async () => plan,
+    );
+    await service.startReview(ref);
+    await settled();
+    expect(await service.getReviewStatus(ref)).toMatchObject({
+      state: 'failed',
+      error: { code: 'ai-invalid-output' },
+    });
+    expect(store.write).not.toHaveBeenCalled();
+  });
   it('keeps the requested language when settings change during a running review', async () => {
     let language: Language = 'en';
     const done = deferred<{ output: unknown }>();
