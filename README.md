@@ -51,7 +51,7 @@ Homebrew installation will use a project-maintained tap after the first signed r
 
 ## Demo
 
-https://github.com/user-attachments/assets/008b92de-4fc4-4aea-b248-2d35f4854479
+https://github.com/user-attachments/assets/17e9ebc0-0720-476c-9687-ba9919cdfa7c
 
 Open a PR, inspect the diff, follow a diagram back to its code and open local work. [Download the English demo](https://github.com/gentledev10/plot/raw/refs/heads/main/docs/media/plot-demo.mp4).
 

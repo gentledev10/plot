@@ -160,10 +160,13 @@ try {
   await settings.getByRole('button', { name: 'Connect', exact: true }).click();
   await settings.getByText('plot-demo', { exact: true }).first().waitFor();
   await settings.getByRole('button', { name: 'Close settings' }).click();
+  await settings.waitFor({ state: 'hidden' });
   await page
     .getByRole('button', { name: /Retry notifications without/ })
     .first()
     .waitFor();
+  // Flush the closed dialog out of the compositor before recording its first frame.
+  await page.screenshot();
   const cdp = await page.context().newCDPSession(page);
   cdp.on('Page.screencastFrame', async ({ data, metadata, sessionId }) => {
     if (recording) {
