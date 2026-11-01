@@ -1,4 +1,4 @@
-import type { PullRequestPage, RepositoryRef } from '@shared/github';
+import type { PullRequestPage, RepositoryPullRequestQuery, RepositoryRef } from '@shared/github';
 import { repositoryKey } from '@shared/repository-ref';
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 import { useApi } from '../../app/providers';
@@ -9,8 +9,11 @@ const SEARCH_RESULT_LIMIT = 1000;
 export const repositoryKeys = {
   choices: (accountId: string | undefined) => ['repository-choices', accountId] as const,
   openCount: (ref: RepositoryRef) => ['open-pull-request-count', repositoryKey(ref)] as const,
-  pullRequests: (ref: RepositoryRef) => ['repository-pull-requests', repositoryKey(ref)] as const,
+  pullRequests: ({ repository, state, scope, text }: RepositoryFilters) =>
+    ['repository-pull-requests', repositoryKey(repository), state, scope, text] as const,
 };
+
+export type RepositoryFilters = Omit<RepositoryPullRequestQuery, 'page'>;
 
 export function useRepositoryChoices(accountId: string | undefined, enabled: boolean) {
   const api = useApi();
@@ -36,11 +39,11 @@ export function useFindRepository() {
   return useMutation({ mutationFn: (ref: RepositoryRef) => api.findRepository(ref) });
 }
 
-export function useRepositoryPullRequests(repository: RepositoryRef) {
+export function useRepositoryPullRequests(filters: RepositoryFilters) {
   const api = useApi();
   return useInfiniteQuery({
-    queryKey: repositoryKeys.pullRequests(repository),
-    queryFn: ({ pageParam }) => api.listRepositoryPullRequests({ repository, page: pageParam }),
+    queryKey: repositoryKeys.pullRequests(filters),
+    queryFn: ({ pageParam }) => api.listRepositoryPullRequests({ ...filters, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: (last: PullRequestPage, pages: PullRequestPage[]) => {
       const loaded = pages.reduce((count, page) => count + page.pullRequests.length, 0);

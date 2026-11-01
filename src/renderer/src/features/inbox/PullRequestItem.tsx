@@ -39,11 +39,24 @@ export function PullRequestItem({
         <span className={styles.itemTitle}>{pull.title}</span>
         {(pull.isDraft || badges) && (
           <span className={styles.badges}>
-            {pull.isDraft && <span className={styles.badge}>Draft</span>}
+            {pull.isDraft && <Badge>Draft</Badge>}
             {badges}
           </span>
         )}
       </span>
     </button>
+  );
+}
+
+interface BadgeProps {
+  tone?: 'neutral' | 'accent' | 'merged' | 'closed';
+  children: ReactNode;
+}
+
+export function Badge({ tone = 'neutral', children }: BadgeProps) {
+  return (
+    <span className={styles.badge} data-tone={tone}>
+      {children}
+    </span>
   );
 }

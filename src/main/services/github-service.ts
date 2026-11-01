@@ -1,4 +1,8 @@
-import type { RepositoryPullRequestQuery } from '@shared/github';
+import type {
+  PullRequestScope,
+  PullRequestStateFilter,
+  RepositoryPullRequestQuery,
+} from '@shared/github';
 import type { PlotApi } from '@shared/ipc';
 import type { GitHubConnections } from '../github/connections';
 
@@ -13,8 +17,35 @@ const REPOSITORY_CHOICES = 100;
 
 export const REPOSITORY_PAGE_SIZE = 30;
 
-export function repositorySearch({ repository }: RepositoryPullRequestQuery): string {
-  return `repo:${repository.owner}/${repository.repo} is:pr is:open`;
+const STATE_QUALIFIERS: Record<PullRequestStateFilter, string> = {
+  open: 'is:open',
+  merged: 'is:merged',
+  closed: 'is:closed is:unmerged',
+  all: '',
+};
+
+const SCOPE_QUALIFIERS: Record<PullRequestScope, string> = {
+  everyone: '',
+  'review-requested': 'review-requested:@me',
+  authored: 'author:@me',
+  assigned: 'assignee:@me',
+};
+
+export function repositorySearch({
+  repository,
+  state,
+  scope,
+  text,
+}: RepositoryPullRequestQuery): string {
+  return [
+    `repo:${repository.owner}/${repository.repo}`,
+    'is:pr',
+    STATE_QUALIFIERS[state],
+    SCOPE_QUALIFIERS[scope],
+    text.trim(),
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 export type GitHubService = Pick<

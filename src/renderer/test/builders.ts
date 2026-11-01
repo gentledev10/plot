@@ -14,6 +14,7 @@ export function aPullRequestSummary(
     title: `Pull request ${number}`,
     author: aUser(),
     isDraft: false,
+    state: 'open',
     updatedAt: new Date().toISOString(),
     url: `https://github.com/octocat/hello-world/pull/${number}`,
     ...overrides,

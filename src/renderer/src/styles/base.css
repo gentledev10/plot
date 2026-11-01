@@ -19,6 +19,7 @@ body {
 }
 
 button,
+select,
 input {
   font: inherit;
   color: inherit;

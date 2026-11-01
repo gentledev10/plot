@@ -11,8 +11,12 @@ export function searchItem(overrides: Record<string, unknown> = {}) {
     html_url: 'https://github.com/octocat/hello-world/pull/42',
     updated_at: '2026-10-30T10:00:00Z',
     draft: false,
+    state: 'open',
     user: octocat,
-    pull_request: { url: 'https://api.github.com/repos/octocat/hello-world/pulls/42' },
+    pull_request: {
+      url: 'https://api.github.com/repos/octocat/hello-world/pulls/42',
+      merged_at: null,
+    },
     ...overrides,
   };
 }

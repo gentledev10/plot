@@ -110,11 +110,19 @@ describe('argumentParsers', () => {
     expect(() => argumentParsers.countOpenPullRequests([{ ...repository, repo: '..' }])).toThrow(
       invalid,
     );
-    expect(argumentParsers.listRepositoryPullRequests([{ repository, page: 2 }])).toEqual([
-      { repository, page: 2 },
-    ]);
-    for (const page of [0, 1.5, '2', 101]) {
-      expect(() => argumentParsers.listRepositoryPullRequests([{ repository, page }])).toThrow(
+    const query = { repository, state: 'merged', scope: 'authored', text: 'label:bug', page: 2 };
+    expect(argumentParsers.listRepositoryPullRequests([{ ...query, extra: 1 }])).toEqual([query]);
+    for (const change of [
+      { page: 0 },
+      { page: 1.5 },
+      { page: '2' },
+      { page: 101 },
+      { state: 'draft' },
+      { scope: 'mine' },
+      { text: 'a\nb' },
+      { text: 'x'.repeat(257) },
+    ]) {
+      expect(() => argumentParsers.listRepositoryPullRequests([{ ...query, ...change }])).toThrow(
         invalid,
       );
     }

@@ -10,7 +10,7 @@ Plot is a lightweight Mac app for reading code changes, made for developers who 
 
 Many developers now open a full IDE only to read diffs, often of code an AI wrote. Plot does just that part, and opens fast:
 
-- **Pull requests in one click.** See the pull requests waiting for your review, browse all pull requests of the repositories you add, or paste any pull request URL.
+- **Pull requests in one click.** See the pull requests waiting for your review, browse and filter all pull requests of the repositories you add, or paste any pull request URL.
 - **IntelliJ's diff, outside IntelliJ.** Side-by-side diffs with IntelliJ's colors, collapsed unchanged fragments, and the same keyboard shortcuts.
 - **Understand a change before you read it.** An AI overview explains what the pull request changes, compares how the code flowed before and after in sequence diagrams, draws the components around it, and lists what else it affects. Every item links to the line it is about. Bring your own Claude Code or Codex CLI.
 - **Your own work, too.** Open a local repository in the Local changes window to see everything on your branch, including work you have not committed, with the same diff and shortcuts. It refreshes as files change, which suits checking code an AI agent just wrote.

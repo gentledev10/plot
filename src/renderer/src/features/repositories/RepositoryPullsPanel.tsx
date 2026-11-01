@@ -1,12 +1,36 @@
-import type { PullRequestRef, RepositoryRef } from '@shared/github';
+import type {
+  PullRequestRef,
+  PullRequestScope,
+  PullRequestStateFilter,
+  PullRequestSummary,
+  RepositoryRef,
+} from '@shared/github';
+import { pullRequestKey } from '@shared/pull-request-ref';
 import { formatRepositoryRef, repositoryUrl } from '@shared/repository-ref';
-import { ChevronLeft, ExternalLink, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ExternalLink, RefreshCw } from 'lucide-react';
+import { type FormEvent, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
-import { PullRequestItem } from '../inbox/PullRequestItem';
+import { useCurrentAccount } from '../accounts/queries';
+import { Badge, PullRequestItem } from '../inbox/PullRequestItem';
+import { useInbox } from '../inbox/queries';
 import { useCommand } from '../keymap/KeymapProvider';
 import { useRepositoryPullRequests } from './queries';
 import styles from './RepositoryPullsPanel.module.css';
+
+const STATES: Record<PullRequestStateFilter, string> = {
+  open: 'Open',
+  merged: 'Merged',
+  closed: 'Closed',
+  all: 'All',
+};
+
+const SCOPES: Record<PullRequestScope, string> = {
+  everyone: 'Everyone',
+  'review-requested': 'Review requested',
+  authored: 'Created by me',
+  assigned: 'Assigned to me',
+};
 
 interface RepositoryPullsPanelProps {
   repository: RepositoryRef;
@@ -22,11 +46,23 @@ export function RepositoryPullsPanel({
   onBack,
 }: RepositoryPullsPanelProps) {
   const name = formatRepositoryRef(repository);
-  const pulls = useRepositoryPullRequests(repository);
+  const [state, setState] = useState<PullRequestStateFilter>('open');
+  const [scope, setScope] = useState<PullRequestScope>('everyone');
+  const [draft, setDraft] = useState('');
+  const [text, setText] = useState('');
+  const pulls = useRepositoryPullRequests({ repository, state, scope, text });
   const items = pulls.data?.pages.flatMap((page) => page.pullRequests) ?? [];
+  const total = pulls.data?.pages[0]?.total;
+  const waiting = useReviewRequests();
+  const filtered = state !== 'open' || scope !== 'everyone' || text !== '';
 
   function refresh() {
     void pulls.refetch();
+  }
+
+  function search(event: FormEvent) {
+    event.preventDefault();
+    setText(draft.trim());
   }
 
   useCommand('navigation.refresh', refresh);
@@ -48,6 +84,30 @@ export function RepositoryPullsPanel({
           <RefreshCw size={14} />
         </IconButton>
       </header>
+      <form className={styles.search} onSubmit={search}>
+        <input
+          className={styles.searchInput}
+          type="search"
+          aria-label={`Search pull requests in ${name}`}
+          placeholder="Search, or try label:bug author:mona"
+          value={draft}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            if (event.target.value === '') {
+              setText('');
+            }
+          }}
+        />
+      </form>
+      <div className={styles.filters}>
+        <Filter label="State" value={state} options={STATES} onChange={setState} />
+        <Filter label="Whose pull requests" value={scope} options={SCOPES} onChange={setScope} />
+        {total !== undefined && (
+          <span className={styles.total}>
+            {total.toLocaleString()} {total === 1 ? 'pull request' : 'pull requests'}
+          </span>
+        )}
+      </div>
       <div className={styles.content}>{renderContent()}</div>
     </aside>
   );
@@ -64,14 +124,24 @@ export function RepositoryPullsPanel({
       );
     }
     if (items.length === 0) {
-      return <StatusMessage>No open pull requests.</StatusMessage>;
+      return (
+        <StatusMessage>
+          {filtered ? 'No pull requests match.' : 'No open pull requests.'}
+        </StatusMessage>
+      );
     }
     return (
       <>
-        <ul className={styles.list} aria-label={`Open pull requests in ${name}`}>
+        <ul className={styles.list} aria-label={`Pull requests in ${name}`}>
           {items.map((pull) => (
             <li key={pull.ref.number}>
-              <PullRequestItem pull={pull} selected={selected} showAuthor onSelect={onSelect} />
+              <PullRequestItem
+                pull={pull}
+                selected={selected}
+                showAuthor
+                badges={badges(pull, waiting)}
+                onSelect={onSelect}
+              />
             </li>
           ))}
         </ul>
@@ -88,4 +158,46 @@ export function RepositoryPullsPanel({
       </>
     );
   }
+}
+
+function useReviewRequests(): ReadonlySet<string> {
+  const inbox = useInbox(useCurrentAccount()?.id);
+  return new Set(inbox.data?.reviewRequested.map((pull) => pullRequestKey(pull.ref)));
+}
+
+function badges(pull: PullRequestSummary, waiting: ReadonlySet<string>) {
+  const requested = waiting.has(pullRequestKey(pull.ref));
+  if (pull.state === 'open' && !requested) {
+    return undefined;
+  }
+  return (
+    <>
+      {pull.state === 'merged' && <Badge tone="merged">Merged</Badge>}
+      {pull.state === 'closed' && <Badge tone="closed">Closed</Badge>}
+      {requested && <Badge tone="accent">Review requested</Badge>}
+    </>
+  );
+}
+
+interface FilterProps<T extends string> {
+  label: string;
+  value: T;
+  options: Record<T, string>;
+  onChange(value: T): void;
+}
+
+function Filter<T extends string>({ label, value, options, onChange }: FilterProps<T>) {
+  return (
+    <label className={styles.filter}>
+      <span className={styles.hidden}>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value as T)}>
+        {(Object.entries(options) as [T, string][]).map(([id, text]) => (
+          <option key={id} value={id}>
+            {text}
+          </option>
+        ))}
+      </select>
+      <ChevronDown size={12} aria-hidden="true" />
+    </label>
+  );
 }

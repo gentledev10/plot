@@ -19,9 +19,20 @@ describe('toPullRequestSummaryFromSearch', () => {
         avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
       },
       isDraft: false,
+      state: 'open',
       updatedAt: '2026-10-30T10:00:00Z',
       url: 'https://github.com/octocat/hello-world/pull/42',
     });
+  });
+
+  it('tells merged pull requests from ones closed without merging', () => {
+    const merged = searchItem({
+      state: 'closed',
+      pull_request: { merged_at: '2026-10-30T11:00:00Z' },
+    });
+    expect(toPullRequestSummaryFromSearch(merged, 'github.com').state).toBe('merged');
+    const closed = searchItem({ state: 'closed', pull_request: { merged_at: null } });
+    expect(toPullRequestSummaryFromSearch(closed, 'github.com').state).toBe('closed');
   });
 
   it('treats a missing draft flag as not draft', () => {

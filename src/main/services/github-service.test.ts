@@ -2,7 +2,12 @@ import type { PullRequestSummary } from '@shared/github';
 import { describe, expect, it, vi } from 'vitest';
 import type { GitHubClient } from '../github/client';
 import { fakeConnections } from '../github/fake-connections';
-import { createGitHubService, INBOX_QUERIES, REPOSITORY_PAGE_SIZE } from './github-service';
+import {
+  createGitHubService,
+  INBOX_QUERIES,
+  REPOSITORY_PAGE_SIZE,
+  repositorySearch,
+} from './github-service';
 
 const user = { login: 'octocat', avatarUrl: 'https://avatars.githubusercontent.com/u/1' };
 
@@ -12,6 +17,7 @@ function summary(number: number): PullRequestSummary {
     title: `Pull request ${number}`,
     author: user,
     isDraft: false,
+    state: 'open',
     updatedAt: '2026-10-30T10:00:00Z',
     url: `https://github.com/octocat/hello-world/pull/${number}`,
   };
@@ -98,13 +104,32 @@ describe('repositories', () => {
       .mockResolvedValue({ pullRequests: [summary(4)], total: 31 });
     const service = createGitHubService(fakeConnections(fakeClient({ searchPullRequestPage })));
 
-    await expect(service.listRepositoryPullRequests({ repository: api, page: 2 })).resolves.toEqual(
-      { pullRequests: [summary(4)], total: 31 },
-    );
+    await expect(
+      service.listRepositoryPullRequests({
+        repository: api,
+        state: 'open',
+        scope: 'everyone',
+        text: '',
+        page: 2,
+      }),
+    ).resolves.toEqual({ pullRequests: [summary(4)], total: 31 });
     expect(searchPullRequestPage).toHaveBeenCalledWith(
       'repo:acme/api is:pr is:open',
       2,
       REPOSITORY_PAGE_SIZE,
     );
+  });
+
+  it('turns the filters into GitHub search qualifiers', () => {
+    const query = { repository: api, state: 'open', scope: 'everyone', text: '', page: 1 } as const;
+    expect(repositorySearch({ ...query, state: 'merged', scope: 'authored' })).toBe(
+      'repo:acme/api is:pr is:merged author:@me',
+    );
+    expect(repositorySearch({ ...query, state: 'closed', scope: 'review-requested' })).toBe(
+      'repo:acme/api is:pr is:closed is:unmerged review-requested:@me',
+    );
+    expect(
+      repositorySearch({ ...query, state: 'all', scope: 'assigned', text: ' label:bug login ' }),
+    ).toBe('repo:acme/api is:pr assignee:@me label:bug login');
   });
 });

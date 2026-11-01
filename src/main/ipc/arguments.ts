@@ -8,7 +8,13 @@ import {
 } from '@shared/ai';
 import { isThemeSource, type ThemeSource } from '@shared/appearance';
 import { isObjectId } from '@shared/diff';
-import type { PullRequestRef, RepositoryPullRequestQuery, RepositoryRef } from '@shared/github';
+import {
+  PULL_REQUEST_SCOPES,
+  PULL_REQUEST_STATE_FILTERS,
+  type PullRequestRef,
+  type RepositoryPullRequestQuery,
+  type RepositoryRef,
+} from '@shared/github';
 import { isHost } from '@shared/hosts';
 import type { IpcMethod, PlotApi } from '@shared/ipc';
 import { isLocalCompare, isLocalRepositoryId, type LocalTarget } from '@shared/local';
@@ -152,12 +158,31 @@ function repositoryRef(value: unknown): RepositoryRef {
   return { host: value.host, owner: value.owner, repo: value.repo };
 }
 
+const SEARCH_TEXT = /^[^\p{Cc}]{0,256}$/u;
+
 function repositoryPullRequestQuery(value: unknown): RepositoryPullRequestQuery {
-  const { repository, page } = (value ?? {}) as Record<string, unknown>;
-  if (typeof page !== 'number' || !Number.isInteger(page) || page < 1 || page > 100) {
+  const { repository, state, scope, text, page } = (value ?? {}) as Record<string, unknown>;
+  const stateFilter = PULL_REQUEST_STATE_FILTERS.find((candidate) => candidate === state);
+  const scopeFilter = PULL_REQUEST_SCOPES.find((candidate) => candidate === scope);
+  if (
+    !stateFilter ||
+    !scopeFilter ||
+    typeof text !== 'string' ||
+    !SEARCH_TEXT.test(text) ||
+    typeof page !== 'number' ||
+    !Number.isInteger(page) ||
+    page < 1 ||
+    page > 100
+  ) {
     throw new AppError('invalid-argument', 'Expected a page of pull requests.');
   }
-  return { repository: repositoryRef(repository), page };
+  return {
+    repository: repositoryRef(repository),
+    state: stateFilter,
+    scope: scopeFilter,
+    text,
+    page,
+  };
 }
 
 function objectId(value: unknown): string {

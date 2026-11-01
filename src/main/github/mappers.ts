@@ -18,11 +18,13 @@ export function toGitHubUser(value: unknown): GitHubUser {
 export function toPullRequestSummaryFromSearch(value: unknown, host: string): PullRequestSummary {
   const item = object(value, 'search item');
   const { owner, repo } = repositoryFromApiUrl(string(item.repository_url, 'repository_url'));
+  const pull = (item.pull_request ?? {}) as Json;
   return {
     ref: { host, owner, repo, number: number(item.number, 'number') },
     title: string(item.title, 'title'),
     author: toGitHubUser(item.user),
     isDraft: item.draft === true,
+    state: pullRequestState({ state: item.state, merged_at: pull.merged_at }),
     updatedAt: string(item.updated_at, 'updated_at'),
     url: string(item.html_url, 'html_url'),
   };
