@@ -143,7 +143,7 @@ const args=process.argv.slice(2);
 if(args.includes('--version'))console.log('codex-cli fixture');
 else if(args[0]==='login')console.log('Logged in');
 else if(args[0]==='app-server')createInterface({input:process.stdin}).on('line',line=>{const r=JSON.parse(line);if(!r.id)return;let result={};if(r.method==='account/read')result={account:{type:'chatgpt'}};if(r.method==='model/list')result={data:[{model:'fixture-model',displayName:'Fixture model',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'high'}]}],nextCursor:null};console.log(JSON.stringify({id:r.id,result}))});
-else if(args[0]==='exec'){const korean=args.at(-1).includes('Write all prose in Korean.');appendFileSync(${JSON.stringify(join(scratch, 'generation-count'))},(korean?'ko':'en')+String.fromCharCode(10));const output=korean?${JSON.stringify(koreanOverview)}:${JSON.stringify(overview)};const config=args.at(-1).split(String.fromCharCode(10)).find(line=>line.startsWith('REVIEW_STEPS_JSON:'));const steps=JSON.parse(config.slice('REVIEW_STEPS_JSON:'.length));output.customSections=steps.filter(step=>step.kind==='custom').map(step=>({id:step.id,body:korean?'추가 관점 분석입니다.':'Additional perspective.',items:step.format==='checklist'?[{area:korean?'호출부 확인':'Check callers',detail:step.instructions,location:{path:'sample.ts',line:1}}]:[],diagram:step.format==='diagram'?output.architecture:null}));writeFileSync(args[args.indexOf('--output-last-message')+1],JSON.stringify(output));console.log(JSON.stringify({type:'turn.completed'}))}
+else if(args[0]==='exec'){const korean=args.at(-1).includes('Write all prose in Korean.');appendFileSync(${JSON.stringify(join(scratch, 'generation-count'))},(korean?'ko':'en')+String.fromCharCode(10));const output=korean?${JSON.stringify(koreanOverview)}:${JSON.stringify(overview)};const config=args.at(-1).split(String.fromCharCode(10)).find(line=>line.startsWith('REVIEW_STEPS_JSON:'));const steps=JSON.parse(config.slice('REVIEW_STEPS_JSON:'.length));output.customSections=steps.filter(step=>step.kind==='custom').map(step=>({id:step.id,body:korean?'추가 관점 분석입니다.':'Additional perspective.',items:step.format==='checklist'?[{area:korean?'호출부 확인':'Check callers',detail:step.instructions,location:{path:'sample.ts',line:1}}]:[],diagram:step.format==='diagram'?{...output.architecture,kind:step.instructions.includes('순서')?'sequence':'components'}:null}));writeFileSync(args[args.indexOf('--output-last-message')+1],JSON.stringify(output));console.log(JSON.stringify({type:'turn.completed'}))}
 `,
   { mode: 0o700 },
 );
@@ -465,7 +465,14 @@ try {
   pass('Drag review cards into a new reading order without another AI call');
 
   await page.getByRole('button', { name: '리뷰 구성', exact: true }).click();
+  await settings.getByRole('button', { name: '요약 삭제', exact: true }).click();
+  assert.equal(await steps.locator('[data-step-id="summary"]').count(), 0);
   await settings.getByRole('button', { name: '단계 추가', exact: true }).click();
+  assert.equal(await settings.getByLabel('카드 제목', { exact: true }).inputValue(), '');
+  assert.equal(
+    await settings.getByLabel('AI에게 추가로 요청할 내용', { exact: true }).inputValue(),
+    '',
+  );
   await settings.getByLabel('카드 제목', { exact: true }).fill('실패 시 확인할 점');
   await settings.getByLabel('표현 방식', { exact: true }).selectOption('checklist');
   await settings
@@ -476,7 +483,7 @@ try {
   await settings.getByLabel('표현 방식', { exact: true }).selectOption('diagram');
   await settings
     .getByLabel('AI에게 추가로 요청할 내용', { exact: true })
-    .fill('변경한 값이 전달되는 관계를 보여 주세요.');
+    .fill('값을 읽는 호출 순서를 시간 순으로 보여 주세요.');
   const reviewFormatA11y = await page.evaluate(async () => {
     const result = await window.axe.run(document.querySelector('dialog'), {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
@@ -486,6 +493,12 @@ try {
   assert.deepEqual(reviewFormatA11y, []);
   await page.screenshot({ path: join(root, 'dist/e2e-review-format.png'), scale: 'css' });
   await settings.getByRole('button', { name: '설정 닫기' }).click();
+  assert.equal(
+    JSON.parse(readFileSync(join(profile, 'preferences.json'), 'utf8'))['review-plan'].steps.some(
+      (step) => step.id === 'summary',
+    ),
+    false,
+  );
   await overviewPanel.getByText(/리뷰 지침이 바뀌었습니다/).waitFor();
   assert.equal(
     readFileSync(join(scratch, 'generation-count'), 'utf8').trim().split('\n').length,
@@ -499,13 +512,21 @@ try {
     .waitFor();
   await overviewPanel
     .getByRole('article', { name: /호출부 관계/ })
-    .getByRole('img')
+    .getByRole('img', { name: '호출 순서 그림', exact: true })
     .waitFor();
   assert.equal(await overviewPanel.getByText(/리뷰 지침이 바뀌었습니다/).count(), 0);
   assert.equal(
     readFileSync(join(scratch, 'generation-count'), 'utf8').trim().split('\n').length,
     3,
   );
+  assert.equal(
+    await overviewPanel
+      .getByRole('article')
+      .filter({ has: page.getByRole('heading', { name: /^요약$/ }) })
+      .count(),
+    0,
+  );
+  pass('Delete a built-in step persistently and start new steps with placeholder-only fields');
   pass('Save custom checklist and diagram stages and generate them in one analysis');
   const customCard = overviewPanel.getByRole('article', { name: /실패 시 확인할 점/ });
   await customCard.getByRole('button', { name: /실패 시 확인할 점/ }).click();

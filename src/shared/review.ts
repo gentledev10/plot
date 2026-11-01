@@ -59,11 +59,16 @@ export interface Architecture {
   edges: ArchitectureEdge[];
 }
 
+export type ReviewDiagramKind = 'components' | 'flowchart' | 'sequence';
+export interface ReviewDiagram extends Architecture {
+  kind?: ReviewDiagramKind;
+}
+
 export interface CustomReviewSection {
   id: string;
   body: string;
   items: Impact[];
-  diagram?: Architecture;
+  diagram?: ReviewDiagram;
 }
 
 export interface ReviewMap {

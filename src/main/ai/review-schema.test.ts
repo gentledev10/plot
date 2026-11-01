@@ -108,6 +108,24 @@ describe('parseReviewMap', () => {
       line: 2,
     });
   });
+  it.each(['components', 'flowchart', 'sequence'] as const)(
+    'preserves custom diagram kind %s',
+    (kind) => {
+      const review = parseReviewMap(
+        output({
+          customSections: [
+            {
+              id: 'custom_graph',
+              body: 'Graph',
+              items: [],
+              diagram: { kind, nodes: [], edges: [] },
+            },
+          ],
+        }),
+      );
+      expect(review.customSections?.[0]?.diagram?.kind).toBe(kind);
+    },
+  );
   it('keeps a well-formed overview, dropping null locations', () => {
     const review = parseReviewMap(output());
     expect(review.changes[0]).toEqual({

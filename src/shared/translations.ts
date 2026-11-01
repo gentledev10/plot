@@ -1,6 +1,35 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  'Show in results': '결과에 표시',
+  'Show {title} in results': '{title} 결과에 표시',
+  'Hide this result card without removing the step from analysis.':
+    '이 단계는 분석에 포함하고 결과 카드만 숨깁니다.',
+  'Show in results only hides a card; it does not skip analysis. Remove a step to exclude it from future analyses. Order and visibility update saved reviews immediately; other analysis changes apply when you generate again.':
+    '‘결과에 표시’를 끄면 카드만 숨깁니다. 다음 분석에서도 빼려면 단계를 삭제하세요. 순서와 표시 여부는 바로 반영되고, 분석 내용 변경은 다시 생성할 때 적용됩니다.',
+  'Remove {title}': '{title} 삭제',
+  'Untitled step': '제목 없는 단계',
+  'For example: failure cases': '예: 실패 상황 점검',
+  'For example: show the login flow and the order of calls.':
+    '예: 로그인 과정을 순서도로 보여 주세요. 또는 호출 순서를 그림으로 설명해 주세요.',
+  'Add a title or instructions to tell the AI what this step should cover.':
+    '이 단계에서 다룰 내용을 제목이나 요청 내용에 입력해 주세요.',
+  'The AI chooses a flowchart, sequence or component diagram to fit your instructions.':
+    '요청 내용에 맞춰 AI가 순서도, 호출 순서, 구성 관계를 그림으로 보여줍니다.',
+  Diagram: '그림',
+  'Sequence diagram': '호출 순서 그림',
+  'Flow diagram': '흐름 그림',
+  'No steps yet. Add a step or restore the defaults to get started.':
+    '아직 단계가 없습니다. 단계를 추가하거나 기본 단계로 복원해 주세요.',
+  'No review steps yet. Add a step or restore the defaults in Review format.':
+    '리뷰 단계가 없습니다. 리뷰 구성에서 단계를 추가하거나 기본 단계로 복원해 주세요.',
+  'Add a review step or restore the defaults before generating.':
+    '리뷰를 생성하려면 단계를 추가하거나 기본 단계로 복원해 주세요.',
+  'Give each custom step a title or instructions before generating.':
+    '리뷰를 생성하기 전에 각 사용자 단계의 제목이나 요청 내용을 입력해 주세요.',
+  'All review cards are hidden. Enable Show in results in Review format to see them.':
+    '모든 리뷰 카드가 숨겨져 있습니다. 리뷰 구성에서 ‘결과에 표시’를 켜 주세요.',
+  'No relevant content was found for these steps.': '선택한 단계에 해당하는 내용이 없습니다.',
   'Saving…': '저장 중…',
   Retry: '다시 시도',
   'The AI overview did not include every custom step. Generate it again.':

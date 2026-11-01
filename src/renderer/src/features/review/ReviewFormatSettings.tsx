@@ -65,7 +65,7 @@ export function ReviewFormatSettings() {
       </p>
       <p className={styles.hint}>
         {t(
-          'Order, titles of built-in steps and visibility update saved reviews immediately. Instructions, detail and custom steps apply when you generate again. Hidden steps are still analyzed.',
+          'Show in results only hides a card; it does not skip analysis. Remove a step to exclude it from future analyses. Order and visibility update saved reviews immediately; other analysis changes apply when you generate again.',
         )}
       </p>
       <div className={styles.toolbar}>
@@ -99,6 +99,11 @@ export function ReviewFormatSettings() {
           {t('Restore default steps')}
         </button>
       </div>
+      {plan.steps.length === 0 && (
+        <p className={styles.hint}>
+          {t('No steps yet. Add a step or restore the defaults to get started.')}
+        </p>
+      )}
       <ol className={styles.cards} aria-label={t('Review steps')}>
         {plan.steps.map((step, index) => {
           const open = expanded === step.id;
@@ -163,10 +168,11 @@ export function ReviewFormatSettings() {
                   <input
                     type="checkbox"
                     checked={step.visible}
-                    disabled={step.visible && plan.steps.filter((s) => s.visible).length === 1}
+                    aria-label={t('Show {title} in results', { title: title(step) })}
+                    title={t('Hide this result card without removing the step from analysis.')}
                     onChange={(e) => update(step.id, { visible: e.target.checked })}
                   />
-                  {t('Show')}
+                  {t('Show in results')}
                 </label>
                 <button
                   type="button"
@@ -192,6 +198,16 @@ export function ReviewFormatSettings() {
                 >
                   <ArrowDown size={14} />
                 </button>
+                <IconButton
+                  label={t('Remove {title}', { title: title(step) })}
+                  onClick={() => {
+                    setUndo(plan);
+                    change({ steps: plan.steps.filter((s) => s.id !== step.id) });
+                    if (expanded === step.id) setExpanded(undefined);
+                  }}
+                >
+                  <Trash2 size={14} />
+                </IconButton>
               </div>
               {open && (
                 <div className={styles.editor} id={`edit-${step.id}`}>
@@ -203,7 +219,11 @@ export function ReviewFormatSettings() {
                       maxLength={100}
                       onBlur={() => void flush().catch(() => {})}
                       value={step.title}
-                      placeholder={t(stepTitle({ ...step, title: '' }))}
+                      placeholder={
+                        builtin
+                          ? t(stepTitle({ ...step, title: '' }))
+                          : t('For example: failure cases')
+                      }
                       onChange={(e) => update(step.id, { title: e.target.value })}
                     />
                   </div>
@@ -234,7 +254,7 @@ export function ReviewFormatSettings() {
                         >
                           <option value="text">{t('Explanation')}</option>
                           <option value="checklist">{t('Checklist')}</option>
-                          <option value="diagram">{t('Component diagram')}</option>
+                          <option value="diagram">{t('Diagram')}</option>
                         </Select>
                       </div>
                     )}
@@ -249,25 +269,27 @@ export function ReviewFormatSettings() {
                       onBlur={() => void flush().catch(() => {})}
                       maxLength={1500}
                       value={step.instructions}
-                      placeholder={t(
-                        'For example: explain the tradeoffs and edge cases in plain language.',
-                      )}
+                      placeholder={
+                        step.format === 'diagram'
+                          ? t('For example: show the login flow and the order of calls.')
+                          : t(
+                              'For example: explain the tradeoffs and edge cases in plain language.',
+                            )
+                      }
                       onChange={(e) => update(step.id, { instructions: e.target.value })}
                     />
                   </div>
-                  {step.kind === 'custom' && (
-                    <div>
-                      <IconButton
-                        label={t('Remove step')}
-                        onClick={() => {
-                          setUndo(plan);
-                          change({ steps: plan.steps.filter((s) => s.id !== step.id) });
-                          setExpanded(undefined);
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </IconButton>
-                    </div>
+                  {step.kind === 'custom' && !step.title.trim() && !step.instructions.trim() && (
+                    <p className={styles.hint}>
+                      {t('Add a title or instructions to tell the AI what this step should cover.')}
+                    </p>
+                  )}
+                  {step.kind === 'custom' && step.format === 'diagram' && (
+                    <p className={styles.hint}>
+                      {t(
+                        'The AI chooses a flowchart, sequence or component diagram to fit your instructions.',
+                      )}
+                    </p>
                   )}
                 </div>
               )}
@@ -287,13 +309,11 @@ export function ReviewFormatSettings() {
               {
                 id,
                 kind: 'custom',
-                title: t('Additional perspective'),
+                title: '',
                 visible: true,
                 detail: 'balanced',
                 format: 'text',
-                instructions: t(
-                  'Check assumptions and unanswered questions, and link them to the relevant code.',
-                ),
+                instructions: '',
               },
             ],
           });

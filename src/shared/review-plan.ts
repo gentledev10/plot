@@ -52,9 +52,7 @@ export const defaultReviewPlan = (): ReviewPlan => ({
 });
 export const isCustomStepId = (id: string) => /^custom_[a-zA-Z0-9-]{1,64}$/.test(id);
 export const stepTitle = (step: ReviewStep) =>
-  step.title.trim() ||
-  BUILTIN_STEPS.find(({ id }) => id === step.kind)?.title ||
-  'Additional perspective';
+  step.title.trim() || BUILTIN_STEPS.find(({ id }) => id === step.kind)?.title || 'Untitled step';
 
 export function parseReviewPlan(value: unknown): ReviewPlan {
   const defaults = defaultReviewPlan();
@@ -90,8 +88,6 @@ export function parseReviewPlan(value: unknown): ReviewPlan {
         !builtin && ['text', 'checklist', 'diagram'].includes(raw.format) ? raw.format : 'text',
     });
   }
-  steps.push(...defaults.steps.filter(({ id }) => !seen.has(id)));
-  if (!steps.some(({ visible }) => visible) && steps[0]) steps[0].visible = true;
   return { steps };
 }
 

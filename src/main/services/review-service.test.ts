@@ -127,6 +127,62 @@ function setup(
 }
 
 describe('createReviewService', () => {
+  it.each<ReviewPlan>([
+    { steps: [] },
+    {
+      steps: [
+        {
+          id: 'custom_empty',
+          kind: 'custom',
+          title: '',
+          visible: true,
+          detail: 'balanced',
+          format: 'text',
+          instructions: '',
+        },
+      ],
+    },
+  ])('does not run an agent for an empty or unspecified review plan', async (plan) => {
+    const { service, agent, repositories } = setup(
+      async () => ({ output: reviewOutput }),
+      'en',
+      async () => plan,
+    );
+    await expect(service.startReview(ref)).rejects.toMatchObject({ code: 'ai-not-configured' });
+    expect(agent.run).not.toHaveBeenCalled();
+    expect(repositories.fetchCommits).not.toHaveBeenCalled();
+  });
+  it('excludes removed sections from the prompt and saved output while analyzing hidden steps', async () => {
+    const plan = defaultReviewPlan();
+    plan.steps = plan.steps
+      .filter((step) => step.id === 'summary')
+      .map((step) => ({ ...step, visible: false }));
+    const { service, store, settled } = setup(
+      async (input) => {
+        expect(input.prompt).toContain('- summary:');
+        expect(input.prompt).not.toContain('- changes:');
+        return { output: reviewOutput };
+      },
+      'en',
+      async () => plan,
+    );
+    await service.startReview(ref);
+    await settled();
+    expect(store.write).toHaveBeenCalledWith(
+      ref,
+      expect.objectContaining({
+        review: {
+          summary: reviewOutput.summary,
+          changes: [],
+          flows: [],
+          architecture: { nodes: [], edges: [] },
+          impacts: [],
+          readingOrder: [],
+        },
+      }),
+    );
+  });
+
   it('captures the plan at start and produces every custom card in one AI run', async () => {
     const plan = defaultReviewPlan();
     plan.steps.push({

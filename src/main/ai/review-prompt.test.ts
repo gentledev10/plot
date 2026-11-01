@@ -1,4 +1,5 @@
 import type { ChangedFile } from '@shared/diff';
+import { defaultReviewPlan } from '@shared/review-plan';
 import { describe, expect, it } from 'vitest';
 import { buildReviewPrompt } from './review-prompt';
 
@@ -26,6 +27,20 @@ describe('buildReviewPrompt', () => {
     language: 'Korean',
   });
 
+  it('skips removed built-ins but continues analyzing hidden configured steps', () => {
+    const plan = defaultReviewPlan();
+    plan.steps = plan.steps
+      .filter((step) => step.id === 'summary')
+      .map((step) => ({ ...step, visible: false, title: 'Display title only' }));
+    const configured = buildReviewPrompt({ files: [], contextDir: '/c', language: 'Korean', plan });
+    expect(configured).toContain('- summary:');
+    expect(configured).not.toContain('- changes:');
+    expect(configured).not.toContain('- architecture:');
+    expect(configured).not.toContain('Display title only');
+    expect(configured).toContain('do not analyze them');
+    expect(configured).toContain('kind="sequence"');
+    expect(configured).toContain('kind="flowchart"');
+  });
   it('points at the context files', () => {
     expect(prompt).toContain('/tmp/review/context/pull-request.diff');
     expect(prompt).toContain('/tmp/review/context/repository-files.txt');

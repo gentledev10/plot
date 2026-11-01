@@ -86,6 +86,7 @@ export interface ArchitectureDiagram {
 export function architectureToMermaid(
   architecture: ReviewMap['architecture'],
   scheme: ColorScheme,
+  direction: 'LR' | 'TD' = 'LR',
 ): ArchitectureDiagram {
   const nodeIds = architecture.nodes.map((node) => node.id);
   const idOf = (id: string) => `n${nodeIds.indexOf(id)}`;
@@ -100,7 +101,7 @@ export function architectureToMermaid(
   const classes = Object.entries(STATUS_STYLE[scheme]).map(
     ([status, style]) => `  classDef ${status} ${style}`,
   );
-  return { source: ['flowchart LR', ...nodes, ...edges, ...classes].join('\n'), nodeIds };
+  return { source: [`flowchart ${direction}`, ...nodes, ...edges, ...classes].join('\n'), nodeIds };
 }
 
 export function nodeIndexFromElementId(elementId: string): number | undefined {

@@ -1,6 +1,13 @@
 import { AI_PROVIDERS, type AiProviderId } from '@shared/ai';
 import type { PullRequestRef } from '@shared/github';
-import type { Architecture, CodeLocation, Flow, ReviewMap, ReviewStatus } from '@shared/review';
+import type {
+  Architecture,
+  CodeLocation,
+  Flow,
+  ReviewDiagramKind,
+  ReviewMap,
+  ReviewStatus,
+} from '@shared/review';
 import {
   defaultReviewPlan,
   type ReviewStep,
@@ -145,18 +152,23 @@ function PullRequestReview({
     () => new Set(diff.data?.files.map((file) => file.path) ?? []),
     [diff.data],
   );
-  const generate = () => start.mutate();
+  const generate = () => {
+    if (plan.steps.length > 0) start.mutate();
+  };
   const done = status.data?.state === 'done' ? status.data : undefined;
   useCommand(
     'review.generate',
     generate,
-    status.data !== undefined && status.data.state !== 'running' && !start.isPending,
+    status.data !== undefined &&
+      status.data.state !== 'running' &&
+      !start.isPending &&
+      plan.steps.length > 0,
   );
   return (
     <>
       <PanelHeader
         onConfigurePlan={onConfigurePlan}
-        onRegenerate={done && !start.isPending ? generate : undefined}
+        onRegenerate={done && !start.isPending && plan.steps.length > 0 ? generate : undefined}
         {...maximizing}
       />
       <div className={styles.content}>
@@ -185,6 +197,14 @@ function PullRequestReview({
       );
     }
     const current: ReviewStatus = status.data;
+    if (plan.steps.length === 0 && current.state !== 'running')
+      return (
+        <StatusMessage
+          action={onConfigurePlan ? { label: 'Review format', run: onConfigurePlan } : undefined}
+        >
+          {t('No review steps yet. Add a step or restore the defaults in Review format.')}
+        </StatusMessage>
+      );
     switch (current.state) {
       case 'idle':
         return (
@@ -352,9 +372,10 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
     location && (
       <LocationLink location={location} changedPaths={changedPaths} onOpen={onOpenLocation} />
     );
-  const graph = (architecture: Architecture) => (
+  const graph = (architecture: Architecture, kind?: ReviewDiagramKind) => (
     <ArchitectureView
       architecture={architecture}
+      kind={kind}
       changedPaths={changedPaths}
       onOpenLocation={onOpenLocation}
       link={link}
@@ -363,7 +384,9 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
   const content = (step: ReviewStep): ReactNode => {
     switch (step.kind) {
       case 'summary':
-        return <p className={styles.text}>{review.summary}</p>;
+        return (
+          <p className={styles.text}>{review.summary || t('Generate again to fill this step.')}</p>
+        );
       case 'changes':
         return review.changes.length > 0 ? (
           <ul className={styles.changes}>
@@ -426,7 +449,15 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
       case 'custom': {
         const section = review.customSections?.find((item) => item.id === step.id);
         if (!section)
-          return <p className={styles.muted}>{t('Generate again to fill this step.')}</p>;
+          return (
+            <p className={styles.muted}>
+              {t(
+                !step.title.trim() && !step.instructions.trim()
+                  ? 'Add a title or instructions to tell the AI what this step should cover.'
+                  : 'Generate again to fill this step.',
+              )}
+            </p>
+          );
         return (
           <>
             {section.body && <p className={styles.text}>{section.body}</p>}
@@ -442,7 +473,9 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
                 ))}
               </ul>
             )}
-            {section.diagram && section.diagram.nodes.length > 0 && graph(section.diagram)}
+            {section.diagram &&
+              section.diagram.nodes.length > 0 &&
+              graph(section.diagram, section.diagram.kind)}
           </>
         );
       }
@@ -454,6 +487,15 @@ function ReviewMapView({ review, changedPaths, onOpenLocation }: ReviewMapViewPr
     .filter(({ body }) => body !== null);
   return (
     <div className={styles.review}>
+      {cards.length === 0 && (
+        <p className={styles.muted}>
+          {t(
+            plan.steps.some((step) => step.visible)
+              ? 'No relevant content was found for these steps.'
+              : 'All review cards are hidden. Enable Show in results in Review format to see them.',
+          )}
+        </p>
+      )}
       {cards.map(({ step, body }, index) => (
         <ReviewCard
           key={step.id}
@@ -506,24 +548,46 @@ function ReviewCard({
 
 function ArchitectureView({
   architecture,
+  kind = 'components',
   changedPaths,
   onOpenLocation,
   link,
 }: {
   architecture: Architecture;
+  kind?: ReviewDiagramKind;
   changedPaths: ReadonlySet<string>;
   onOpenLocation(location: CodeLocation): void;
   link(location: CodeLocation | undefined): ReactNode;
 }) {
   const t = useT();
   const scheme = useAppearance().theme.kind;
-  const source = useMemo(() => architectureToMermaid(architecture, scheme), [architecture, scheme]);
+  const diagramKind = kind === 'sequence' && architecture.edges.length === 0 ? 'components' : kind;
+  const source = useMemo(() => {
+    if (diagramKind !== 'sequence')
+      return architectureToMermaid(architecture, scheme, diagramKind === 'flowchart' ? 'TD' : 'LR')
+        .source;
+    const names = new Map(architecture.nodes.map((node) => [node.id, node.label]));
+    return sequenceToMermaid(
+      architecture.edges.map((edge) => ({
+        from: names.get(edge.from) ?? edge.from,
+        to: names.get(edge.to) ?? edge.to,
+        label: edge.label ?? '',
+      })),
+    );
+  }, [architecture, scheme, diagramKind]);
   return (
     <>
       <MermaidDiagram
-        source={source.source}
-        label={t('Components around this change')}
+        source={source}
+        label={t(
+          diagramKind === 'sequence'
+            ? 'Sequence diagram'
+            : diagramKind === 'flowchart'
+              ? 'Flow diagram'
+              : 'Components around this change',
+        )}
         onElementClick={(elementId) => {
+          if (diagramKind === 'sequence') return;
           const index = nodeIndexFromElementId(elementId);
           const location = index === undefined ? undefined : architecture.nodes[index]?.location;
           if (location && changedPaths.has(location.path)) onOpenLocation(location);

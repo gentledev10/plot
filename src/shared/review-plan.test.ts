@@ -7,7 +7,7 @@ import {
 } from './review-plan';
 
 describe('review plans', () => {
-  it('restores built-in steps and rejects duplicate or unknown custom ids', () => {
+  it('preserves exactly the configured steps and rejects duplicate or unknown ids', () => {
     const plan = parseReviewPlan({
       steps: [
         { id: 'architecture', visible: false },
@@ -16,19 +16,11 @@ describe('review plans', () => {
         { id: 'custom_safe', kind: 'custom', title: 'Tests', format: 'checklist' },
       ],
     });
-    expect(plan.steps.map((s) => s.id)).toEqual([
-      'architecture',
-      'custom_safe',
-      'summary',
-      'changes',
-      'flows',
-      'impacts',
-      'readingOrder',
-    ]);
+    expect(plan.steps.map((s) => s.id)).toEqual(['architecture', 'custom_safe']);
     expect(plan.steps[1]?.format).toBe('checklist');
     expect(parseReviewPlan(null)).toEqual(defaultReviewPlan());
   });
-  it('bounds user input and custom count and keeps one card visible', () => {
+  it('bounds user input and custom count without enabling hidden cards', () => {
     const steps = [
       ...defaultReviewPlan().steps,
       ...Array.from({ length: 9 }, (_, i) => ({
@@ -41,12 +33,20 @@ describe('review plans', () => {
     ].map((s) => ({ ...s, visible: false }));
     const plan = parseReviewPlan({ steps });
     expect(plan.steps).toHaveLength(12);
-    expect(plan.steps.filter((s) => s.visible)).toHaveLength(1);
+    expect(plan.steps.filter((s) => s.visible)).toHaveLength(0);
     expect(plan.steps[6]).toMatchObject({
       title: 'x'.repeat(100),
       instructions: 'y'.repeat(1500),
       format: 'text',
     });
+  });
+  it('preserves deletion of every built-in across saving and parsing', () => {
+    const empty = { steps: [] };
+    expect(parseReviewPlan(JSON.parse(JSON.stringify(empty)))).toEqual(empty);
+    const plan = defaultReviewPlan();
+    plan.steps = plan.steps.filter((step) => step.id !== 'summary');
+    expect(parseReviewPlan(plan).steps.some((step) => step.id === 'summary')).toBe(false);
+    expect(reviewContentKey(plan)).not.toBe(reviewContentKey(defaultReviewPlan()));
   });
   it('reuses analysis after ordering, visibility and built-in title changes', () => {
     const plan = defaultReviewPlan();

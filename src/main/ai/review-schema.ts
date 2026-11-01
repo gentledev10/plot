@@ -118,7 +118,19 @@ export const REVIEW_SCHEMA = {
               additionalProperties: false,
             },
           },
-          diagram: { anyOf: [architectureSchema, { type: 'null' }] },
+          diagram: {
+            anyOf: [
+              {
+                ...architectureSchema,
+                properties: {
+                  ...architectureSchema.properties,
+                  kind: { type: 'string', enum: ['components', 'flowchart', 'sequence'] },
+                },
+                required: [...architectureSchema.required, 'kind'],
+              },
+              { type: 'null' },
+            ],
+          },
         },
         required: ['id', 'body', 'items', 'diagram'],
         additionalProperties: false,
@@ -204,7 +216,16 @@ function toCustom(item: Json): CustomReviewSection | undefined {
     id: item.id,
     body: clip(item.body, 6000),
     items: list(item.items, LIMITS.impacts, toImpact),
-    ...(isObject(item.diagram) ? { diagram: toArchitecture(item.diagram) } : {}),
+    ...(isObject(item.diagram)
+      ? {
+          diagram: {
+            ...toArchitecture(item.diagram),
+            ...(['components', 'flowchart', 'sequence'].includes(String(item.diagram.kind))
+              ? { kind: item.diagram.kind as 'components' | 'flowchart' | 'sequence' }
+              : {}),
+          },
+        }
+      : {}),
   };
 }
 

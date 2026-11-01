@@ -155,7 +155,19 @@ export function createReviewService({
         parsed.customSections = parsed.customSections.filter((section) =>
           customIds.has(section.id),
         );
-      const review = verifyLocations(parsed, lineCounter(repoDir));
+      const kinds = new Set(reviewPlan.steps.map((step) => step.kind));
+      const review = verifyLocations(
+        {
+          ...parsed,
+          summary: kinds.has('summary') ? parsed.summary : '',
+          changes: kinds.has('changes') ? parsed.changes : [],
+          flows: kinds.has('flows') ? parsed.flows : [],
+          architecture: kinds.has('architecture') ? parsed.architecture : { nodes: [], edges: [] },
+          impacts: kinds.has('impacts') ? parsed.impacts : [],
+          readingOrder: kinds.has('readingOrder') ? parsed.readingOrder : [],
+        },
+        lineCounter(repoDir),
+      );
       await store.write(ref, {
         language,
         planKey: reviewContentKey(reviewPlan),
@@ -209,6 +221,20 @@ export function createReviewService({
       }
       const language = await currentLanguage();
       const reviewPlan = parseReviewPlan(await plan());
+      if (reviewPlan.steps.length === 0)
+        throw new AppError(
+          'ai-not-configured',
+          'Add a review step or restore the defaults before generating.',
+        );
+      if (
+        reviewPlan.steps.some(
+          (step) => step.kind === 'custom' && !step.title.trim() && !step.instructions.trim(),
+        )
+      )
+        throw new AppError(
+          'ai-not-configured',
+          'Give each custom step a title or instructions before generating.',
+        );
       if (jobs.get(key)?.state === 'running') return;
       const controller = new AbortController();
       jobs.set(key, { state: 'running', startedAt: now().toISOString(), activity: [], controller });
