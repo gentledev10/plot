@@ -427,7 +427,7 @@ function ModelFields({ settings, onSave, onReloadTools }: ModelFieldsProps) {
       )}
       {models.isError && (
         <p className={styles.error} role="alert">
-          {models.error.message} {provider !== 'codex' && reloadButton}
+          {models.error.message}
         </p>
       )}
       {provider === 'codex' && model && !listed && models.isSuccess && (
@@ -447,15 +447,13 @@ function ModelFields({ settings, onSave, onReloadTools }: ModelFieldsProps) {
           : 'Default uses the Claude Code default model.'}{' '}
         Higher effort thinks longer and costs more.
       </span>
-      {provider === 'codex' && (
-        <div className={styles.modelHelp}>
-          <p className={styles.hint}>
-            Missing a newer model? Try updating Codex CLI, then reload the list. Model availability
-            also depends on your account.
-          </p>
-          {reloadButton}
-        </div>
-      )}
+      <div className={styles.modelHelp}>
+        <p className={styles.hint}>
+          Missing a newer model? Try updating {tool.name}, then reload the list. Model availability
+          also depends on your account.
+        </p>
+        {reloadButton}
+      </div>
     </fieldset>
   );
 }
