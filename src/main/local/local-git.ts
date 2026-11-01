@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { lstat, readFile, readlink, realpath, stat } from 'node:fs/promises';
+import { lstat, readFile, readlink, realpath } from 'node:fs/promises';
 import { isAbsolute, join, relative, sep } from 'node:path';
 import type { BlobContent, ChangedFile } from '@shared/diff';
 import type { LocalCompare, LocalDiff, LocalStatus } from '@shared/local';
@@ -177,15 +177,23 @@ export function createLocalGit({ run, runForBuffer, env }: LocalGitOptions): Loc
     },
 
     async signature(root, compare) {
-      const [from, status] = await Promise.all([
+      const [from, head, branch, status] = await Promise.all([
         base(root, compare),
-        git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=normal']),
+        optional(root, ['rev-parse', '--verify', '--quiet', 'HEAD']),
+        optional(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']),
+        git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=all']),
       ]);
-      const hash = createHash('sha1').update(`${from?.commit ?? ''}\0${status}`);
-      for (const entry of status.split('\0').filter(Boolean)) {
+      const hash = createHash('sha1').update(
+        `${from?.commit ?? ''}\0${head}\0${branch}\0${status}`,
+      );
+      const entries = status.split('\0').filter(Boolean);
+      for (let index = 0; index < entries.length; index++) {
+        const entry = entries[index];
+        if (!entry) continue;
         const path = entry.slice(3);
-        const stats = await stat(join(root, path)).catch(() => undefined);
+        const stats = await lstat(join(root, path)).catch(() => undefined);
         hash.update(`\0${path}:${stats?.mtimeMs ?? '-'}:${stats?.size ?? '-'}`);
+        if (entry.slice(0, 2).match(/[RC]/)) index++;
       }
       return hash.digest('hex');
     },

@@ -193,6 +193,31 @@ describe('createLocalGit', () => {
     expect(summary(diff.files)).toEqual(['added first.txt']);
     expect((await local.status(empty)).changedFiles).toBe(1);
   });
+
+  it('detects edits inside an existing untracked directory', async () => {
+    await write(repo, { 'untracked/nested/note.txt': 'before\n' });
+    const before = await local.signature(repo, 'branch');
+    await write(repo, { 'untracked/nested/note.txt': 'after editing the same file\n' });
+    expect(await local.signature(repo, 'branch')).not.toBe(before);
+  });
+
+  it('detects new commits and branch switches even with a clean working tree', async () => {
+    const clean = join(root, 'clean');
+    await mkdir(clean);
+    await git(clean, 'init', '--quiet', '--initial-branch=main');
+    await write(clean, { 'first.txt': 'base\n' });
+    await git(clean, 'add', '.');
+    await git(clean, 'commit', '--quiet', '-m', 'Base');
+    await git(clean, 'switch', '--quiet', '-c', 'feature');
+    const before = await local.signature(clean, 'branch');
+    await write(clean, { 'second.txt': 'new commit\n' });
+    await git(clean, 'add', '.');
+    await git(clean, 'commit', '--quiet', '-m', 'More work');
+    const committed = await local.signature(clean, 'branch');
+    expect(committed).not.toBe(before);
+    await git(clean, 'switch', '--quiet', '-c', 'another-name');
+    expect(await local.signature(clean, 'branch')).not.toBe(committed);
+  });
 });
 
 describe('localGitEnvironment', () => {
