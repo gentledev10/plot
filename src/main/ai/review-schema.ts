@@ -12,6 +12,7 @@ import type {
   ReadingStep,
   ReviewMap,
   ReviewPoint,
+  ReviewVisual,
 } from '@shared/review';
 import { isCustomStepId } from '@shared/review-plan';
 import { AppError } from '../errors';
@@ -83,6 +84,17 @@ const architectureSchema = {
   additionalProperties: false,
 } as const;
 
+const visualGraphSchema = {
+  type: 'object',
+  properties: {
+    groups: architectureSchema.properties.groups,
+    nodes: architectureSchema.properties.nodes,
+    edges: architectureSchema.properties.edges,
+  },
+  required: ['groups', 'nodes', 'edges'],
+  additionalProperties: false,
+} as const;
+
 // Strict enough for OpenAI structured outputs, which Codex uses: every property is required,
 // optional values are nullable, and no object accepts properties it does not list.
 export const REVIEW_SCHEMA = {
@@ -112,6 +124,22 @@ export const REVIEW_SCHEMA = {
       },
     },
     architecture: architectureSchema,
+    visuals: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ['components', 'flowchart', 'sequence'] },
+          title: text,
+          takeaway: text,
+          scope: text,
+          before: { anyOf: [visualGraphSchema, { type: 'null' }] },
+          after: { anyOf: [visualGraphSchema, { type: 'null' }] },
+        },
+        required: ['kind', 'title', 'takeaway', 'scope', 'before', 'after'],
+        additionalProperties: false,
+      },
+    },
     reviewPoints: {
       type: 'array',
       items: {
@@ -185,6 +213,7 @@ export const REVIEW_SCHEMA = {
     'changes',
     'flows',
     'architecture',
+    'visuals',
     'impacts',
     'readingOrder',
     'customSections',
@@ -218,6 +247,16 @@ export function parseReviewMap(value: unknown): ReviewMap {
     changes: list(value.changes, LIMITS.changes, toKeyChange),
     flows: list(value.flows, LIMITS.flows, toFlow),
     architecture: toArchitecture(value.architecture),
+    ...(Array.isArray(value.visuals)
+      ? {
+          visuals: list(value.visuals, 3, toVisual).filter(
+            (visual, index, all) =>
+              all.findIndex(
+                (other) => other.kind === visual.kind && other.title === visual.title,
+              ) === index,
+          ),
+        }
+      : {}),
     impacts: list(value.impacts, LIMITS.impacts, toImpact),
     ...(Array.isArray(value.reviewPoints)
       ? { reviewPoints: list(value.reviewPoints, 8, toReviewPoint) }
@@ -230,6 +269,43 @@ export function parseReviewMap(value: unknown): ReviewMap {
           ),
         }
       : {}),
+  };
+}
+
+function toVisual(item: Json): ReviewVisual | undefined {
+  if (
+    !['components', 'flowchart', 'sequence'].includes(String(item.kind)) ||
+    !nonEmpty(item.title) ||
+    !nonEmpty(item.takeaway)
+  )
+    return;
+  const graph = (value: unknown, before: boolean) => {
+    if (!isObject(value)) return;
+    const parsed = toArchitecture(value);
+    const nodes = parsed.nodes.slice(0, 12).map((node) => {
+      if (!before) return node;
+      const { location: _, ...rest } = node;
+      return rest;
+    });
+    const ids = new Set(nodes.map((node) => node.id));
+    return nodes.length
+      ? {
+          ...parsed,
+          nodes,
+          edges: parsed.edges.filter((edge) => ids.has(edge.from) && ids.has(edge.to)).slice(0, 24),
+        }
+      : undefined;
+  };
+  const before = graph(item.before, true);
+  const after = graph(item.after, false);
+  if (!before && !after) return;
+  return {
+    kind: item.kind as ReviewVisual['kind'],
+    title: clip(item.title, LIMITS.label),
+    takeaway: clip(item.takeaway, 600),
+    scope: typeof item.scope === 'string' ? clip(item.scope, LIMITS.text) : '',
+    ...(before ? { before } : {}),
+    ...(after ? { after } : {}),
   };
 }
 

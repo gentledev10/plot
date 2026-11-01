@@ -46,6 +46,7 @@ describe('REVIEW_SCHEMA', () => {
       'changes',
       'flows',
       'architecture',
+      'visuals',
       'impacts',
       'readingOrder',
       'customSections',
@@ -80,6 +81,68 @@ describe('REVIEW_SCHEMA', () => {
 });
 
 describe('parseReviewMap', () => {
+  it('accepts complementary before/after visuals without making old code clickable', () => {
+    const graph = {
+      groups: [],
+      nodes: [
+        {
+          id: 'service',
+          label: 'Service',
+          status: 'changed',
+          location: { path: 'src/service.ts', line: 3 },
+        },
+      ],
+      edges: [],
+    };
+    const visual = {
+      kind: 'components',
+      title: 'Environment boundaries',
+      takeaway: 'Shared state becomes isolated state.',
+      scope: 'Inspected source.',
+      before: graph,
+      after: graph,
+    };
+    const parsed = parseReviewMap(
+      output({ visuals: [visual, visual, { ...visual, kind: 'script' }] }),
+    );
+    expect(parsed.visuals).toHaveLength(1);
+    expect(parsed.visuals?.[0]?.before?.nodes[0]).not.toHaveProperty('location');
+    expect(parsed.visuals?.[0]?.after?.nodes[0]?.location).toEqual({
+      path: 'src/service.ts',
+      line: 3,
+    });
+    expect(parseReviewMap(output())).not.toHaveProperty('visuals');
+  });
+
+  it('bounds visual complexity and drops links to omitted nodes', () => {
+    const graph = {
+      nodes: Array.from({ length: 20 }, (_, index) => ({
+        id: String(index),
+        label: String(index),
+        status: 'unchanged',
+      })),
+      edges: [
+        { from: '0', to: '19' },
+        { from: '0', to: '1' },
+      ],
+    };
+    const parsed = parseReviewMap(
+      output({
+        visuals: [
+          {
+            kind: 'flowchart',
+            title: 'Path',
+            takeaway: 'New route.',
+            scope: '',
+            before: null,
+            after: graph,
+          },
+        ],
+      }),
+    );
+    expect(parsed.visuals?.[0]?.after?.nodes).toHaveLength(12);
+    expect(parsed.visuals?.[0]?.after?.edges).toEqual([{ from: '0', to: '1' }]);
+  });
   it('preserves grouped context and provenance, dropping invalid group references', () => {
     const review = parseReviewMap(
       output({

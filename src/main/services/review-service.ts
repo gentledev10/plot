@@ -183,6 +183,7 @@ export function createReviewService({
           architecture: kinds.has('architecture')
             ? ensureArchitectureGroups(parsed.architecture, language)
             : { nodes: [], edges: [] },
+          ...(parsed.visuals ? { visuals: kinds.has('architecture') ? parsed.visuals : [] } : {}),
           impacts: kinds.has('impacts') ? parsed.impacts : [],
           ...(parsed.reviewPoints
             ? { reviewPoints: kinds.has('reviewPoints') ? parsed.reviewPoints : [] }

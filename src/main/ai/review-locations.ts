@@ -16,6 +16,24 @@ export function verifyLocations(review: ReviewMap, lineCount: LineCounter): Revi
     changes: review.changes.map(check),
     flows: review.flows.map((flow) => ({ ...flow, after: flow.after.map(check) })),
     architecture: { ...review.architecture, nodes: review.architecture.nodes.map(check) },
+    ...(review.visuals
+      ? {
+          visuals: review.visuals.map((visual) => ({
+            ...visual,
+            ...(visual.before
+              ? {
+                  before: {
+                    ...visual.before,
+                    nodes: visual.before.nodes.map(({ location: _, ...node }) => node),
+                  },
+                }
+              : {}),
+            ...(visual.after
+              ? { after: { ...visual.after, nodes: visual.after.nodes.map(check) } }
+              : {}),
+          })),
+        }
+      : {}),
     impacts: review.impacts.map(check),
     ...(review.reviewPoints ? { reviewPoints: review.reviewPoints.map(check) } : {}),
     ...(review.customSections

@@ -75,6 +75,14 @@ export interface Architecture {
 }
 
 export type ReviewDiagramKind = 'components' | 'flowchart' | 'sequence';
+export interface ReviewVisual {
+  kind: ReviewDiagramKind;
+  title: string;
+  takeaway: string;
+  scope: string;
+  before?: Architecture;
+  after?: Architecture;
+}
 export interface ReviewDiagram extends Architecture {
   kind?: ReviewDiagramKind;
 }
@@ -91,6 +99,7 @@ export interface ReviewMap {
   changes: KeyChange[];
   flows: Flow[];
   architecture: Architecture;
+  visuals?: ReviewVisual[];
   impacts: Impact[];
   reviewPoints?: ReviewPoint[];
   readingOrder: ReadingStep[];

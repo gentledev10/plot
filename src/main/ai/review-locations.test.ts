@@ -23,6 +23,37 @@ const review: ReviewMap = {
 const lines = (path: string) => (path === 'src/a.ts' ? 5 : undefined);
 
 describe('verifyLocations', () => {
+  it('verifies only the current side of a visual comparison', () => {
+    const graph = {
+      nodes: [
+        {
+          id: 'n',
+          label: 'Service',
+          status: 'changed' as const,
+          location: { path: 'src/a.ts', line: 3 },
+        },
+      ],
+      edges: [],
+    };
+    const checked = verifyLocations(
+      {
+        ...review,
+        visuals: [
+          {
+            kind: 'components',
+            title: 'Architecture',
+            takeaway: 'New boundary.',
+            scope: '',
+            before: graph,
+            after: graph,
+          },
+        ],
+      },
+      lines,
+    );
+    expect(checked.visuals?.[0]?.before?.nodes[0]).not.toHaveProperty('location');
+    expect(checked.visuals?.[0]?.after?.nodes[0]?.location?.verified).toBe(true);
+  });
   it('marks locations that point at real lines', () => {
     const verified = verifyLocations(review, lines);
     expect(verified.changes[0]?.location?.verified).toBe(true);
