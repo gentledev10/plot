@@ -42,6 +42,7 @@
 
 .file[data-selected="true"] {
   background: var(--color-bg-selected);
+  color: var(--color-text);
 }
 
 .link {

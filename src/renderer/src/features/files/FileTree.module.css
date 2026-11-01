@@ -63,3 +63,10 @@
 .deletions {
   color: var(--color-danger);
 }
+
+.row[aria-selected="true"] .name,
+.row[aria-selected="true"] .additions,
+.row[aria-selected="true"] .deletions,
+.row[aria-selected="true"] .counts {
+  color: var(--color-text);
+}
