@@ -12,6 +12,7 @@ import {
 import { RefreshCw } from 'lucide-react';
 import { type FormEvent, useId, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
+import { Select } from '../../components/Select';
 import { StatusMessage } from '../../components/StatusMessage';
 import styles from './AiReviewSettings.module.css';
 import {
@@ -66,18 +67,37 @@ export function AiReviewSettings() {
           <IconButton
             label="Check the installed tools again"
             busy={providers.isFetching}
-            onClick={() => void providers.refetch()}
+            onClick={() => void Promise.all([providers.refetch(), settings.refetch()])}
           >
             <RefreshCw size={13} />
           </IconButton>
         </legend>
+        <label className={styles.choice}>
+          <input
+            type="checkbox"
+            checked={current.autoSelect === true}
+            onChange={(event) => update.mutate({ ...current, autoSelect: event.target.checked })}
+          />
+          Choose an available tool automatically
+        </label>
+        <span className={styles.hint}>
+          {current.autoSelect
+            ? `Automatic selection checks installation, sign-in and compatibility. Current tool: ${AI_PROVIDERS[current.provider].name}. If neither tool is ready, finish setup below.`
+            : 'Your saved tool stays selected. Choose automatically to check this Mac instead.'}
+        </span>
         {AI_PROVIDER_IDS.map((id) => (
           <label key={id} className={styles.provider}>
             <input
               type="radio"
               name={groupName}
               checked={current.provider === id}
-              onChange={() => update.mutate({ ...current, provider: id })}
+              onChange={() =>
+                update.mutate({
+                  ...current,
+                  provider: id,
+                  ...(current.autoSelect !== undefined ? { autoSelect: false } : {}),
+                })
+              }
             />
             <span className={styles.providerText}>
               <span className={styles.providerName}>{AI_PROVIDERS[id].name}</span>
@@ -96,7 +116,9 @@ export function AiReviewSettings() {
         key={current.provider}
         settings={current}
         status={statusOf(current.provider)}
-        onChange={(next) => update.mutate(next)}
+        onChange={(next) =>
+          update.mutate({ ...next, ...(next.autoSelect ? { autoSelect: false } : {}) })
+        }
       />
       <ModelFields
         key={`model-${current.provider}`}
@@ -304,7 +326,10 @@ function ModelFields({ settings, onSave }: ModelFieldsProps) {
   const model = settings.models[provider];
   const effort = settings.efforts[provider];
   const listed = options.find((option) => option.id === model);
-  const efforts = listed?.efforts.length ? listed.efforts : tool.efforts;
+  const defaultModel =
+    provider === 'codex' ? (options.find((option) => option.isDefault) ?? options[0]) : undefined;
+  const selected = model ? listed : defaultModel;
+  const efforts = selected?.efforts.length ? selected.efforts : tool.efforts;
   const [typing, setTyping] = useState(false);
   const modelId = useId();
   const effortId = useId();
@@ -328,7 +353,8 @@ function ModelFields({ settings, onSave }: ModelFieldsProps) {
     }
     setTyping(false);
     const next = value === '' ? undefined : value;
-    const supported = options.find((option) => option.id === next)?.efforts ?? tool.efforts;
+    const selected = next ? options.find((option) => option.id === next) : defaultModel;
+    const supported = selected?.efforts ?? tool.efforts;
     save({ model: next, effort: effort && supported.includes(effort) ? effort : undefined });
   }
 
@@ -338,13 +364,13 @@ function ModelFields({ settings, onSave }: ModelFieldsProps) {
       <div className={styles.modelRow}>
         <label className={styles.field} htmlFor={modelId}>
           <span>Model</span>
-          <select
+          <Select
             id={modelId}
             className={styles.select}
             value={typing ? OTHER : (model ?? '')}
             onChange={(event) => chooseModel(event.target.value)}
           >
-            <option value="">Default</option>
+            <option value="">{defaultModel ? `Default (${defaultModel.name})` : 'Default'}</option>
             {options.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.name}
@@ -352,11 +378,11 @@ function ModelFields({ settings, onSave }: ModelFieldsProps) {
             ))}
             {model && !listed && <option value={model}>{model}</option>}
             <option value={OTHER}>Other…</option>
-          </select>
+          </Select>
         </label>
         <label className={styles.field} htmlFor={effortId}>
           <span>Reasoning effort</span>
-          <select
+          <Select
             id={effortId}
             className={styles.select}
             value={effort ?? ''}
@@ -369,11 +395,12 @@ function ModelFields({ settings, onSave }: ModelFieldsProps) {
               </option>
             ))}
             {effort && !efforts.includes(effort) && <option value={effort}>{effort}</option>}
-          </select>
+          </Select>
         </label>
       </div>
       {typing && (
         <OtherModelField
+          provider={provider}
           initial={listed ? '' : (model ?? '')}
           onSave={(name) => {
             setTyping(false);
@@ -410,7 +437,15 @@ function ModelFields({ settings, onSave }: ModelFieldsProps) {
   );
 }
 
-function OtherModelField({ initial, onSave }: { initial: string; onSave(name: string): void }) {
+function OtherModelField({
+  provider,
+  initial,
+  onSave,
+}: {
+  provider: AiProviderId;
+  initial: string;
+  onSave(name: string): void;
+}) {
   const [value, setValue] = useState(initial);
   const inputId = useId();
   const trimmed = value.trim();
@@ -431,7 +466,11 @@ function OtherModelField({ initial, onSave }: { initial: string; onSave(name: st
       <input
         id={inputId}
         className={styles.input}
-        placeholder="Model name, such as claude-opus-5-5"
+        placeholder={
+          provider === 'codex'
+            ? 'Model ID from your Codex model list'
+            : 'Model ID or alias, such as opus'
+        }
         spellCheck={false}
         // biome-ignore lint/a11y/noAutofocus: the field appears because Other was just chosen
         autoFocus

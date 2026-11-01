@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { authOf, isApiKey, parseAiSettings } from './ai';
+import {
+  type AiProviderStatus,
+  authOf,
+  DEFAULT_AI_SETTINGS,
+  isApiKey,
+  parseAiSettings,
+  selectAvailableProvider,
+} from './ai';
 
 describe('parseAiSettings', () => {
   it('reads settings saved before the sign-in choice existed', () => {
@@ -30,6 +37,61 @@ describe('parseAiSettings', () => {
 
   it('refuses an unknown tool', () => {
     expect(parseAiSettings({ provider: 'gpt', models: {}, auth: {} })).toBeUndefined();
+  });
+
+  it('preserves the automatic choice without changing older saved choices', () => {
+    expect(parseAiSettings(DEFAULT_AI_SETTINGS)?.autoSelect).toBe(true);
+    expect(parseAiSettings({ provider: 'claude-code' })?.autoSelect).toBeUndefined();
+  });
+});
+
+describe('selectAvailableProvider', () => {
+  const statuses: AiProviderStatus[] = [
+    {
+      id: 'claude-code',
+      installed: true,
+      signedIn: true,
+      apiKeySaved: true,
+      compatibilityIssue: 'Update Claude Code.',
+    },
+    { id: 'codex', installed: true, signedIn: true, apiKeySaved: false },
+  ];
+
+  it('uses signed-in Codex when Claude cannot run restricted overviews', () => {
+    expect(selectAvailableProvider(DEFAULT_AI_SETTINGS, statuses).provider).toBe('codex');
+  });
+
+  it('keeps a manual choice even if it needs setup', () => {
+    const settings = { ...DEFAULT_AI_SETTINGS, autoSelect: false };
+    expect(selectAvailableProvider(settings, statuses)).toBe(settings);
+  });
+
+  it('uses the selected authentication method when checking readiness', () => {
+    const settings = {
+      ...DEFAULT_AI_SETTINGS,
+      auth: { codex: 'api-key' as const },
+    };
+    expect(selectAvailableProvider(settings, statuses)).toBe(settings);
+    expect(
+      selectAvailableProvider(settings, [
+        { id: 'codex', installed: true, signedIn: false, apiKeySaved: true },
+      ]).provider,
+    ).toBe('codex');
+  });
+
+  it('keeps the current ready tool and does not assume unknown sign-in is ready', () => {
+    const settings = { ...DEFAULT_AI_SETTINGS, provider: 'codex' as const };
+    expect(
+      selectAvailableProvider(
+        settings,
+        statuses.map((status) => ({ ...status, compatibilityIssue: undefined })),
+      ).provider,
+    ).toBe('codex');
+    expect(
+      selectAvailableProvider(DEFAULT_AI_SETTINGS, [
+        { id: 'codex', installed: true, apiKeySaved: false },
+      ]),
+    ).toBe(DEFAULT_AI_SETTINGS);
   });
 });
 

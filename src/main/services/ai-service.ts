@@ -3,6 +3,7 @@ import {
   type AiModelOption,
   type AiProviderId,
   type AiProviderStatus,
+  selectAvailableProvider,
 } from '@shared/ai';
 import type { PlotApi } from '@shared/ipc';
 import type { AiSettingsStore } from '../ai/ai-settings-store';
@@ -26,24 +27,31 @@ interface AiServiceOptions {
 }
 
 export function createAiService({ store, keys, detect, listModels }: AiServiceOptions): AiService {
+  let checking: Promise<AiProviderStatus[]> | undefined;
+  function detectAll() {
+    checking ??= Promise.all(
+      AI_PROVIDER_IDS.map(async (id) => ({
+        ...(await detect(id)),
+        apiKeySaved: await keys.has(id),
+      })),
+    ).finally(() => {
+      checking = undefined;
+    });
+    return checking;
+  }
+  async function currentSettings() {
+    const settings = await store.read();
+    return settings.autoSelect ? selectAvailableProvider(settings, await detectAll()) : settings;
+  }
   return {
-    getAiSettings() {
-      return store.read();
-    },
+    getAiSettings: currentSettings,
 
     async updateAiSettings(settings) {
       await store.write(settings);
-      return settings;
+      return currentSettings();
     },
 
-    detectAiProviders() {
-      return Promise.all(
-        AI_PROVIDER_IDS.map(async (id) => ({
-          ...(await detect(id)),
-          apiKeySaved: await keys.has(id),
-        })),
-      );
-    },
+    detectAiProviders: detectAll,
 
     listAiModels(provider) {
       return listModels(provider);

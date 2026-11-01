@@ -115,11 +115,20 @@ function createApi(): PlotApi {
     'claude-code': createClaudeCodeAgent(),
     codex: createCodexAgent(),
   };
+  const ai = createAiService({
+    store: aiSettings,
+    keys: apiKeys,
+    detect: (id) => detectProvider(runCommand, id),
+    async listModels(id) {
+      const settings = { ...(await aiSettings.read()), provider: id };
+      return listAiModels(id, { apiKey: await apiKeyFor(apiKeys, settings) });
+    },
+  });
   const reviews = createReviewService({
     connections,
     repositories,
     async resolveAgent() {
-      const settings = await aiSettings.read();
+      const settings = await ai.getAiSettings();
       const { provider } = settings;
       const apiKey = await apiKeyFor(apiKeys, settings);
       if (provider === 'claude-code') {
@@ -166,15 +175,7 @@ function createApi(): PlotApi {
     ...createGitHubService(connections),
     ...createDiffService({ connections, repositories }),
     ...reviews,
-    ...createAiService({
-      store: aiSettings,
-      keys: apiKeys,
-      detect: (id) => detectProvider(runCommand, id),
-      async listModels(id) {
-        const settings = { ...(await aiSettings.read()), provider: id };
-        return listAiModels(id, { apiKey: await apiKeyFor(apiKeys, settings) });
-      },
-    }),
+    ...ai,
     async setThemeSource(source) {
       nativeTheme.themeSource = source;
       await writeThemeSource(appearanceFile(), source);

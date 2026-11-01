@@ -21,6 +21,7 @@ const profile = join(scratch, 'profile');
 const repository = join(scratch, 'fixture');
 const bin = join(scratch, 'bin');
 const results = [];
+mkdirSync(join(root, 'dist'), { recursive: true });
 const pass = (name) => {
   results.push(name);
   console.log(`PASS ${name}`);
@@ -246,8 +247,53 @@ try {
   const settings = page.getByRole('dialog', { name: 'Settings' });
   await settings.getByRole('button', { name: 'AI overview', exact: true }).click();
   await settings.getByText(/Update to Claude Code 2.1.248/).waitFor();
+  assert.equal(await settings.getByRole('radio', { name: /^Codex CLI/ }).isChecked(), true);
+  assert.equal(
+    await settings
+      .getByRole('checkbox', { name: 'Choose an available tool automatically' })
+      .isChecked(),
+    true,
+  );
+  await settings.getByRole('radio', { name: /^Claude Code/ }).click();
+  pass('Select the ready AI tool automatically and preserve a manual choice');
   pass('Explain incompatible Claude Code before execution');
   await settings.getByRole('button', { name: 'Appearance', exact: true }).click();
+  const initialSettings = await settings.boundingBox();
+  await page.mouse.move(
+    initialSettings.x + initialSettings.width - 3,
+    initialSettings.y + initialSettings.height - 3,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    initialSettings.x + initialSettings.width + 117,
+    initialSettings.y + initialSettings.height + 77,
+    { steps: 10 },
+  );
+  await page.mouse.up();
+  const resizedSettings = await settings.boundingBox();
+  assert.ok(resizedSettings.width > initialSettings.width + 80);
+  assert.ok(resizedSettings.height > initialSettings.height + 40);
+  await settings.getByRole('button', { name: 'Expand settings', exact: true }).click();
+  await page.waitForFunction(() => {
+    const bounds = document.querySelector('dialog').getBoundingClientRect();
+    return bounds.width >= innerWidth - 34 && bounds.height >= innerHeight - 34;
+  });
+  await settings.getByRole('button', { name: 'Restore settings size', exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      Math.abs(document.querySelector('dialog').getBoundingClientRect().width - expected) < 2,
+    resizedSettings.width,
+  );
+  const arrowInset = await settings
+    .getByRole('combobox', { name: 'Font', exact: true })
+    .evaluate(
+      (select) =>
+        select.getBoundingClientRect().right -
+        select.parentElement.querySelector('svg').getBoundingClientRect().right,
+    );
+  assert.ok(arrowInset >= 9 && arrowInset <= 12, String(arrowInset));
+  await page.screenshot({ path: join(root, 'dist/e2e-appearance.png'), scale: 'css' });
+  pass('Resize and expand settings, restore the chosen size and inset select arrows');
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Runtime.evaluate', {
     expression: readFileSync(join(root, 'node_modules/axe-core/axe.min.js'), 'utf8'),

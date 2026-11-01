@@ -60,6 +60,7 @@ export function useSaveAiApiKey() {
     mutationFn: ({ provider, key }: { provider: AiProviderId; key: string }) =>
       api.saveAiApiKey(provider, key),
     onSuccess: () => {
+      void client.invalidateQueries({ queryKey: aiKeys.settings });
       void client.invalidateQueries({ queryKey: aiKeys.providers });
       return client.invalidateQueries({ queryKey: ['ai', 'models'] });
     },
@@ -72,6 +73,7 @@ export function useRemoveAiApiKey() {
   return useMutation({
     mutationFn: (provider: AiProviderId) => api.removeAiApiKey(provider),
     onSuccess: () => {
+      void client.invalidateQueries({ queryKey: aiKeys.settings });
       void client.invalidateQueries({ queryKey: aiKeys.providers });
       return client.invalidateQueries({ queryKey: ['ai', 'models'] });
     },

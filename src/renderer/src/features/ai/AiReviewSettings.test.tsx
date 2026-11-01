@@ -6,11 +6,13 @@ import { renderWithApi } from '../../../test/render';
 import { AiReviewSettings } from './AiReviewSettings';
 
 function setup(overrides: Parameters<typeof renderWithApi>[1] = {}) {
-  const updateAiSettings = vi.fn(async (settings: AiSettings) => settings);
+  let saved: AiSettings = { provider: 'claude-code', models: {}, efforts: {}, auth: {} };
+  const updateAiSettings = vi.fn(async (settings: AiSettings) => {
+    saved = settings;
+    return settings;
+  });
   const rendered = renderWithApi(<AiReviewSettings />, {
-    getAiSettings: vi
-      .fn()
-      .mockResolvedValue({ provider: 'claude-code', models: {}, efforts: {}, auth: {} }),
+    getAiSettings: vi.fn(async () => saved),
     listAiModels: vi.fn().mockResolvedValue(CLAUDE_CODE_MODELS),
     detectAiProviders: vi.fn().mockResolvedValue([
       {
@@ -29,6 +31,59 @@ function setup(overrides: Parameters<typeof renderWithApi>[1] = {}) {
 }
 
 describe('AiReviewSettings', () => {
+  it('shows the actual default model and its supported efforts from the live catalog', async () => {
+    setup({
+      getAiSettings: vi.fn().mockResolvedValue({
+        provider: 'codex',
+        models: {},
+        efforts: {},
+        auth: {},
+      }),
+      listAiModels: vi.fn().mockResolvedValue([
+        {
+          id: 'gpt-6.1-sol',
+          name: 'GPT-6.1 Sol',
+          efforts: ['low', 'high', 'ultra'],
+          isDefault: true,
+        },
+        { id: 'gpt-6-astra', name: 'GPT-6 Astra', efforts: ['low', 'high'] },
+      ]),
+    });
+    expect(await screen.findByRole('option', { name: 'Default (GPT-6.1 Sol)' })).toHaveProperty(
+      'selected',
+      true,
+    );
+    expect(screen.getByRole('option', { name: 'GPT-6 Astra' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Ultra' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Medium' })).not.toBeInTheDocument();
+  });
+
+  it('explains automatic selection and keeps the tool chosen by the user', async () => {
+    const { updateAiSettings } = setup({
+      getAiSettings: vi.fn().mockResolvedValue({
+        provider: 'codex',
+        autoSelect: true,
+        models: {},
+        efforts: {},
+        auth: {},
+      }),
+    });
+    const automatic = await screen.findByRole('checkbox', {
+      name: 'Choose an available tool automatically',
+    });
+    expect(automatic).toBeChecked();
+    expect(screen.getByRole('radio', { name: /^Codex CLI/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: /^Claude Code/ }));
+    expect(updateAiSettings).toHaveBeenCalledWith({
+      provider: 'claude-code',
+      autoSelect: false,
+      models: {},
+      efforts: {},
+      auth: {},
+    });
+    expect(automatic).not.toBeChecked();
+  });
+
   it('shows which tools are installed and signed in', async () => {
     setup();
 

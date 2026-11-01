@@ -55,6 +55,7 @@ export type AiAuth = (typeof AI_AUTH_METHODS)[number];
 
 export interface AiSettings {
   provider: AiProviderId;
+  autoSelect?: boolean;
   models: Partial<Record<AiProviderId, string>>;
   efforts: Partial<Record<AiProviderId, string>>;
   auth: Partial<Record<AiProviderId, AiAuth>>;
@@ -62,6 +63,7 @@ export interface AiSettings {
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
   provider: 'claude-code',
+  autoSelect: true,
   models: {},
   efforts: {},
   auth: {},
@@ -92,11 +94,13 @@ export function parseAiSettings(value: unknown): AiSettings | undefined {
   if (typeof value !== 'object' || value === null) {
     return undefined;
   }
-  const { provider, models, efforts, auth } = value as Record<string, unknown>;
+  const { provider, models, efforts, auth, autoSelect } = value as Record<string, unknown>;
   if (!isAiProviderId(provider)) {
     return undefined;
   }
   const parsed: AiSettings = { provider, models: {}, efforts: {}, auth: {} };
+  // Old saved choices remain manual; only new profiles opt in automatically.
+  if (typeof autoSelect === 'boolean') parsed.autoSelect = autoSelect;
   for (const id of AI_PROVIDER_IDS) {
     const model = fieldOf(models, id);
     if (typeof model === 'string' && MODEL.test(model)) {
@@ -112,6 +116,21 @@ export function parseAiSettings(value: unknown): AiSettings | undefined {
     }
   }
   return parsed;
+}
+
+export function selectAvailableProvider(
+  settings: AiSettings,
+  statuses: readonly AiProviderStatus[],
+): AiSettings {
+  if (!settings.autoSelect) return settings;
+  const ready = statuses.filter(
+    (status) =>
+      status.installed &&
+      !status.compatibilityIssue &&
+      (authOf(settings, status.id) === 'api-key' ? status.apiKeySaved : status.signedIn === true),
+  );
+  const selected = ready.find((status) => status.id === settings.provider) ?? ready[0];
+  return selected ? { ...settings, provider: selected.id } : settings;
 }
 
 export function isModelName(value: string): boolean {

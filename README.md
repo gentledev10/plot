@@ -18,6 +18,8 @@ Many developers now open a full IDE only to read diffs, often of code an AI wrot
 
 ## AI overviews and your code
 
+New profiles automatically choose an installed, compatible tool that is signed in using the selected sign-in method. Choosing a tool yourself keeps that choice; existing saved choices stay manual. Toggle automatic selection in Settings > AI overview at any time. The Codex model picker shows the model currently used by Default as well as the account's available models.
+
 Overviews are made by an AI coding tool on your Mac: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. Pick its model and reasoning effort there too. Codex models are loaded for the selected sign-in; API-key discovery uses a temporary, isolated Codex profile and does not change your CLI sign-in. If an older Codex returns only retired models, update it and reload the list. The tool can use its own sign-in, or an Anthropic or OpenAI API key that you add there, which your provider bills for each overview. Plot keeps the key in your macOS keychain and gives it only to that tool while it makes an overview. Plot has no server and no API key of its own.
 
 The tool reads the pull request's diff and description, the list of file paths in the repository, and the directories the pull request touches. It only gets to read:
@@ -57,6 +59,8 @@ The defaults follow IntelliJ IDEA's macOS keymap. At the last difference of a fi
 Change any shortcut in Settings > Keymap. Actions such as switching to the unified view or explaining a change have no default shortcut, and you can give them one there.
 
 ## Make it yours
+
+Drag the bottom-right corner of Settings to resize it, or use its expand/restore button. The fixed-width font filter narrows the list of fonts installed on your Mac to those suited to aligned code columns.
 
 Settings > Appearance offers Light, Dark, and IntelliJ's classic Darcula theme, or System to follow macOS. Change the code font and size, and the diff and accent colors of each theme, while a preview shows which part of the window each one changes. Plot comes with JetBrains Mono, Fira Code, Geist Mono, Inconsolata, Iosevka, and Roboto Mono, and can use any font installed on your Mac or font files you add. Panels can be hidden, resized by dragging their edge, and the AI overview can take the whole window.
 

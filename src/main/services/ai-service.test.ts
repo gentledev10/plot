@@ -1,4 +1,4 @@
-import { DEFAULT_AI_SETTINGS } from '@shared/ai';
+import { type AiSettings, DEFAULT_AI_SETTINGS } from '@shared/ai';
 import { describe, expect, it, vi } from 'vitest';
 import { createAiService } from './ai-service';
 
@@ -24,6 +24,28 @@ function setup() {
 }
 
 describe('createAiService', () => {
+  it('resolves automatic choices when reading and preserves a saved manual override', async () => {
+    let settings: AiSettings = DEFAULT_AI_SETTINGS;
+    const service = createAiService({
+      store: {
+        read: async () => settings,
+        write: async (next) => {
+          settings = next;
+        },
+      },
+      keys: { has: async () => false, save: async () => {}, remove: async () => {} },
+      detect: async (id) => ({ id, installed: true, signedIn: id === 'codex' }),
+      listModels: async () => [],
+    });
+    expect((await service.getAiSettings()).provider).toBe('codex');
+    expect(settings.provider).toBe('claude-code');
+    expect(await service.updateAiSettings({ ...settings, autoSelect: false })).toMatchObject({
+      provider: 'claude-code',
+      autoSelect: false,
+    });
+    expect((await service.getAiSettings()).provider).toBe('claude-code');
+  });
+
   it('tells whether each tool has an API key saved, next to what the tool reports', async () => {
     const { service } = setup();
     await expect(service.detectAiProviders()).resolves.toEqual([
