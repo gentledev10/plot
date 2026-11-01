@@ -34,6 +34,7 @@ import { useAppearance } from '../appearance/AppearanceProvider';
 import { usePullRequestDiff } from '../diff/queries';
 import { useCommand, useShortcutLabel, withShortcut } from '../keymap/KeymapProvider';
 import { useLanguage, useT } from '../language/LanguageProvider';
+import { architectureOverview } from './architecture-overview';
 import { MermaidDiagram } from './MermaidDiagram';
 import {
   architectureToMermaid,
@@ -377,13 +378,14 @@ function ReviewMapView({ review, changedPaths, onOpenLocation, onExpandMap }: Re
     location && (
       <LocationLink location={location} changedPaths={changedPaths} onOpen={onOpenLocation} />
     );
-  const graph = (architecture: Architecture, kind?: ReviewDiagramKind) => (
+  const graph = (architecture: Architecture, kind?: ReviewDiagramKind, overview = false) => (
     <ArchitectureView
       architecture={architecture}
       kind={kind}
       changedPaths={changedPaths}
       onOpenLocation={onOpenLocation}
       onExpandMap={onExpandMap}
+      overview={overview}
       link={link}
     />
   );
@@ -430,7 +432,9 @@ function ReviewMapView({ review, changedPaths, onOpenLocation, onExpandMap }: Re
             ))
           : null;
       case 'architecture':
-        return review.architecture.nodes.length > 0 ? graph(review.architecture) : null;
+        return review.architecture.nodes.length > 0
+          ? graph(review.architecture, undefined, true)
+          : null;
       case 'reviewPoints':
         return review.reviewPoints === undefined ? (
           <p className={styles.muted}>{t('Generate again to fill this step.')}</p>
@@ -624,6 +628,7 @@ function ArchitectureView({
   onOpenLocation,
   link,
   onExpandMap,
+  overview = false,
 }: {
   architecture: Architecture;
   kind?: ReviewDiagramKind;
@@ -631,14 +636,25 @@ function ArchitectureView({
   onOpenLocation(location: CodeLocation): void;
   link(location: CodeLocation | undefined): ReactNode;
   onExpandMap?(): void;
+  overview?: boolean;
 }) {
   const t = useT();
   const scheme = useAppearance().theme.kind;
+  const [detail, setDetail] = useState(false);
+  const areas = useMemo(
+    () => (overview ? architectureOverview(architecture) : undefined),
+    [architecture, overview],
+  );
+  const showingAreas = !!areas && !detail;
+  const displayed = showingAreas ? areas : architecture;
   const diagramKind = kind === 'sequence' && architecture.edges.length === 0 ? 'components' : kind;
   const source = useMemo(() => {
     if (diagramKind !== 'sequence')
-      return architectureToMermaid(architecture, scheme, diagramKind === 'flowchart' ? 'TD' : 'LR')
-        .source;
+      return architectureToMermaid(
+        displayed,
+        scheme,
+        showingAreas || diagramKind === 'flowchart' ? 'TD' : 'LR',
+      ).source;
     const names = new Map(architecture.nodes.map((node) => [node.id, node.label]));
     return sequenceToMermaid(
       architecture.edges.map((edge) => ({
@@ -647,10 +663,25 @@ function ArchitectureView({
         label: edge.label ?? '',
       })),
     );
-  }, [architecture, scheme, diagramKind]);
+  }, [architecture, displayed, scheme, diagramKind, showingAreas]);
   return (
     <>
       {architecture.summary && <p className={styles.mapSummary}>{architecture.summary}</p>}
+      {areas && (
+        <fieldset className={styles.mapViews} aria-label={t('Map detail')}>
+          <button type="button" aria-pressed={!detail} onClick={() => setDetail(false)}>
+            {t('System overview')}
+          </button>
+          <button type="button" aria-pressed={detail} onClick={() => setDetail(true)}>
+            {t('Components ({count})', { count: architecture.nodes.length })}
+          </button>
+        </fieldset>
+      )}
+      {showingAreas && (
+        <p className={styles.muted}>
+          {t('Areas are summarized here. Open Components for exact changes and code links.')}
+        </p>
+      )}
       {diagramKind !== 'sequence' && (
         <div className={styles.mapToolbar}>
           <span>{t('Highlighted: this PR · Dashed: inferred')}</span>
@@ -674,7 +705,7 @@ function ArchitectureView({
         onElementClick={(elementId) => {
           if (diagramKind === 'sequence') return;
           const index = nodeIndexFromElementId(elementId);
-          const location = index === undefined ? undefined : architecture.nodes[index]?.location;
+          const location = index === undefined ? undefined : displayed.nodes[index]?.location;
           if (location && changedPaths.has(location.path)) onOpenLocation(location);
         }}
       />

@@ -20,6 +20,8 @@ export function MermaidDiagram({
   const scheme = useAppearance().theme.kind;
   const id = `diagram-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const [failed, setFailed] = useState(false);
+  const [large, setLarge] = useState(false);
+  const [readable, setReadable] = useState(false);
   const latestClick = useRef(onElementClick);
   latestClick.current = onElementClick;
   useEffect(() => {
@@ -31,6 +33,7 @@ export function MermaidDiagram({
         securityLevel: 'strict',
         theme: scheme === 'dark' ? 'dark' : 'default',
         fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
+        fontSize: 16,
         flowchart: {
           htmlLabels: false,
         },
@@ -38,6 +41,10 @@ export function MermaidDiagram({
       const { svg } = await mermaid.render(id, source);
       if (!cancelled && container.current) {
         container.current.innerHTML = svg;
+        const width = container.current.querySelector('svg')?.viewBox.baseVal.width ?? 0;
+        container.current.style.setProperty('--diagram-readable-width', `${width * 0.875}px`);
+        setLarge(width > 640);
+        setReadable(false);
         setFailed(false);
       }
     })().catch(() => {
@@ -53,19 +60,32 @@ export function MermaidDiagram({
     return <p className={styles.muted}>{t('This diagram could not be drawn.')}</p>;
   }
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: every clickable node also appears in the keyboard-accessible list below the diagram
-    <div
-      ref={container}
-      className={styles.diagram}
-      data-fit={fit}
-      role="img"
-      aria-label={label}
-      onClick={(event) => {
-        const node = (event.target as Element).closest('g.node');
-        if (node?.id) {
-          latestClick.current?.(node.id);
-        }
-      }}
-    />
+    <>
+      {fit && large && (
+        <fieldset className={styles.mapViews} aria-label={t('Diagram size')}>
+          <button type="button" aria-pressed={!readable} onClick={() => setReadable(false)}>
+            {t('Fit to panel')}
+          </button>
+          <button type="button" aria-pressed={readable} onClick={() => setReadable(true)}>
+            {t('Readable size')}
+          </button>
+        </fieldset>
+      )}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: every clickable node also appears in the keyboard-accessible list below the diagram */}
+      <div
+        ref={container}
+        className={styles.diagram}
+        data-fit={fit}
+        data-readable={readable}
+        role="img"
+        aria-label={label}
+        onClick={(event) => {
+          const node = (event.target as Element).closest('g.node');
+          if (node?.id) {
+            latestClick.current?.(node.id);
+          }
+        }}
+      />
+    </>
   );
 }

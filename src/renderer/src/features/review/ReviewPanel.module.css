@@ -193,11 +193,42 @@
   display: block;
   max-width: none;
   height: auto;
+  margin-inline: auto;
 }
 
 .diagram[data-fit="true"] svg {
   width: 100%;
   height: auto;
+}
+.diagram[data-readable="true"] {
+  max-height: 420px;
+  overflow: auto;
+}
+.diagram[data-readable="true"] svg {
+  min-width: var(--diagram-readable-width);
+}
+.mapViews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 0;
+  min-width: 0;
+  border: none;
+}
+.mapViews button {
+  padding: 3px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-small);
+}
+.mapViews button[aria-pressed="true"] {
+  background: var(--color-bg-selected);
+  color: var(--color-text);
+  border-color: var(--color-accent);
 }
 .mapSummary {
   margin: 0 0 10px;
@@ -208,6 +239,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex-wrap: wrap;
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
 }
@@ -349,11 +381,6 @@
   margin-left: auto;
   padding-right: 24px;
   padding-left: 24px;
-}
-
-.panel[data-maximized="true"] .diagram {
-  display: flex;
-  justify-content: center;
 }
 
 .card {

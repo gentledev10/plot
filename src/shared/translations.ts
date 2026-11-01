@@ -1,6 +1,14 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  'Map detail': '지도 상세 수준',
+  'System overview': '전체 구조',
+  'Components ({count})': '구성 요소 ({count})',
+  'Areas are summarized here. Open Components for exact changes and code links.':
+    '영역별 개요입니다. 구성 요소에서 구체적인 변경 위치와 관련 코드를 볼 수 있습니다.',
+  'Diagram size': '그림 크기',
+  'Fit to panel': '패널에 맞춤',
+  'Readable size': '읽기 편한 크기',
   'Areas are grouped by source file; additional architectural boundaries were not inferred.':
     '영역을 소스 파일 기준으로 묶었습니다. 확인되지 않은 계층이나 서비스 구분을 추가하지 않았습니다.',
   'Highlighted: this PR · Dashed: inferred': '강조: 이번 변경 · 점선: 추론한 맥락',

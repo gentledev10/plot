@@ -467,6 +467,128 @@ try {
     'Render a grouped change map with scope, provenance, fitted layout and working code navigation',
   );
   pass('Recover from AI configuration errors and render an overview with diagrams');
+  const cacheFile = join(profile, `reviews/github.com/octocat/hello-world/42-${head}-en.json`);
+  const savedReview = readFileSync(cacheFile, 'utf8');
+  const largeReview = JSON.parse(savedReview);
+  largeReview.review.architecture = {
+    ...overview.architecture,
+    groups: [
+      { id: 'api', label: 'Public API' },
+      { id: 'dev', label: 'Development server' },
+      { id: 'build', label: 'Production build' },
+      { id: 'execution', label: 'Module execution' },
+    ],
+    nodes: [
+      ['Public API', 'api'],
+      ['Configuration', 'api'],
+      ['Module', 'dev'],
+      ['Plugin container', 'dev'],
+      ['Module graph', 'dev'],
+      ['HMR', 'dev'],
+      ['Builder', 'build'],
+      ['Bundler', 'build'],
+      ['Runner', 'execution'],
+      ['Transport', 'execution'],
+    ].map(([label, group], index) => ({
+      id: `component-${index}`,
+      label,
+      group,
+      status: index === 7 ? 'unchanged' : index % 3 === 0 ? 'added' : 'changed',
+      evidence: 'code',
+      location: { path: 'sample.ts', line: 1 },
+    })),
+    edges: [
+      [0, 1],
+      [0, 2],
+      [0, 6],
+      [1, 2],
+      [1, 6],
+      [2, 3],
+      [2, 4],
+      [2, 5],
+      [5, 4],
+      [5, 2],
+      [8, 9],
+      [9, 2],
+      [6, 7],
+    ].map(([from, to]) => ({
+      from: `component-${from}`,
+      to: `component-${to}`,
+      label: 'connects components',
+      evidence: from === 9 ? 'inferred' : 'code',
+    })),
+  };
+  writeFileSync(cacheFile, JSON.stringify(largeReview));
+  const reopenFixture = async () => {
+    await page.reload();
+    await cdp.send('Runtime.evaluate', {
+      expression: readFileSync(join(root, 'node_modules/axe-core/axe.min.js'), 'utf8'),
+    });
+    await page
+      .getByRole('button', { name: /Fixture pull request/ })
+      .first()
+      .click();
+    await changeMap.getByRole('img').locator('svg').waitFor();
+  };
+  await reopenFixture();
+  assert.equal(
+    await changeMap.getByRole('button', { name: 'System overview' }).getAttribute('aria-pressed'),
+    'true',
+  );
+  assert.equal(await mapImage.locator('g.node').count(), 4);
+  const mapMeasurements = async () =>
+    mapImage.evaluate((host) => {
+      const svg = host.querySelector('svg');
+      const text = svg.querySelector('.nodeLabel, text, .label');
+      const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+      return {
+        width: host.clientWidth,
+        height: host.clientHeight,
+        scrollWidth: host.scrollWidth,
+        fontPixels: Number.parseFloat(getComputedStyle(text).fontSize) * scale,
+        bodyOverflows: document.body.scrollWidth > innerWidth,
+      };
+    });
+  const areaMeasurements = await mapMeasurements();
+  assert.ok(areaMeasurements.fontPixels >= 11, JSON.stringify(areaMeasurements));
+  assert.ok(areaMeasurements.height <= 320, JSON.stringify(areaMeasurements));
+  assert.equal(areaMeasurements.bodyOverflows, false);
+  await page.screenshot({ path: join(root, 'dist/e2e-large-map-overview.png'), scale: 'css' });
+  pass('Keep a large change map short and readable with a four-area overview');
+  await changeMap.getByRole('button', { name: 'Components (10)' }).click();
+  await page.waitForFunction(
+    () => document.querySelectorAll('[data-step-id="architecture"] g.node').length === 10,
+  );
+  await changeMap.getByRole('button', { name: 'Readable size' }).click();
+  const detailMeasurements = await mapMeasurements();
+  assert.ok(detailMeasurements.fontPixels >= 13.9, JSON.stringify(detailMeasurements));
+  assert.ok(
+    detailMeasurements.scrollWidth > detailMeasurements.width,
+    JSON.stringify(detailMeasurements),
+  );
+  assert.ok(detailMeasurements.height <= 440, JSON.stringify(detailMeasurements));
+  assert.equal(detailMeasurements.bodyOverflows, false);
+  await page.screenshot({ path: join(root, 'dist/e2e-large-map-detail.png'), scale: 'css' });
+  writeFileSync(
+    join(root, 'dist/e2e-large-map-measurements.json'),
+    JSON.stringify({ overview: areaMeasurements, detail: detailMeasurements }, null, 2),
+  );
+  await page
+    .getByRole('treeitem')
+    .filter({ hasText: 'understandingCodeChangesAndNavigatingToTheCorrectSourceLocation.ts' })
+    .click();
+  await changeMap.getByRole('button', { name: 'Fit to panel' }).click();
+  await changeMap.getByRole('button', { name: 'Enlarge map' }).click();
+  await mapImage
+    .locator('g.node')
+    .filter({ hasText: /^Module$/ })
+    .click();
+  await page.waitForFunction(() =>
+    document.querySelector('.editor.modified .view-lines')?.textContent?.includes('result'),
+  );
+  pass('Read detailed maps at a stable font size and navigate their original code locations');
+  writeFileSync(cacheFile, savedReview);
+  await reopenFixture();
   const changesCard = page
     .getByRole('article')
     .filter({ has: page.getByRole('heading', { name: /Key changes/ }) });
