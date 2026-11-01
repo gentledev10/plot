@@ -53,6 +53,12 @@ export type BrowserSignInState =
   | { step: 'waiting'; signIn: BrowserSignIn }
   | { step: 'failed'; message: string };
 
+export function devicePageUrl(signIn: Pick<BrowserSignIn, 'userCode' | 'verificationUri'>): string {
+  const url = new URL(signIn.verificationUri);
+  url.searchParams.set('user_code', signIn.userCode);
+  return url.toString();
+}
+
 export function useBrowserSignIn(onSignedIn?: (account: Account) => void) {
   const api = useApi();
   const refresh = useRefreshAfterAccountChange();
@@ -78,6 +84,7 @@ export function useBrowserSignIn(onSignedIn?: (account: Account) => void) {
       id = signIn.id;
       active.current = id;
       setState({ step: 'waiting', signIn });
+      window.open(devicePageUrl(signIn), '_blank', 'noreferrer');
       const account = await api.finishBrowserSignIn(id);
       if (active.current !== id) {
         return;

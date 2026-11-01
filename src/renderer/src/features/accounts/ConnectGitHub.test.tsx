@@ -1,7 +1,7 @@
 import type { Account } from '@shared/accounts';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { anAccount, anAccountList } from '../../../test/builders';
 import { renderWithApi } from '../../../test/render';
 import { PlotError } from '../../lib/api';
@@ -26,12 +26,17 @@ const signIn = {
 
 function setup(api: Parameters<typeof renderWithApi>[1] = {}) {
   const onConnected = vi.fn();
+  const open = vi.spyOn(window, 'open').mockReturnValue(null);
   const rendered = renderWithApi(<ConnectGitHub onConnected={onConnected} />, {
     listAccounts: vi.fn().mockResolvedValue(anAccountList([])),
     ...api,
   });
-  return { ...rendered, onConnected };
+  return { ...rendered, onConnected, open };
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('ConnectGitHub', () => {
   it('connects with a personal access token', async () => {
@@ -115,26 +120,27 @@ describe('ConnectGitHub', () => {
     );
   });
 
-  it('signs in through the browser with a one-time code', async () => {
+  it('opens GitHub in the browser with the one-time code', async () => {
     const account = anAccount('mona');
     const finish = deferred<Account>();
     const finishBrowserSignIn = vi.fn().mockReturnValue(finish.promise);
-    const { onConnected } = setup({
+    const { onConnected, open } = setup({
       startBrowserSignIn: vi.fn().mockResolvedValue(signIn),
       finishBrowserSignIn,
     });
-    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    const devicePage = 'https://github.com/login/device?user_code=WDJB-MJHT';
 
     await userEvent.click(await screen.findByRole('button', { name: /Sign in with your browser/ }));
 
     expect(await screen.findByLabelText('Sign-in code')).toHaveTextContent('WDJB-MJHT');
+    expect(open).toHaveBeenCalledWith(devicePage, '_blank', 'noreferrer');
     expect(finishBrowserSignIn).toHaveBeenCalledWith(signIn.id);
     await userEvent.click(screen.getByRole('button', { name: 'Copy code and open GitHub' }));
-    expect(open).toHaveBeenCalledWith(signIn.verificationUri, '_blank', 'noreferrer');
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(open).toHaveBeenLastCalledWith(devicePage, '_blank', 'noreferrer');
 
     finish.resolve(account);
     await vi.waitFor(() => expect(onConnected).toHaveBeenCalledWith(account));
-    open.mockRestore();
   });
 
   it('cancels a browser sign-in', async () => {

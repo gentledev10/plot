@@ -3,7 +3,7 @@ import { GITHUB_HOST, normalizeHost } from '@shared/hosts';
 import { Globe, KeyRound, LoaderCircle, Terminal } from 'lucide-react';
 import { type FormEvent, type ReactNode, useId, useState } from 'react';
 import styles from './ConnectGitHub.module.css';
-import { useAccountActions, useAccounts, useBrowserSignIn } from './queries';
+import { devicePageUrl, useAccountActions, useAccounts, useBrowserSignIn } from './queries';
 
 interface ConnectGitHubProps {
   onConnected?(account: Account): void;
@@ -281,12 +281,15 @@ function DeviceCode({ signIn, onCancel }: DeviceCodeProps) {
       () => setCopied(true),
       () => setCopied(false),
     );
-    window.open(signIn.verificationUri, '_blank', 'noreferrer');
+    window.open(devicePageUrl(signIn), '_blank', 'noreferrer');
   }
 
   return (
     <div className={styles.deviceCode}>
-      <p>Enter this code on GitHub to finish signing in.</p>
+      <p>
+        Approve Plot on the GitHub page that opened in your browser. If GitHub asks for a code,
+        enter this one.
+      </p>
       <output className={styles.code} aria-label="Sign-in code">
         {signIn.userCode}
       </output>

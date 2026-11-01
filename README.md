@@ -61,7 +61,7 @@ Settings > Appearance offers Light, Dark, and IntelliJ's classic Darcula theme, 
 
 Plot connects to nothing until you choose how to sign in:
 
-- **Browser.** Approve Plot on github.com with a one-time code. Works with single sign-on.
+- **Browser.** Plot opens github.com in your browser, where you approve it with a one-time code. Works with single sign-on.
 - **Personal access token.** A classic token with the `repo` scope, or a fine-grained token with read access to contents and pull requests.
 - **GitHub CLI.** Uses the account you signed in to with `gh auth login`. Plot asks `gh` for the token when it needs one and stores no copy.
 
