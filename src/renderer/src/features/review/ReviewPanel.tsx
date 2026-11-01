@@ -307,7 +307,7 @@ function Introduction({ provider, onGenerate, onConfigure, busy }: IntroductionP
       <p className={styles.muted}>
         {name}
         {t(
-          ' reads this pull request and the directories it touches on this Mac, with read-only access. It takes a minute or two and counts toward your ',
+          ' reads this pull request, related code and selected repository documentation and settings on this Mac, with read-only access. It takes a minute or two and counts toward your ',
         )}
         {name}
         {t(' usage.')}

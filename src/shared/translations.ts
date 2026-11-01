@@ -391,8 +391,8 @@ export const korean: Record<string, string> = {
   'owner/repo': 'owner/repo',
   'pull request': '개 풀 리퀘스트',
   'pull requests': '개 풀 리퀘스트',
-  'reads this pull request and the directories it touches on this Mac, with read-only access. It takes a minute or two and counts toward your':
-    '도구가 읽기 전용으로 이 풀 리퀘스트와 관련 디렉터리를 분석합니다. 보통 1~2분이 걸리며 해당',
+  'reads this pull request, related code and selected repository documentation and settings on this Mac, with read-only access. It takes a minute or two and counts toward your':
+    '도구가 읽기 전용으로 이 풀 리퀘스트, 관련 코드, 선택된 저장소 문서와 설정을 분석합니다. 보통 1~2분이 걸리며 해당',
   'renamed from': '이전 이름:',
   repo: 'repo',
   'scope to read private repositories, or a fine-grained token with read access to contents and pull requests.':
