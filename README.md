@@ -18,7 +18,7 @@ Many developers now open a full IDE only to read diffs, often of code an AI wrot
 
 ## AI overviews and your code
 
-Overviews are made by an AI coding tool on your Mac: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. Pick its model and reasoning effort there too, from the lists the tool offers. The tool can use its own sign-in, or an Anthropic or OpenAI API key that you add there, which your provider bills for each overview. Plot keeps the key in your macOS keychain and gives it only to that tool while it makes an overview. Plot has no server and no API key of its own.
+Overviews are made by an AI coding tool on your Mac: [Claude Code](https://claude.com/claude-code) or [Codex CLI](https://github.com/openai/codex). Choose one in Settings > AI overview, which also shows whether each tool is installed and signed in. Pick its model and reasoning effort there too. Codex models are loaded for the selected sign-in; API-key discovery uses a temporary, isolated Codex profile and does not change your CLI sign-in. If an older Codex returns only retired models, update it and reload the list. The tool can use its own sign-in, or an Anthropic or OpenAI API key that you add there, which your provider bills for each overview. Plot keeps the key in your macOS keychain and gives it only to that tool while it makes an overview. Plot has no server and no API key of its own.
 
 The tool reads the pull request's diff and description, the list of file paths in the repository, and the directories the pull request touches. It only gets to read:
 
@@ -26,6 +26,8 @@ The tool reads the pull request's diff and description, the list of file paths i
 - **Codex CLI** runs in its read-only sandbox: it can run commands that read files, but cannot change them or use the network. Those commands see only basic environment variables such as `PATH` and `HOME`, so keys in your environment do not reach them. Web search, your Codex configuration, and its MCP servers are turned off.
 
 Instructions hidden in a pull request therefore cannot make the tool change files or send code elsewhere. Lines the AI cites are checked against the code, and anything it made up is marked as unverified.
+
+Code sent for an overview is processed by your chosen AI provider under that account’s terms. Only the changed directories, the diff, description, and repository file list are provided, so impacts outside that context may be incomplete.
 
 Overviews are saved on your Mac per commit, so reopening a pull request does not run the tool again.
 
@@ -75,11 +77,11 @@ You can connect several accounts, including accounts on company servers, and swi
 - macOS
 - Git
 - A GitHub account on github.com or GitHub Enterprise Server
-- Claude Code or Codex CLI, signed in, for AI overviews. Everything else works without them.
+- Claude Code 2.1.248 or later, or an up-to-date Codex CLI, signed in, for AI overviews. Everything else works without them.
 
 ## Development
 
-Requires Node.js 22 or later.
+Requires Node.js 22.12 or later.
 
 ```sh
 npm install
@@ -93,10 +95,12 @@ npm run dev
 | `npm test`          | Run unit and component tests with Vitest        |
 | `npm run dist:mac`  | Build a macOS app into `dist/`                  |
 
+For a deterministic check in the real Electron app on macOS, run `npm run test:e2e`. It uses a temporary profile, real temporary Git repositories, and fixture GitHub/AI responses. It never signs in to GitHub or calls an AI provider. It also checks narrow-window layout, automatic refresh, diagrams, sanitizer versions, notices, and accessibility.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the app is structured. Report security issues as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE). Plot includes fonts and theme colors from other projects under their own licenses, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE). Plot includes fonts and theme colors from other projects under their own licenses, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Builds generate `THIRD_PARTY_LICENSES.txt` with the bundled packages’ full notices, including Monaco’s embedded components and ELK source instructions. Open it from Help > Open Source Licenses in the packaged app.

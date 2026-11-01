@@ -4,7 +4,7 @@ Thanks for your interest in Plot. This guide covers how to set up the project an
 
 ## Setup
 
-You need macOS and Node.js 22 or later.
+You need macOS and Node.js 22.12 or later.
 
 ```sh
 git clone https://github.com/gentledev10/plot.git
@@ -35,7 +35,17 @@ npm test
 npm run build
 ```
 
-`npm run format` fixes formatting and import order.
+`npm run format` fixes formatting and import order. On macOS, `npm run test:e2e` checks the built Electron app with isolated fixtures and does not use live accounts or paid AI calls.
+
+To run the same smoke checks against a packaged app, set `PLOT_E2E_EXECUTABLE` to its `Contents/MacOS/Plot` executable and run `node e2e/smoke.mjs`. The test supplies an isolated login-shell path so installed CLI tools cannot replace its fixtures.
+
+The renderer build collects upstream license files from its actual module graph. A new bundled dependency without license text fails the build. Keep upstream third-party notices and any required source-access information intact. `npm audit` includes build-tool dependencies too; never use `--omit=dev` to assess the shipped app, because renderer dependencies are bundled from `devDependencies`.
+
+### Current dependency audit
+
+As of November 1, 2026, the renderer uses DOMPurify 3.4.17 throughout, including Monaco's embedded sanitizer replacement. The renderer's generated component inventory lists 82 packages and retains their upstream notices. ELK remains EPL-2.0 with matching source-access instructions; Plot's own code remains MIT.
+
+The build overrides minimatch 9/10 with 11.0.3. Older build dependencies still need minimatch 3.1.5 or 5.1.9's callable API, so replacing those with 11 would break packaging. `npm audit` reports 15 moderate entries through those paths, all deriving from [GHSA-g3hv-75wg-m249](https://github.com/isaacs/minimatch/security/advisories/GHSA-g3hv-75wg-m249). The upstream advisory describes `firstPhasePreProcess()` with `optimizationLevel >= 2`; neither implementation exists in the installed 3/5 sources. This is our applicability assessment, not an audit suppression or an upstream correction. The packages are used for packaging, not included in the renderer. Recheck the advisory and dependency paths when updating electron-builder; do not force incompatible majors just to clear the audit count.
 
 ## Guidelines
 
