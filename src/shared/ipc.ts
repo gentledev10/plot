@@ -3,6 +3,7 @@ import type { AiModelOption, AiProviderId, AiProviderStatus, AiSettings } from '
 import type { ThemeSource } from './appearance';
 import type { BlobContent, PullRequestDiff } from './diff';
 import type { ErrorPayload } from './errors';
+import type { AddedFont, InstalledFont } from './fonts';
 import type {
   Inbox,
   PullRequestDetail,
@@ -42,6 +43,11 @@ export interface PlotApi {
   saveAiApiKey(provider: AiProviderId, key: string): Promise<void>;
   removeAiApiKey(provider: AiProviderId): Promise<void>;
   setThemeSource(source: ThemeSource): Promise<void>;
+  listInstalledFonts(): Promise<InstalledFont[]>;
+  listAddedFonts(): Promise<AddedFont[]>;
+  addFonts(): Promise<AddedFont[]>;
+  readAddedFont(id: string): Promise<Uint8Array<ArrayBuffer>>;
+  removeAddedFont(family: string): Promise<void>;
   getPreferences(): Promise<Record<string, unknown>>;
   setPreference(key: string, value: unknown): Promise<void>;
   openLocalRepository(): Promise<LocalRepository | null>;
@@ -84,6 +90,11 @@ const METHODS: Record<IpcMethod, true> = {
   saveAiApiKey: true,
   removeAiApiKey: true,
   setThemeSource: true,
+  listInstalledFonts: true,
+  listAddedFonts: true,
+  addFonts: true,
+  readAddedFont: true,
+  removeAddedFont: true,
   getPreferences: true,
   setPreference: true,
   openLocalRepository: true,

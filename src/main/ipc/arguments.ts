@@ -8,6 +8,7 @@ import {
 } from '@shared/ai';
 import { isThemeSource, type ThemeSource } from '@shared/appearance';
 import { isObjectId } from '@shared/diff';
+import { isFontFamily, isFontId } from '@shared/fonts';
 import {
   PULL_REQUEST_SCOPES,
   PULL_REQUEST_STATE_FILTERS,
@@ -56,6 +57,11 @@ export const argumentParsers: ArgumentParsers = {
   saveAiApiKey: ([provider, key]) => [aiProvider(provider), apiKey(key)],
   removeAiApiKey: ([provider]) => [aiProvider(provider)],
   setThemeSource: ([source]) => [themeSource(source)],
+  listInstalledFonts: () => [],
+  listAddedFonts: () => [],
+  addFonts: () => [],
+  readAddedFont: ([id]) => [fontId(id)],
+  removeAddedFont: ([family]) => [fontFamily(family)],
   getPreferences: () => [],
   setPreference: ([key, value]) => [preferenceKey(key), preferenceValue(value)],
   openLocalRepository: () => [],
@@ -119,6 +125,20 @@ function preferenceValue(value: unknown): unknown {
 function themeSource(value: unknown): ThemeSource {
   if (!isThemeSource(value)) {
     throw new AppError('invalid-argument', 'Expected system, light, or dark.');
+  }
+  return value;
+}
+
+function fontId(value: unknown): string {
+  if (!isFontId(value)) {
+    throw new AppError('invalid-argument', 'Expected a font id.');
+  }
+  return value;
+}
+
+function fontFamily(value: unknown): string {
+  if (!isFontFamily(value)) {
+    throw new AppError('invalid-argument', 'Expected a font name.');
   }
   return value;
 }

@@ -23,6 +23,8 @@ import {
 } from './app/security';
 import { readThemeSource, writeThemeSource } from './app/theme-source';
 import { createMainWindow } from './app/window';
+import { createFontLibrary } from './fonts/font-library';
+import { listInstalledFonts } from './fonts/installed-fonts';
 import { basicAuthHeader } from './git/environment';
 import { createRepositoryCache } from './git/repository-cache';
 import { createGitHubClient } from './github/client';
@@ -38,6 +40,7 @@ import { createPreferencesStore } from './preferences/preferences-store';
 import { createAccountService } from './services/account-service';
 import { createAiService } from './services/ai-service';
 import { createDiffService } from './services/diff-service';
+import { createFontService } from './services/font-service';
 import { createGitHubService, openPullRequestFinder } from './services/github-service';
 import { createLocalService } from './services/local-service';
 import { createReviewService } from './services/review-service';
@@ -150,6 +153,11 @@ function createApi(): PlotApi {
       nativeTheme.themeSource = source;
       await writeThemeSource(appearanceFile(), source);
     },
+    ...createFontService({
+      library: createFontLibrary(join(userData, 'fonts')),
+      chooseFiles: chooseFontFiles,
+      listInstalled: () => listInstalledFonts(runCommand),
+    }),
     getPreferences: () => preferences.all(),
     setPreference: (key, value) => preferences.set(key, value),
     ...createLocalService({
@@ -161,17 +169,30 @@ function createApi(): PlotApi {
   };
 }
 
-async function chooseRepositoryFolder(): Promise<string | undefined> {
-  const options: Electron.OpenDialogOptions = {
-    title: 'Open a Local Repository',
-    buttonLabel: 'Open',
-    properties: ['openDirectory'],
-  };
+async function choosePaths(options: Electron.OpenDialogOptions): Promise<string[]> {
   const window = BrowserWindow.getFocusedWindow();
   const result = window
     ? await dialog.showOpenDialog(window, options)
     : await dialog.showOpenDialog(options);
-  return result.canceled ? undefined : result.filePaths[0];
+  return result.canceled ? [] : result.filePaths;
+}
+
+async function chooseRepositoryFolder(): Promise<string | undefined> {
+  const [folder] = await choosePaths({
+    title: 'Open a Local Repository',
+    buttonLabel: 'Open',
+    properties: ['openDirectory'],
+  });
+  return folder;
+}
+
+function chooseFontFiles(): Promise<string[]> {
+  return choosePaths({
+    title: 'Add Fonts',
+    buttonLabel: 'Add',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Fonts', extensions: ['ttf', 'otf'] }],
+  });
 }
 
 function appearanceFile(): string {

@@ -83,6 +83,15 @@ describe('argumentParsers', () => {
     expect(() => argumentParsers.removeAiApiKey(['../codex'])).toThrow(invalid);
   });
 
+  it('accepts a font only by its id or by a name a style can hold', () => {
+    expect(argumentParsers.readAddedFont(['0123456789abcdef'])).toEqual(['0123456789abcdef']);
+    expect(argumentParsers.removeAddedFont(['Fira Code'])).toEqual(['Fira Code']);
+
+    const invalid = expect.objectContaining({ code: 'invalid-argument' });
+    expect(() => argumentParsers.readAddedFont(['../fonts.json'])).toThrow(invalid);
+    expect(() => argumentParsers.removeAddedFont(['Mono"; color: red'])).toThrow(invalid);
+  });
+
   it('accepts local repositories only by id, and paths only inside them', () => {
     const id = '0123456789abcdef';
     expect(

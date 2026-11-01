@@ -4,11 +4,16 @@ Plot includes the fonts and colors below from other projects. Each stays under i
 
 ## Fonts
 
-This font comes with Plot as packaged by [Fontsource](https://fontsource.org), which splits it by Unicode range. It is licensed under the SIL Open Font License, Version 1.1.
+These fonts come with Plot as packaged by [Fontsource](https://fontsource.org), which splits each font by Unicode range. They are licensed under the SIL Open Font License, Version 1.1.
 
-| Font           | Copyright                                         | Project                                    |
-| -------------- | ------------------------------------------------- | ------------------------------------------ |
-| JetBrains Mono | Copyright 2020 The JetBrains Mono Project Authors | https://github.com/JetBrains/JetBrainsMono |
+| Font           | Copyright                                                                   | Project                                    |
+| -------------- | --------------------------------------------------------------------------- | ------------------------------------------ |
+| JetBrains Mono | Copyright 2020 The JetBrains Mono Project Authors                           | https://github.com/JetBrains/JetBrainsMono |
+| Fira Code      | Copyright 2014-2020 The Fira Code Project Authors                           | https://github.com/tonsky/FiraCode         |
+| Geist Mono     | Copyright 2024 The Geist Project Authors                                    | https://github.com/vercel/geist-font       |
+| Inconsolata    | Copyright 2006 The Inconsolata Project Authors                              | https://github.com/cyrealtype/Inconsolata  |
+| Iosevka        | Copyright (c) 2015-2023, Renzhi Li (aka. Belleve Invis, belleve@typeof.net) | https://github.com/be5invis/Iosevka        |
+| Roboto Mono    | Copyright 2015 The Roboto Mono Project Authors                              | https://github.com/googlefonts/robotomono  |
 
 ## Theme colors
 

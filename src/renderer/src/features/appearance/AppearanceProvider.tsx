@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useColorScheme } from '../../lib/color-scheme';
 import { readPreference, usePreference } from '../../lib/preferences';
+import { useAddedFontFaces } from './added-font-faces';
 import {
   type Appearance,
   type CodeFont,
@@ -75,6 +76,7 @@ export function AppearanceProvider({ onThemeSource, children }: AppearanceProvid
   const source = themeSourceFor(appearance.theme);
   const latestOnThemeSource = useRef(onThemeSource);
   latestOnThemeSource.current = onThemeSource;
+  useAddedFontFaces();
 
   useLayoutEffect(() => {
     apply(document.documentElement, theme, colors, appearance.codeFont);

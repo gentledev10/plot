@@ -44,7 +44,55 @@ const popoverStyle = document.createElement('style');
 popoverStyle.textContent = '[popover][data-popover-open] { display: block !important; }';
 document.head.append(popoverStyle);
 
+// jsdom does not implement font loading.
+class TestFontFace {
+  status: FontFaceLoadStatus = 'unloaded';
+
+  constructor(
+    readonly family: string,
+    readonly source: string | BufferSource,
+    readonly descriptors: FontFaceDescriptors = {},
+  ) {}
+
+  get weight() {
+    return this.descriptors.weight ?? 'normal';
+  }
+
+  get style() {
+    return this.descriptors.style ?? 'normal';
+  }
+
+  load() {
+    this.status = 'loaded';
+    return Promise.resolve(this);
+  }
+}
+class TestFontFaceSet extends Set<FontFace> {
+  ready = Promise.resolve(this);
+  addEventListener() {}
+  removeEventListener() {}
+  dispatchEvent() {
+    return true;
+  }
+  load() {
+    return Promise.resolve([]);
+  }
+}
+globalThis.FontFace ??= TestFontFace as unknown as typeof FontFace;
+globalThis.FontFaceSetLoadEvent ??= class extends Event {
+  readonly fontfaces: readonly FontFace[];
+
+  constructor(type: string, init: FontFaceSetLoadEventInit = {}) {
+    super(type);
+    this.fontfaces = init.fontfaces ?? [];
+  }
+};
+if (!('fonts' in document)) {
+  Object.defineProperty(document, 'fonts', { value: new TestFontFaceSet() });
+}
+
 afterEach(() => {
   cleanup();
   initializePreferences({}, () => {});
+  document.fonts.clear();
 });

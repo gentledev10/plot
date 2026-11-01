@@ -15,5 +15,6 @@ import EditorWorker from 'monaco-editor/editor/editor.worker.js?worker';
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
 void document.fonts.ready.then(() => monaco.editor.remeasureFonts());
+document.fonts.addEventListener('loadingdone', () => monaco.editor.remeasureFonts());
 
 export { monaco };

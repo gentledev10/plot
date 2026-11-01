@@ -1,4 +1,5 @@
 import type { ThemeSource } from '@shared/appearance';
+import { isFontFamily } from '@shared/fonts';
 import type { editor } from 'monaco-editor/editor.js';
 import { THEMES, type Theme, type ThemeId, themeById, type UiColor } from './themes';
 
@@ -40,14 +41,9 @@ export const DEFAULT_APPEARANCE: Appearance = {
 };
 
 const COLOR = /^#[0-9a-f]{6}$/i;
-const FONT_FAMILY = /^[\p{L}\p{N} ._-]{1,64}$/u;
 
 export function isColor(value: unknown): value is string {
   return typeof value === 'string' && COLOR.test(value);
-}
-
-export function isFontFamily(value: unknown): value is string {
-  return typeof value === 'string' && FONT_FAMILY.test(value) && value.trim() !== '';
 }
 
 export function clampFontSize(size: number): number {

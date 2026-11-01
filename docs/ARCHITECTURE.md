@@ -55,6 +55,7 @@ To add a method, add it to `PlotApi` and `METHODS` in `src/shared/ipc.ts`, then 
 | `src/main/github`   | GitHub adapter: connections per host, sign-in flows, the REST client, and response mappers        |
 | `src/main/git`      | Repository cache: fetches the commits a pull request needs and parses `git diff` output           |
 | `src/main/ai`       | AI review: Claude Code and Codex CLI runners, detection, the prompt, schema, and stored reviews   |
+| `src/main/fonts`    | Font files people add to Plot, and the font families installed on the Mac                         |
 | `src/main/system`   | Running commands, and reading `PATH` from the login shell                                         |
 
 Adapters receive what they depend on as arguments, for example `createGitHubClient({ fetch, tokens })`, so tests can pass fakes instead of mocking modules. Pure logic is kept out of files that import `electron`, so it can be tested in plain Node.js.
@@ -136,6 +137,8 @@ The shell in `app/App.tsx` lays out a tool window bar on each edge, the sidebar,
 Renderer preferences, such as the panel layout and widths, the keymap, diff options, and appearance, live in `userData/preferences.json`, which the main process owns (`preferences/preferences-store.ts`). The renderer loads them once before the first render with `initializePreferences` and sends each change back with `setPreference`. Nothing is kept in `localStorage`, because Chromium does not keep it for the app's own `app://` page across restarts.
 
 Themes are defined in `features/appearance/themes.ts`: the UI colors, which become CSS variables on the root element, and Monaco's syntax and editor colors. People can override a few colors per theme, such as the diff colors and the accent, and `editorTheme` builds a Monaco theme from the same colors, so the editor and the rest of the app always match. The saved appearance is applied before React renders, so the window does not flash the default colors. The main process sets `nativeTheme.themeSource` to light, dark, or system to match the theme, so scrollbars, form controls, and `prefers-color-scheme` follow it, and it remembers that choice to open the window in the right colors.
+
+Code fonts come from three places. Six fonts under the SIL Open Font License are bundled into the renderer (`features/appearance/bundled-fonts.ts`). `fonts/installed-fonts.ts` asks macOS for its font families through `osascript` and marks the monospaced ones. Font files someone adds are copied to `userData/fonts` (`fonts/font-library.ts`), after `fonts/font-file.ts` reads the family, weight, and style from the font's own tables. The renderer reads those files over IPC and registers them with the `FontFace` API, so they work without being installed on the Mac.
 
 Components get the API from `useApi()` instead of reading `window.plot`, and fetch data through React Query hooks. Tests render components with a fake API through `renderWithApi` in `src/renderer/test/render.tsx`.
 

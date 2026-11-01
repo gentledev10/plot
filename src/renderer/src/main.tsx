@@ -3,10 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { AppProviders, createQueryClient } from './app/providers';
 import { applySavedAppearance } from './features/appearance/AppearanceProvider';
+import './features/appearance/bundled-fonts';
 import { createApi } from './lib/api';
 import { initializePreferences } from './lib/preferences';
-import '@fontsource/jetbrains-mono/400.css';
-import '@fontsource/jetbrains-mono/700.css';
 import './styles/tokens.css';
 import './styles/base.css';
 

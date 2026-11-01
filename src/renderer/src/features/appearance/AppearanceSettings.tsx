@@ -6,25 +6,17 @@ import { useAppearance } from './AppearanceProvider';
 import styles from './AppearanceSettings.module.css';
 import {
   type Appearance,
+  type CodeFont,
   CUSTOM_COLORS,
   type CustomColor,
   clampFontSize,
+  DEFAULT_APPEARANCE,
   FONT_SIZE,
-  isFontFamily,
   type ThemeChoice,
 } from './appearance';
+import { BUNDLED_FONTS } from './bundled-fonts';
+import { useAddedFonts, useAddFonts, useInstalledFonts, useRemoveAddedFont } from './queries';
 import { THEMES, type Theme } from './themes';
-
-const SUGGESTED_FONTS = [
-  'JetBrains Mono',
-  'SF Mono',
-  'Menlo',
-  'Monaco',
-  'D2Coding',
-  'Fira Code',
-  'Cascadia Code',
-  'Source Code Pro',
-];
 
 const CHOICES: readonly { id: ThemeChoice; name: string }[] = [
   { id: 'system', name: 'System' },
@@ -163,18 +155,28 @@ function ThemeSwatch({ themes }: { themes: Theme[] }) {
 interface FontFieldsProps {
   family: string;
   size: number;
-  onChange(font: { family: string; size: number }): void;
+  onChange(font: CodeFont): void;
 }
 
 function FontFields({ family, size, onChange }: FontFieldsProps) {
-  const [draft, setDraft] = useState(family);
-  const listId = useId();
-  const invalid = !isFontFamily(draft);
+  const installed = useInstalledFonts();
+  const added = useAddedFonts();
+  const addFonts = useAddFonts();
+  const removeFont = useRemoveAddedFont();
+  const [monospacedOnly, setMonospacedOnly] = useState(true);
+  const addedFamilies = [...new Set((added.data ?? []).map((font) => font.family))].sort();
+  const others = (installed.data ?? []).filter(
+    (font) =>
+      !BUNDLED_FONTS.includes(font.family) &&
+      !addedFamilies.includes(font.family) &&
+      (font.monospaced || !monospacedOnly || font.family === family),
+  );
+  const listed = [...BUNDLED_FONTS, ...addedFamilies, ...others.map((font) => font.family)];
+  const missing = installed.isSuccess && added.isSuccess && !listed.includes(family);
+  const error = addFonts.error ?? removeFont.error;
 
-  function saveFamily() {
-    if (!invalid && draft.trim() !== family) {
-      onChange({ family: draft.trim(), size });
-    }
+  function chooseFamily(next: string) {
+    onChange({ family: next, size });
   }
 
   return (
@@ -182,25 +184,40 @@ function FontFields({ family, size, onChange }: FontFieldsProps) {
       <div className={styles.fontRow}>
         <label className={styles.field}>
           <span>Font</span>
-          <input
-            className={styles.input}
-            list={listId}
-            spellCheck={false}
-            value={draft}
-            aria-invalid={invalid}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                saveFamily();
-              }
-            }}
-            onBlur={saveFamily}
-          />
-          <datalist id={listId}>
-            {SUGGESTED_FONTS.map((font) => (
-              <option key={font} value={font} />
-            ))}
-          </datalist>
+          <select
+            className={styles.select}
+            value={family}
+            onChange={(event) => chooseFamily(event.target.value)}
+          >
+            <optgroup label="Included with Plot">
+              {BUNDLED_FONTS.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </optgroup>
+            {addedFamilies.length > 0 && (
+              <optgroup label="Added to Plot">
+                {addedFamilies.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {others.length > 0 && (
+              <optgroup label="Installed on this Mac">
+                {others.map((font) => (
+                  <option key={font.family} value={font.family}>
+                    {font.family}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {!listed.includes(family) && (
+              <option value={family}>{missing ? `${family} (not installed)` : family}</option>
+            )}
+          </select>
         </label>
         <label className={styles.field}>
           <span>Size</span>
@@ -219,13 +236,51 @@ function FontFields({ family, size, onChange }: FontFieldsProps) {
           />
         </label>
       </div>
-      {invalid && (
+      <div className={styles.fontActions}>
+        <button
+          type="button"
+          className={styles.secondary}
+          disabled={addFonts.isPending}
+          onClick={() =>
+            addFonts.mutate(undefined, {
+              onSuccess: ([first]) => first && chooseFamily(first.family),
+            })
+          }
+        >
+          Add font files…
+        </button>
+        {addedFamilies.includes(family) && (
+          <button
+            type="button"
+            className={styles.secondary}
+            disabled={removeFont.isPending}
+            onClick={() =>
+              removeFont.mutate(family, {
+                onSuccess: () => chooseFamily(DEFAULT_APPEARANCE.codeFont.family),
+              })
+            }
+          >
+            Remove from Plot
+          </button>
+        )}
+        <label className={styles.check}>
+          <input
+            type="checkbox"
+            checked={monospacedOnly}
+            onChange={(event) => setMonospacedOnly(event.target.checked)}
+          />
+          Show only monospaced fonts
+        </label>
+      </div>
+      {error && (
         <p className={styles.error} role="alert">
-          Use a font name made of letters, digits, spaces, dots, dashes, or underscores.
+          {error.message}
         </p>
       )}
       <p className={styles.hint}>
-        Fonts that are not installed fall back to JetBrains Mono, which comes with Plot.
+        {missing
+          ? `${family} is not installed on this Mac, so code is shown in ${DEFAULT_APPEARANCE.codeFont.family}.`
+          : 'Plot comes with the fonts under Included with Plot. To use another font, install it on this Mac or add its .ttf or .otf files.'}
       </p>
     </div>
   );

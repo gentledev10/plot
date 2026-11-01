@@ -56,7 +56,7 @@ Change any shortcut in Settings > Keymap. Actions such as switching to the unifi
 
 ## Make it yours
 
-Settings > Appearance offers Light, Dark, and IntelliJ's classic Darcula theme, or System to follow macOS. Pick any installed code font and size, and change the diff and accent colors of each theme, while a preview shows which part of the window each one changes. Panels can be hidden, resized by dragging their edge, and the AI overview can take the whole window.
+Settings > Appearance offers Light, Dark, and IntelliJ's classic Darcula theme, or System to follow macOS. Change the code font and size, and the diff and accent colors of each theme, while a preview shows which part of the window each one changes. Plot comes with JetBrains Mono, Fira Code, Geist Mono, Inconsolata, Iosevka, and Roboto Mono, and can use any font installed on your Mac or font files you add. Panels can be hidden, resized by dragging their edge, and the AI overview can take the whole window.
 
 ## Connecting GitHub
 
