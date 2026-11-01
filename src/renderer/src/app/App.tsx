@@ -4,7 +4,7 @@ import { formatPullRequestRef } from '@shared/pull-request-ref';
 import { formatRepositoryRef } from '@shared/repository-ref';
 import type { CodeLocation } from '@shared/review';
 import { FolderGit2, GitPullRequest, Settings, Sparkles } from 'lucide-react';
-import { type CSSProperties, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { StatusMessage } from '../components/StatusMessage';
 import type { LocationRequest } from '../features/diff/DiffWorkspace';
 import { type DiffTarget, targetKey } from '../features/diff/target';
@@ -26,16 +26,17 @@ import {
   DEFAULT_LAYOUT,
   DEFAULT_SIZES,
   DEFAULT_TOOL_WINDOW,
+  fitPanels,
+  MIN_WORKSPACE_WIDTH,
   type PanelId,
   type PanelLayout,
   parseLayout,
   parseSizes,
   parseToolWindow,
   SIZE_LIMITS,
+  TOOL_BARS_WIDTH,
   type ToolWindowId,
-  toggleAllPanels,
   togglePanel,
-  toggleToolWindow,
 } from './panels';
 import { useMenuCommand, usePlatform } from './providers';
 import { ResizeHandle } from './ResizeHandle';
@@ -59,7 +60,21 @@ export function App() {
   const [restore, setRestore] = useState<PanelLayout>();
   const [sizes, setSizes] = usePreference('layout.sizes', DEFAULT_SIZES, parseSizes);
   const [maximized, setMaximized] = useState(false);
-  const reviewShown = layout.review || maximized;
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
+  const [panelPriority, setPanelPriority] = useState<PanelId>('sidebar');
+  const [contextReview, setContextReview] = useState(false);
+  const requestedLayout = {
+    sidebar: layout.sidebar,
+    review: open?.kind === 'pull-request' ? layout.review : contextReview,
+  };
+  const fitted = fitPanels(viewportWidth, sizes, requestedLayout, panelPriority);
+  const sidebarShown = fitted.layout.sidebar && !maximized;
+  const reviewShown = fitted.layout.review || maximized;
+  useEffect(() => {
+    const resize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
   const shell = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<SettingsSection>();
   const [focusOpenField, setFocusOpenField] = useState(false);
@@ -68,6 +83,7 @@ export function App() {
   const reviewShortcut = useShortcutLabel('view.toggleReview');
 
   function show(target: DiffTarget) {
+    setContextReview(false);
     setOpen(target);
     setLastOpened(target);
     setToolWindow(target.kind === 'local' ? 'local-changes' : 'pull-requests');
@@ -102,6 +118,7 @@ export function App() {
   }
 
   function backToList() {
+    setContextReview(false);
     setMaximized(false);
     setOpen(undefined);
     setSelectedPath(undefined);
@@ -116,27 +133,45 @@ export function App() {
 
   function toggle(panel: PanelId) {
     setMaximized(false);
-    setLayout(togglePanel(layout, panel));
+    setPanelPriority(panel);
+    if (panel === 'review' && open?.kind !== 'pull-request') setContextReview(!reviewShown);
+    else setLayout(togglePanel({ ...layout, [panel]: fitted.layout[panel] }, panel));
     setRestore(undefined);
   }
 
   function toggleWindow(id: ToolWindowId) {
     setMaximized(false);
-    const next = toggleToolWindow({ layout, window: toolWindow }, id);
-    setLayout(next.layout);
-    setToolWindow(next.window);
+    setPanelPriority('sidebar');
+    setLayout({ ...layout, sidebar: !(sidebarShown && toolWindow === id) });
+    setToolWindow(id);
     setRestore(undefined);
   }
 
   function toggleAll() {
     setMaximized(false);
-    const next = toggleAllPanels(layout, restore);
-    setLayout(next.layout);
-    setRestore(next.restore);
+    if (sidebarShown || reviewShown) {
+      setRestore(requestedLayout);
+      setLayout({ sidebar: false, review: false });
+      setContextReview(false);
+    } else {
+      const next = restore ?? DEFAULT_LAYOUT;
+      setLayout(next);
+      setContextReview(next.review);
+      setRestore(undefined);
+    }
+  }
+
+  function maxPanelWidth(panel: PanelId) {
+    const other = panel === 'sidebar' ? 'review' : 'sidebar';
+    const available = viewportWidth - TOOL_BARS_WIDTH - MIN_WORKSPACE_WIDTH - fitted.sizes[other];
+    return Math.max(SIZE_LIMITS[panel].min, Math.min(SIZE_LIMITS[panel].max, available));
   }
 
   function previewSize(panel: PanelId, width: number) {
-    shell.current?.style.setProperty(`--${panel}-width`, `${width}px`);
+    shell.current?.style.setProperty(
+      `--${panel}-width`,
+      `${Math.min(width, maxPanelWidth(panel))}px`,
+    );
   }
 
   function resizeHandle(panel: PanelId, label: string, edge: 'left' | 'right') {
@@ -144,11 +179,14 @@ export function App() {
       <ResizeHandle
         label={label}
         edge={edge}
-        width={sizes[panel]}
+        width={fitted.sizes[panel]}
         min={SIZE_LIMITS[panel].min}
-        max={SIZE_LIMITS[panel].max}
+        max={maxPanelWidth(panel)}
         onPreview={(width) => previewSize(panel, width)}
-        onResize={(width) => setSizes({ ...sizes, [panel]: width })}
+        onResize={(width) => {
+          setPanelPriority(panel);
+          setSizes({ ...sizes, [panel]: Math.min(width, maxPanelWidth(panel)) });
+        }}
         onReset={() => setSizes({ ...sizes, [panel]: DEFAULT_SIZES[panel] })}
       />
     );
@@ -165,7 +203,8 @@ export function App() {
   function startOpeningPullRequest() {
     backToList();
     setBrowsing(undefined);
-    if (!layout.sidebar) {
+    setPanelPriority('sidebar');
+    if (!sidebarShown) {
       setLayout({ ...layout, sidebar: true });
     }
     setToolWindow('pull-requests');
@@ -194,12 +233,12 @@ export function App() {
       className={styles.app}
       style={
         {
-          '--sidebar-width': layout.sidebar ? `${sizes.sidebar}px` : '0px',
-          '--review-width': reviewShown ? `${sizes.review}px` : '0px',
+          '--sidebar-width': sidebarShown ? `${fitted.sizes.sidebar}px` : '0px',
+          '--review-width': reviewShown ? `${fitted.sizes.review}px` : '0px',
         } as CSSProperties
       }
       data-platform={platform}
-      data-sidebar={layout.sidebar ? 'visible' : 'hidden'}
+      data-sidebar={sidebarShown ? 'visible' : 'hidden'}
       data-review={reviewShown ? 'visible' : 'hidden'}
       data-maximized={maximized ? 'review' : undefined}
     >
@@ -220,7 +259,7 @@ export function App() {
           <ToolWindowButton
             label="Pull requests"
             shortcut={pullRequestsShortcut}
-            pressed={layout.sidebar && toolWindow === 'pull-requests'}
+            pressed={sidebarShown && toolWindow === 'pull-requests'}
             onClick={() => toggleWindow('pull-requests')}
           >
             <GitPullRequest size={16} />
@@ -228,14 +267,14 @@ export function App() {
           <ToolWindowButton
             label="Local changes"
             shortcut={localChangesShortcut}
-            pressed={layout.sidebar && toolWindow === 'local-changes'}
+            pressed={sidebarShown && toolWindow === 'local-changes'}
             onClick={() => toggleWindow('local-changes')}
           >
             <FolderGit2 size={16} />
           </ToolWindowButton>
         </ToolWindowBar>
       </div>
-      <div className={styles.sidebar} hidden={!layout.sidebar || maximized}>
+      <div className={styles.sidebar} hidden={!sidebarShown}>
         {resizeHandle('sidebar', 'Resize the sidebar', 'right')}
         <div className={styles.toolWindow} hidden={toolWindow !== 'pull-requests'}>
           {open?.kind === 'pull-request' ? (
@@ -281,7 +320,7 @@ export function App() {
           ) : (
             <LocalChangesPanel
               selectedId={lastOpened?.kind === 'local' ? lastOpened.repositoryId : undefined}
-              active={layout.sidebar && !maximized && toolWindow === 'local-changes'}
+              active={sidebarShown && toolWindow === 'local-changes'}
               onOpen={openLocalRepository}
             />
           )}
@@ -310,9 +349,19 @@ export function App() {
         )}
         {!open && (
           <div className={styles.placeholder}>
+            <h1>Understand your changes.</h1>
+            <div className={styles.startActions}>
+              <button type="button" onClick={chooseAndOpenLocalRepository}>
+                Open a local folder…
+              </button>
+              <button type="button" onClick={() => setSettings('accounts')}>
+                Connect GitHub…
+              </button>
+            </div>
+            <p className={styles.startHint}>Local changes work without a GitHub account.</p>
             <StatusMessage
               action={
-                layout.sidebar
+                sidebarShown
                   ? undefined
                   : { label: 'Show pull requests', run: () => toggleWindow('pull-requests') }
               }

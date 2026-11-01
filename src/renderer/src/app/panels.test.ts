@@ -1,12 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_LAYOUT,
+  fitPanels,
   parseLayout,
   parseToolWindow,
   toggleAllPanels,
   togglePanel,
   toggleToolWindow,
 } from './panels';
+
+describe('fitPanels', () => {
+  it('preserves a readable workspace even when stored panel sizes are too large', () => {
+    const result = fitPanels(1440, { sidebar: 640, review: 1000 }, DEFAULT_LAYOUT);
+    expect(result.sizes.sidebar + result.sizes.review).toBeLessThanOrEqual(1440 - 72 - 480);
+  });
+  it('shows the explicitly requested panel on a narrow window and restores both when wide', () => {
+    const sizes = { sidebar: 300, review: 360 };
+    expect(fitPanels(960, sizes, DEFAULT_LAYOUT).layout).toEqual({ sidebar: true, review: false });
+    expect(fitPanels(960, sizes, DEFAULT_LAYOUT, 'review').layout).toEqual({
+      sidebar: false,
+      review: true,
+    });
+    expect(fitPanels(1440, sizes, DEFAULT_LAYOUT).layout).toEqual(DEFAULT_LAYOUT);
+  });
+});
 
 describe('togglePanel', () => {
   it('flips one panel and leaves the other alone', () => {

@@ -65,8 +65,37 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
+  padding: 24px;
+  text-align: center;
   height: 100%;
   -webkit-app-region: drag;
+}
+
+.placeholder h1 {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+.startActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.startActions button {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-input);
+}
+.startActions button:first-child {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+.startHint {
+  color: var(--color-text-muted);
+  margin: 12px 0 0;
 }
 
 .placeholder button {

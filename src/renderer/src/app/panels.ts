@@ -81,3 +81,33 @@ export function parseSizes(stored: unknown): PanelSizes | undefined {
     ? { sidebar: clampSize('sidebar', sidebar), review: clampSize('review', review) }
     : undefined;
 }
+
+export const MIN_WORKSPACE_WIDTH = 480;
+export const TOOL_BARS_WIDTH = 72;
+
+export function fitPanels(
+  viewport: number,
+  sizes: PanelSizes,
+  requested: PanelLayout,
+  priority: PanelId = 'sidebar',
+): { layout: PanelLayout; sizes: PanelSizes } {
+  const layout = { ...requested };
+  const fitted = { ...sizes };
+  const budget = Math.max(0, viewport - TOOL_BARS_WIDTH - MIN_WORKSPACE_WIDTH);
+  const other = priority === 'sidebar' ? 'review' : 'sidebar';
+  if (
+    layout.sidebar &&
+    layout.review &&
+    (viewport < 1_100 || budget < SIZE_LIMITS.sidebar.min + SIZE_LIMITS.review.min)
+  ) {
+    layout[other] = false;
+  }
+  const reserved = layout[other] ? SIZE_LIMITS[other].min : 0;
+  fitted[priority] = layout[priority]
+    ? Math.min(clampSize(priority, sizes[priority]), Math.max(0, budget - reserved))
+    : 0;
+  fitted[other] = layout[other]
+    ? Math.min(clampSize(other, sizes[other]), Math.max(0, budget - fitted[priority]))
+    : 0;
+  return { layout, sizes: fitted };
+}

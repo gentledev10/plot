@@ -1,12 +1,16 @@
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { anAccountList, aPullRequestDetail, aPullRequestSummary } from '../../test/builders';
 import { renderWithApi } from '../../test/render';
 import { initializePreferences } from '../lib/preferences';
 import { App } from './App';
 
 vi.mock('../features/diff/DiffViewer', () => import('../../test/fake-diff-viewer'));
+
+beforeEach(() => {
+  window.innerWidth = 1440;
+});
 
 const diff = {
   mergeBase: 'c'.repeat(40),
@@ -165,10 +169,12 @@ describe('App', () => {
 
   it('remembers which panels were hidden', async () => {
     const { unmount } = renderWithApi(<App />, api());
+    await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
     await userEvent.click(screen.getByRole('button', { name: 'AI overview', pressed: true }));
     unmount();
 
     renderWithApi(<App />, api());
+    await userEvent.click(await screen.findByRole('button', { name: /Fix login redirect/ }));
 
     expect(screen.getByRole('button', { name: 'AI overview', pressed: false })).toBeInTheDocument();
     expect(screen.queryByRole('complementary', { name: 'AI overview' })).not.toBeInTheDocument();
@@ -197,6 +203,8 @@ describe('App', () => {
     const sidebar = () => screen.queryByRole('complementary', { name: 'Pull requests' });
     const review = () => screen.queryByRole('complementary', { name: 'AI overview' });
 
+    fireEvent.keyDown(document.body, { key: '2', code: 'Digit2', metaKey: true });
+    expect(review()).toBeInTheDocument();
     fireEvent.keyDown(document.body, { key: '2', code: 'Digit2', metaKey: true });
     expect(review()).not.toBeInTheDocument();
 
@@ -298,6 +306,8 @@ describe('App', () => {
     expect(await screen.findByRole('treeitem', { name: /server\.ts/ })).toBeInTheDocument();
     expect(await screen.findByTestId('original')).toHaveTextContent('listen(80)');
     expect(screen.getByTestId('modified')).toHaveTextContent('listen(8080)');
+    expect(screen.queryByRole('complementary', { name: 'AI overview' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'AI overview', pressed: false }));
     expect(screen.getByText(/AI overviews work on pull requests for now/)).toBeInTheDocument();
 
     getLocalSignature.mockResolvedValue('second');
