@@ -1,5 +1,8 @@
 import type { editor } from 'monaco-editor/editor.js';
 
+// Palettes adapted from the Apache-2.0 IntelliJ Platform themes. Plot adjusts contrast and
+// diff colors; upstream attribution and license text are in THIRD_PARTY_NOTICES.md.
+
 export type ThemeId = 'light' | 'dark' | 'darcula';
 
 export type ThemeKind = 'light' | 'dark';

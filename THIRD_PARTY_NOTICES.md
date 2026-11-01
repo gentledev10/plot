@@ -19,6 +19,8 @@ These fonts come with Plot as packaged by [Fontsource](https://fontsource.org), 
 | Iosevka        | Copyright (c) 2015-2023, Renzhi Li (aka. Belleve Invis, belleve@typeof.net) | https://github.com/be5invis/Iosevka        |
 | Roboto Mono    | Copyright 2015 The Roboto Mono Project Authors                              | https://github.com/googlefonts/robotomono  |
 
+JetBrains explicitly permits using JetBrains Mono in applications, including commercial applications: https://www.jetbrains.com/lp/mono/#license. Its upstream copyright and OFL text are at https://github.com/JetBrains/JetBrainsMono/blob/master/OFL.txt and are preserved in the generated distribution notices.
+
 ## Theme colors
 
 The Light, Dark, and Darcula themes use colors from the themes and color schemes of the IntelliJ Platform, https://github.com/JetBrains/intellij-community, licensed under the Apache License, Version 2.0. Its NOTICE file reads:
@@ -28,6 +30,8 @@ This software includes code from IntelliJ IDEA
 Copyright (C) JetBrains s.r.o.
 https://www.jetbrains.com/idea/
 ```
+
+Plot adapts these palettes and changes text contrast and diff colors. JetBrains confirms the open-source licensing of the Darcula theme materials here: https://intellij-support.jetbrains.com/hc/en-us/community/posts/360002090079-Is-Darcula-licensed-under-Apache-or-another-open-source-license. This notice concerns the open-source theme materials used by Plot; the IntelliJ product and its branding remain JetBrains' own.
 
 ## Trademarks
 
