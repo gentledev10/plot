@@ -1,5 +1,5 @@
-import type { ReviewUnitFile } from '@shared/review-unit';
-import { type ReactNode, useMemo, useRef, useState } from 'react';
+import type { ReviewCodeSelection, ReviewUnitFile } from '@shared/review-unit';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { StatusMessage } from '../../components/StatusMessage';
 import { usePreference } from '../../lib/preferences';
 import { buildFileTree, filesInTreeOrder } from '../files/file-tree';
@@ -12,7 +12,7 @@ import type { ChangePosition, DiffSettings, DiffViewerHandle } from './DiffViewe
 import styles from './DiffWorkspace.module.css';
 import { FileDiff } from './FileDiff';
 import { useTargetDiff } from './queries';
-import type { DiffTarget } from './target';
+import { type DiffTarget, targetKey } from './target';
 export interface LocationRequest {
   path: string;
   line: number;
@@ -29,6 +29,7 @@ interface DiffWorkspaceProps extends WorkspaceSelection {
   onRefresh(): void;
   focusFiles?: ReviewUnitFile[];
   scopeKey?: string;
+  onAskCode?(selection: ReviewCodeSelection): void;
 }
 const DEFAULT_SETTINGS: DiffSettings = {
   collapseUnchanged: true,
@@ -51,6 +52,7 @@ export function DiffWorkspace({
   onSelectPath,
   focusFiles,
   scopeKey,
+  onAskCode,
 }: DiffWorkspaceProps) {
   const t = useT();
   const diff = useTargetDiff(target);
@@ -61,6 +63,10 @@ export function DiffWorkspace({
       : all;
   }, [diff.data, focusFiles]);
   const current = files.find((file) => file.path === selectedPath) ?? files[0];
+  const [codeSelection, setCodeSelection] = useState<ReviewCodeSelection>();
+  const sourceKey = targetKey(target);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new file, revision scope or target invalidates the previous editor selection
+  useEffect(() => setCodeSelection(undefined), [current?.path, scopeKey, sourceKey]);
   const focused = focusFiles?.find((file) => file.path === current?.path);
   const focusReveal = useMemo(() => {
     const range = focused?.ranges[0] ?? focused?.beforeRanges[0];
@@ -259,8 +265,23 @@ export function DiffWorkspace({
           onSettingsChange={setSettings}
           onNavigate={navigate}
         />
+        {onAskCode && (
+          <div className={styles.askCode}>
+            <button
+              type="button"
+              disabled={!codeSelection || codeSelection.path !== current.path}
+              onClick={() => {
+                if (codeSelection) onAskCode(codeSelection);
+              }}
+            >
+              {t('Ask about selected code')}
+            </button>
+            <span>{t('Select up to 120 lines on either side of the diff.')}</span>
+          </div>
+        )}
         <FileDiff
           key={current.path}
+          onCodeSelection={setCodeSelection}
           target={target}
           file={current}
           settings={settings}

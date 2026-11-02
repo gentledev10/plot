@@ -46,6 +46,7 @@ import {
   sequenceToMermaid,
 } from './mermaid-source';
 import { useReviewActions, useReviewStatus } from './queries';
+import { ReviewActivities } from './ReviewActivities';
 import styles from './ReviewPanel.module.css';
 import { useReviewPlan } from './ReviewPlanProvider';
 import { useReviewReading } from './ReviewReadingProvider';
@@ -185,6 +186,14 @@ function PullRequestReview({
           </StatusMessage>
         )}
         {renderBody()}
+        {diff.data && (done || reading.question?.target === pullRequestKey(target)) && (
+          <ReviewActivities
+            target={target}
+            head={diff.data.head}
+            units={done?.review.units ?? []}
+            onOpenLocation={onOpenLocation}
+          />
+        )}
       </div>
     </>
   );

@@ -1,0 +1,85 @@
+.panel {
+  padding: 12px;
+  border-top: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.panel h4 {
+  font-size: var(--font-size);
+  margin: 10px 0 6px;
+}
+.panel p {
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.scope {
+  font-weight: 600;
+}
+.note,
+.context {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+.panel summary {
+  cursor: pointer;
+  padding: 5px 0;
+}
+.panel button {
+  font: inherit;
+  color: var(--color-accent);
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+}
+.panel button:disabled {
+  opacity: 0.5;
+}
+.panel form {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+.panel label {
+  display: grid;
+  gap: 6px;
+}
+.panel textarea {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+.panel form > button {
+  justify-self: start;
+}
+.answer,
+.finding {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+.finding[data-verdict="dismissed"] {
+  color: var(--color-text-muted);
+}
+.links,
+.selection {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.verification {
+  margin-top: 14px;
+}
+.context {
+  margin-top: 8px;
+}
+.context ul {
+  padding-left: 18px;
+}

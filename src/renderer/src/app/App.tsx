@@ -1,6 +1,6 @@
 import type { PullRequestRef, RepositoryRef } from '@shared/github';
 import type { LocalRepository } from '@shared/local';
-import { formatPullRequestRef } from '@shared/pull-request-ref';
+import { formatPullRequestRef, pullRequestKey } from '@shared/pull-request-ref';
 import { formatRepositoryRef } from '@shared/repository-ref';
 import type { CodeLocation } from '@shared/review';
 import { FolderGit2, GitPullRequest, Settings, Sparkles } from 'lucide-react';
@@ -74,6 +74,17 @@ export function App() {
   const fitted = fitPanels(viewportWidth, sizes, requestedLayout, panelPriority);
   const sidebarShown = fitted.layout.sidebar && !maximized;
   const reviewShown = fitted.layout.review || maximized;
+  useEffect(() => {
+    if (
+      !reading.question ||
+      open?.kind !== 'pull-request' ||
+      reading.question.target !== pullRequestKey(open.ref)
+    )
+      return;
+    setMaximized(false);
+    setPanelPriority('review');
+    if (!layout.review) setLayout({ ...layout, review: true });
+  }, [reading.question, open, layout, setLayout]);
   useEffect(() => {
     const resize = () => setViewportWidth(window.innerWidth);
     window.addEventListener('resize', resize);

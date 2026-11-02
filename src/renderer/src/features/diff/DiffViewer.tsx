@@ -1,4 +1,4 @@
-import type { ReviewRange } from '@shared/review-unit';
+import type { ReviewCodeSelection, ReviewRange } from '@shared/review-unit';
 import { type Ref, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { useAppearance } from '../appearance/AppearanceProvider';
 import { codeFontStack, editorTheme, editorThemeName } from '../appearance/appearance';
@@ -49,6 +49,7 @@ interface DiffViewerProps {
   onReveal?(position: ChangePosition): void;
   ref?: Ref<DiffViewerHandle>;
   focusRanges?: { original: ReviewRange[]; modified: ReviewRange[] };
+  onCodeSelection?(selection: ReviewCodeSelection | undefined): void;
 }
 
 const EDITOR_OPTIONS: monaco.editor.IStandaloneDiffEditorConstructionOptions = {
@@ -91,6 +92,7 @@ export function DiffViewer({
   onReveal,
   ref,
   focusRanges,
+  onCodeSelection,
 }: DiffViewerProps) {
   const container = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null);
@@ -98,8 +100,8 @@ export function DiffViewer({
   const changes = useRef<LineChange[]>([]);
   const caretTouched = useRef(false);
   const pendingJump = useRef(initialChange);
-  const latest = useRef({ settings, onChangesComputed, onReveal });
-  latest.current = { settings, onChangesComputed, onReveal };
+  const latest = useRef({ settings, onChangesComputed, onReveal, onCodeSelection, path });
+  latest.current = { settings, onChangesComputed, onReveal, onCodeSelection, path };
   const { theme, colors, appearance } = useAppearance();
   const { family, size } = appearance.codeFont;
 
@@ -149,9 +151,30 @@ export function DiffViewer({
       }
     });
 
+    const selections = (['original', 'modified'] as const).map((side) => {
+      const source = side === 'original' ? editor.getOriginalEditor() : editor.getModifiedEditor();
+      return source.onDidChangeCursorSelection((event) => {
+        if (event.source === 'api') return;
+        const range = event.selection;
+        const endLine =
+          range.endLineNumber -
+          Number(range.endColumn === 1 && range.endLineNumber > range.startLineNumber);
+        latest.current.onCodeSelection?.(
+          endLine - range.startLineNumber < 120
+            ? {
+                path: latest.current.path,
+                side,
+                startLine: range.startLineNumber,
+                endLine,
+              }
+            : undefined,
+        );
+      });
+    });
     return () => {
       diffUpdates.dispose();
       caretMoves.dispose();
+      for (const selection of selections) selection.dispose();
       editor.dispose();
       editorRef.current = null;
       decorationsRef.current = null;

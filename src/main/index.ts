@@ -21,6 +21,7 @@ import { createCodexAgent } from './ai/codex';
 import { requireRestrictedMode } from './ai/compatibility';
 import { detectProvider } from './ai/detect';
 import { listAiModels } from './ai/models';
+import { createReviewActivityStore } from './ai/review-activity-store';
 import { createFileReviewStore } from './ai/review-store';
 import { keychainCipher } from './app/keychain';
 import { applicationMenu } from './app/menu';
@@ -54,6 +55,7 @@ import { createDiffService } from './services/diff-service';
 import { createFontService } from './services/font-service';
 import { createGitHubService, openPullRequestFinder } from './services/github-service';
 import { createLocalService } from './services/local-service';
+import { createReviewActivityService } from './services/review-activity-service';
 import { createReviewService } from './services/review-service';
 import { runCommand, runCommandForBuffer } from './system/process';
 import { mergePaths, resolveLoginShellPath } from './system/shell-env';
@@ -133,42 +135,44 @@ function createApi(): PlotApi {
       return listAiModels(id, { apiKey: await apiKeyFor(apiKeys, settings) });
     },
   });
+  const reviewStore = createFileReviewStore(join(userData, 'reviews'));
+  const resolveReviewAgent = async () => {
+    const settings = await ai.getAiSettings();
+    const { provider } = settings;
+    const apiKey = await apiKeyFor(apiKeys, settings);
+    if (provider === 'claude-code') {
+      const status = await detectProvider(runCommand, provider);
+      requireRestrictedMode(status.version ?? '');
+    }
+    let model = settings.models[provider];
+    if (provider === 'codex') {
+      const models = await listAiModels(provider, { apiKey });
+      if (model && !models.some((option) => option.id === model)) {
+        throw new AppError(
+          'ai-not-configured',
+          'This model is not available for your selected sign-in. Choose another model in Settings > AI overview.',
+        );
+      }
+      model ??= models.find((option) => option.isDefault)?.id ?? models[0]?.id;
+      if (!model)
+        throw new AppError(
+          'ai-not-configured',
+          'No Codex models are available. Check your sign-in in Settings > AI overview.',
+        );
+    }
+    return {
+      provider,
+      model,
+      effort: settings.efforts[provider],
+      apiKey,
+      agent: agents[provider],
+    };
+  };
   const reviews = createReviewService({
     connections,
     repositories,
-    async resolveAgent() {
-      const settings = await ai.getAiSettings();
-      const { provider } = settings;
-      const apiKey = await apiKeyFor(apiKeys, settings);
-      if (provider === 'claude-code') {
-        const status = await detectProvider(runCommand, provider);
-        requireRestrictedMode(status.version ?? '');
-      }
-      let model = settings.models[provider];
-      if (provider === 'codex') {
-        const models = await listAiModels(provider, { apiKey });
-        if (model && !models.some((option) => option.id === model)) {
-          throw new AppError(
-            'ai-not-configured',
-            'This model is not available for your selected sign-in. Choose another model in Settings > AI overview.',
-          );
-        }
-        model ??= models.find((option) => option.isDefault)?.id ?? models[0]?.id;
-        if (!model)
-          throw new AppError(
-            'ai-not-configured',
-            'No Codex models are available. Check your sign-in in Settings > AI overview.',
-          );
-      }
-      return {
-        provider,
-        model,
-        effort: settings.efforts[provider],
-        apiKey,
-        agent: agents[provider],
-      };
-    },
-    store: createFileReviewStore(join(userData, 'reviews')),
+    resolveAgent: resolveReviewAgent,
+    store: reviewStore,
     workspaceRoot: join(userData, 'review-workspaces'),
     plan: async () => parseReviewPlan((await preferences.all())[REVIEW_PLAN_PREFERENCE]),
     language: async () =>
@@ -177,6 +181,19 @@ function createApi(): PlotApi {
         systemLocale(),
       ),
     onUnexpectedError: (error) => console.error('[review] failed', error),
+  });
+  const reviewActivities = createReviewActivityService({
+    connections,
+    repositories,
+    reviews: reviewStore,
+    store: createReviewActivityStore(join(userData, 'review-activities')),
+    workspaceRoot: join(userData, 'review-activity-workspaces'),
+    resolveAgent: resolveReviewAgent,
+    language: async () =>
+      reviewLanguage(
+        parseLanguages((await preferences.all())[LANGUAGE_PREFERENCE]),
+        systemLocale(),
+      ),
   });
   return {
     ...createAccountService({
@@ -189,6 +206,7 @@ function createApi(): PlotApi {
     ...createGitHubService(connections),
     ...createDiffService({ connections, repositories }),
     ...reviews,
+    ...reviewActivities,
     ...ai,
     async setThemeSource(source) {
       nativeTheme.themeSource = source;

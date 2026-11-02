@@ -1,6 +1,54 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  'Questions and independent checks': '질문과 독립 검토',
+  'Whole PR': '전체 PR',
+  Scope: '범위',
+  Revision: '버전',
+  'Each question or independent check starts a new request with your selected AI tool.':
+    '질문과 독립 검토는 선택한 AI 도구로 새 요청을 보냅니다.',
+  'Ask about this change': '이 변경에 질문하기',
+  'Your question': '질문',
+  'For example: what happens if this request times out?':
+    '예: 이 요청이 시간 초과되면 어떻게 동작하나요?',
+  'Ask AI': 'AI에게 질문',
+  'Selected code': '선택한 코드',
+  'Clear selection': '코드 선택 해제',
+  'Ask about selected code': '선택한 코드에 질문',
+  'Select up to 120 lines on either side of the diff.':
+    '변경 전이나 후 코드에서 최대 120줄을 선택하세요.',
+  'Independent AI check': '독립 AI 검토',
+  'One session proposes concrete issues; another session checks them against the code. AI support is not runtime confirmation.':
+    '별도 실행에서 문제 후보를 찾고 다른 실행에서 코드를 대조합니다. AI의 지지는 실제 실행으로 확인한 결과와 다릅니다.',
+  'Run independent check': '독립 검토 시작',
+  'Run independent check again': '독립 검토 다시 실행',
+  'No concrete candidate was reported in the supplied context. This is not an approval or a guarantee.':
+    '제공된 맥락에서 구체적인 문제 후보가 보고되지 않았습니다. PR 승인이나 무결함을 뜻하지는 않습니다.',
+  'High priority': '높은 우선순위',
+  'Medium priority': '중간 우선순위',
+  'Low priority': '낮은 우선순위',
+  'Supported by a second AI check': '두 번째 AI 검토에서 지지',
+  'Dismissed by the second check': '두 번째 검토에서 기각',
+  'Uncertain — inspect the code': '불확실 · 코드 확인 필요',
+  'Context supplied to AI': 'AI에 제공한 맥락',
+  'Explicit source snapshots: {count}. Other changed files without a full snapshot: {omitted}. This does not measure which files the AI actually read.':
+    '소스 전체를 제공한 파일 {count}개, 전체 소스를 제공하지 않은 나머지 변경 파일 {omitted}개입니다. AI가 실제로 읽은 범위를 측정하지는 않습니다.',
+  'The diff context was bounded. Inspect omitted changes separately.':
+    'diff 맥락의 분량을 제한했습니다. 나머지 변경은 별도로 확인하세요.',
+  'Other changed files': '나머지 변경 파일',
+  'Preparing version-bound review context': '해당 버전의 코드 맥락 준비 중',
+  'Answering the selected code question': '선택한 코드에 대한 답변 작성 중',
+  'Independent inspection for concrete defects': '별도 실행에서 문제 후보 확인 중',
+  'Rechecking candidates in a separate AI session': '다른 AI 실행에서 후보를 다시 대조하는 중',
+  'The PR changed. Refresh the diff before starting this activity.':
+    'PR이 변경되었습니다. diff를 새로고침한 뒤 실행하세요.',
+  'The independent check did not return a valid report.':
+    '독립 검토가 올바른 형식의 결과를 반환하지 않았습니다.',
+  'The independent recheck did not establish a verdict.':
+    '별도 재검토에서 결론을 내리지 못했습니다.',
+  'The candidate has no verified current-code location.':
+    '이 후보에는 확인된 현재 코드 위치가 없습니다.',
+  'The AI did not return an answer.': 'AI가 답변을 반환하지 않았습니다.',
   'Read by change': '변경 목적별로 읽기',
   'All files and review steps': '전체 파일과 리뷰 단계',
   'Other files ({count})': '묶음 밖의 파일 ({count})',

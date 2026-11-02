@@ -17,7 +17,12 @@ export interface RepositoryCache {
   fetchCommits(repository: RepositoryRef, commits: readonly string[]): Promise<void>;
   diff(repository: RepositoryRef, from: string, to: string): Promise<ChangedFile[]>;
   readBlob(repository: RepositoryRef, blob: string, maxBytes: number): Promise<BlobContent>;
-  unifiedDiff(repository: RepositoryRef, from: string, to: string): Promise<string>;
+  unifiedDiff(
+    repository: RepositoryRef,
+    from: string,
+    to: string,
+    paths?: readonly string[],
+  ): Promise<string>;
   listFiles(repository: RepositoryRef, commit: string): Promise<string[]>;
   checkoutDirectories(
     repository: RepositoryRef,
@@ -145,7 +150,7 @@ export function createRepositoryCache({
       return toChangedFiles(parseRawDiff(raw), parseNumstat(numstat));
     },
 
-    unifiedDiff(repository, from, to) {
+    unifiedDiff(repository, from, to, paths) {
       return git(repository, [
         'diff',
         '--no-color',
@@ -154,6 +159,7 @@ export function createRepositoryCache({
         '-M',
         from,
         to,
+        ...(paths?.length ? ['--', ...paths] : []),
       ]);
     },
 

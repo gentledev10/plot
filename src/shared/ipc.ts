@@ -15,6 +15,11 @@ import type {
 } from './github';
 import type { LocalDiff, LocalRepository, LocalStatus, LocalTarget } from './local';
 import type { ReviewStatus } from './review';
+import type {
+  ReviewActivity,
+  ReviewQuestionRequest,
+  ReviewVerificationRequest,
+} from './review-activity';
 
 export interface PlotApi {
   listAccounts(): Promise<AccountList>;
@@ -36,6 +41,10 @@ export interface PlotApi {
   getReviewStatus(ref: PullRequestRef): Promise<ReviewStatus>;
   startReview(ref: PullRequestRef): Promise<void>;
   cancelReview(ref: PullRequestRef): Promise<void>;
+  getReviewActivity(ref: PullRequestRef): Promise<ReviewActivity>;
+  askReview(ref: PullRequestRef, request: ReviewQuestionRequest): Promise<void>;
+  verifyReview(ref: PullRequestRef, request: ReviewVerificationRequest): Promise<void>;
+  cancelReviewActivity(ref: PullRequestRef, kind: 'question' | 'verification'): Promise<void>;
   getAiSettings(): Promise<AiSettings>;
   updateAiSettings(settings: AiSettings): Promise<AiSettings>;
   detectAiProviders(): Promise<AiProviderStatus[]>;
@@ -83,6 +92,10 @@ const METHODS: Record<IpcMethod, true> = {
   getReviewStatus: true,
   startReview: true,
   cancelReview: true,
+  getReviewActivity: true,
+  askReview: true,
+  verifyReview: true,
+  cancelReviewActivity: true,
   getAiSettings: true,
   updateAiSettings: true,
   detectAiProviders: true,

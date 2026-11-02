@@ -21,7 +21,7 @@ export function PullRequestWorkspace({ target, ...selection }: PullRequestWorksp
   const status = useReviewStatus(target);
   const diff = usePullRequestDiff(target);
   const { plan } = useReviewPlan();
-  const { focus, select } = useReviewReading();
+  const { focus, select, ask } = useReviewReading();
   const key = pullRequestKey(target);
   const done = status.data?.state === 'done' ? status.data : undefined;
   const units =
@@ -96,7 +96,12 @@ export function PullRequestWorkspace({ target, ...selection }: PullRequestWorksp
         </>
       }
       focusFiles={units.length ? focusedFiles : undefined}
-      scopeKey={unit?.id ?? active?.mode}
+      scopeKey={`${diff.data?.head}:${unit?.id ?? active?.mode ?? 'all'}`}
+      onAskCode={
+        diff.data
+          ? (selection) => ask({ target: key, head: diff.data.head, unitId: unit?.id, selection })
+          : undefined
+      }
       onRefresh={() => {
         void queryClient.invalidateQueries({ queryKey: pullRequestKeys.detail(target) });
       }}

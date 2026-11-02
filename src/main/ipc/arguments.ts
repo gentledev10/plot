@@ -21,6 +21,7 @@ import type { IpcMethod, PlotApi } from '@shared/ipc';
 import { isLocalCompare, isLocalRepositoryId, type LocalTarget } from '@shared/local';
 import { isPullRequestRef } from '@shared/pull-request-ref';
 import { isRepositoryRef } from '@shared/repository-ref';
+import type { ReviewQuestionRequest, ReviewVerificationRequest } from '@shared/review-activity';
 import { AppError } from '../errors';
 
 export type ArgumentParsers = {
@@ -50,6 +51,14 @@ export const argumentParsers: ArgumentParsers = {
   getReviewStatus: ([ref]) => [pullRequestRef(ref)],
   startReview: ([ref]) => [pullRequestRef(ref)],
   cancelReview: ([ref]) => [pullRequestRef(ref)],
+  getReviewActivity: ([ref]) => [pullRequestRef(ref)],
+  askReview: ([ref, request]) => [pullRequestRef(ref), reviewQuestion(request)],
+  verifyReview: ([ref, request]) => [pullRequestRef(ref), reviewScope(request)],
+  cancelReviewActivity: ([ref, kind]) => {
+    if (kind !== 'question' && kind !== 'verification')
+      throw new AppError('invalid-argument', 'Expected a review activity.');
+    return [pullRequestRef(ref), kind];
+  },
   getAiSettings: () => [],
   updateAiSettings: ([settings]) => [aiSettings(settings)],
   detectAiProviders: () => [],
@@ -74,6 +83,45 @@ export const argumentParsers: ArgumentParsers = {
   readLocalBlob: ([id, blob]) => [localRepositoryId(id), objectId(blob)],
   readLocalFile: ([id, path]) => [localRepositoryId(id), relativePath(path)],
 };
+
+function reviewScope(value: unknown): ReviewVerificationRequest {
+  const { head, unitId } = (value ?? {}) as Record<string, unknown>;
+  if (unitId !== undefined && (typeof unitId !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(unitId)))
+    throw new AppError('invalid-argument', 'Expected a review unit.');
+  return { head: objectId(head), ...(typeof unitId === 'string' ? { unitId } : {}) };
+}
+function reviewQuestion(value: unknown): ReviewQuestionRequest {
+  const scope = reviewScope(value);
+  const { question, selection } = (value ?? {}) as Record<string, unknown>;
+  if (
+    typeof question !== 'string' ||
+    !question.trim() ||
+    question.length > 2000 ||
+    question.includes('\0')
+  )
+    throw new AppError('invalid-argument', 'Ask a question of up to 2000 characters.');
+  if (selection === undefined) return { ...scope, question: question.trim() };
+  const { path, side, startLine, endLine } = (selection ?? {}) as Record<string, unknown>;
+  if (
+    (side !== 'original' && side !== 'modified') ||
+    !Number.isInteger(startLine) ||
+    !Number.isInteger(endLine) ||
+    Number(startLine) < 1 ||
+    Number(endLine) < Number(startLine) ||
+    Number(endLine) - Number(startLine) >= 120
+  )
+    throw new AppError('invalid-argument', 'Select up to 120 lines from one side of the diff.');
+  return {
+    ...scope,
+    question: question.trim(),
+    selection: {
+      path: relativePath(path),
+      side,
+      startLine: Number(startLine),
+      endLine: Number(endLine),
+    },
+  };
+}
 
 function localRepositoryId(value: unknown): string {
   if (!isLocalRepositoryId(value)) {
