@@ -1,6 +1,53 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  'Top-level test comparison': '최상위 테스트 비교',
+  'New failure': '새로 발생한 실패',
+  'Not captured': '결과 없음',
+  passed: '성공',
+  failed: '실패',
+  skipped: '건너뜀',
+  'Skipped tests are not passes. Nested details and duplicate test names require checking the raw output.':
+    '건너뛴 테스트는 성공으로 세지 않습니다. 중첩된 결과나 같은 이름의 테스트는 원본 출력을 확인하세요.',
+  'No top-level test results were captured. Inspect the output for missing setup or unsupported tests.':
+    '최상위 테스트 결과가 없습니다. 실행 환경 부족이나 지원하지 않는 테스트인지 출력을 확인하세요.',
+
+  'Actual code execution': '실제 코드 실행',
+  'Compare actual function results': '실제 함수 결과 비교',
+  'Run related Node tests': '관련 Node 테스트 실행',
+  'Runs only when you click, on isolated merge-base and PR-head snapshots. Network, private files and child processes are blocked. No dependencies are installed or package scripts run.':
+    '직접 실행을 누르면 격리된 변경 전·후 코드에서 실행합니다. 네트워크·개인 파일·자식 프로세스 접근은 차단하며, 의존성을 설치하거나 패키지 스크립트를 실행하지 않습니다.',
+  'Checking execution support…': '실행 환경 확인 중…',
+  'This model has no executable function binding. Generate the review again or use the explanation model.':
+    '이 모델에는 실제 함수 연결 정보가 없습니다. 리뷰를 다시 생성하거나 설명용 모델을 이용해 주세요.',
+  'Run actual code with these values': '이 값으로 실제 코드 실행',
+  'Run the same head tests on both versions': '동일한 현재 테스트로 전·후 실행',
+  'Running isolated code': '격리된 코드 실행 중',
+  'Cancel execution': '실행 취소',
+  'Inputs changed. The results below belong to the previous values; run again to compare the current values.':
+    '입력값이 바뀌었습니다. 아래는 이전 입력값의 결과입니다. 현재 값의 결과를 보려면 다시 실행하세요.',
+  'Executed versions': '실행한 버전',
+  'Both versions use the PR-head test files. A failure may indicate changed behavior or missing setup; inspect the output.':
+    '두 버전 모두 현재 PR의 테스트 파일로 실행합니다. 실패는 동작 변경이나 환경 설정 부족 때문일 수 있으니 출력을 확인하세요.',
+  'Function bindings and assumptions': '연결한 함수와 고정 인자',
+  'Execution covers only the selected function inputs or test files. It does not prove the whole PR is correct. Results are kept for this app session.':
+    '선택한 함수 입력값 또는 테스트 파일만 실행한 결과입니다. PR 전체의 정확성을 보장하지 않으며, 결과는 이번 앱 실행 동안 보관합니다.',
+  Completed: '실행 완료',
+  'Failed or missing setup': '실패 또는 실행 환경 부족',
+  'Execution timed out': '실행 시간 초과',
+  'Exit code': '종료 코드',
+  'Function returned': '함수 반환값',
+  'Function threw': '함수에서 발생한 예외',
+  'Execution setup error': '실행 준비 오류',
+  'Command and output': '명령과 출력',
+  'Preparing isolated code snapshots': '격리된 코드 복사본 준비 중',
+  'Executing before version in the macOS sandbox': 'macOS 격리 환경에서 이전 코드 실행 중',
+  'Executing after version in the macOS sandbox': 'macOS 격리 환경에서 현재 코드 실행 중',
+  'Isolated execution currently requires macOS.': '격리 실행은 현재 macOS에서 지원합니다.',
+  'The macOS execution sandbox is unavailable.': 'macOS 격리 실행 환경을 사용할 수 없습니다.',
+  'A compatible Node.js runtime could not start in the execution sandbox. Install a current Node.js version.':
+    '격리 환경에서 호환되는 Node.js를 실행할 수 없습니다. 최신 Node.js를 설치해 주세요.',
+
   'Questions and independent checks': '질문과 독립 검토',
   'Whole PR': '전체 PR',
   Scope: '범위',

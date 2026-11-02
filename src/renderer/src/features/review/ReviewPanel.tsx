@@ -9,6 +9,7 @@ import type {
   ReviewMap,
   ReviewStatus,
 } from '@shared/review';
+import { NODE_TEST_PATH } from '@shared/review-execution';
 import {
   defaultReviewPlan,
   type ReviewStep,
@@ -47,6 +48,7 @@ import {
 } from './mermaid-source';
 import { useReviewActions, useReviewStatus } from './queries';
 import { ReviewActivities } from './ReviewActivities';
+import { type ExecutionContext, ReviewExecution } from './ReviewExecution';
 import styles from './ReviewPanel.module.css';
 import { useReviewPlan } from './ReviewPlanProvider';
 import { useReviewReading } from './ReviewReadingProvider';
@@ -194,6 +196,35 @@ function PullRequestReview({
             onOpenLocation={onOpenLocation}
           />
         )}
+        {diff.data &&
+          done &&
+          (() => {
+            const focus =
+              reading.focus?.target === pullRequestKey(target) &&
+              reading.focus.head === diff.data.head &&
+              reading.focus.mode === 'unit'
+                ? reading.focus
+                : undefined;
+            const unit = done.review.units?.find((u) => u.id === focus?.unitId);
+            const paths = diff.data.files
+              .filter(
+                (f) =>
+                  f.kind === 'file' &&
+                  f.newBlob &&
+                  NODE_TEST_PATH.test(f.path) &&
+                  (!unit || unit.files.some((p) => p.path === f.path)),
+              )
+              .map((f) => f.path)
+              .slice(0, 8);
+            return (
+              paths.length > 0 && (
+                <ReviewExecution
+                  context={{ ref: target, head: diff.data.head, unitId: unit?.id }}
+                  paths={paths}
+                />
+              )
+            );
+          })()}
       </div>
     </>
   );
@@ -277,6 +308,7 @@ function PullRequestReview({
             plan.steps.some((step) => step.kind === 'changes' && step.visible) &&
             current.review.units?.some((unit) => unit.id === reading.focus?.unitId) ? (
               <UnitReview
+                execution={{ ref: target, head: current.head, unitId: reading.focus.unitId }}
                 unit={
                   current.review.units.find(
                     (unit) => unit.id === reading.focus?.unitId,
@@ -296,6 +328,7 @@ function PullRequestReview({
               />
             ) : (
               <ReviewMapView
+                execution={{ ref: target, head: current.head }}
                 review={current.review}
                 changedPaths={changedPaths}
                 onOpenLocation={onOpenLocation}
@@ -406,6 +439,7 @@ function useElapsed(startedAt: string): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 function UnitReview({
+  execution,
   unit,
   review,
   changedPaths,
@@ -413,6 +447,7 @@ function UnitReview({
   onExpandMap,
   onShowAll,
 }: {
+  execution?: ExecutionContext;
   unit: ReviewUnit;
   review: ReviewMap;
   changedPaths: ReadonlySet<string>;
@@ -507,6 +542,7 @@ function UnitReview({
         </p>
       </section>
       <ReviewMapView
+        execution={execution}
         review={scoped}
         changedPaths={changedPaths}
         onOpenLocation={onOpenLocation}
@@ -530,6 +566,7 @@ function UnitReview({
 }
 
 interface ReviewMapViewProps {
+  execution?: ExecutionContext;
   review: ReviewMap;
   changedPaths: ReadonlySet<string>;
   onOpenLocation(location: CodeLocation): void;
@@ -537,6 +574,7 @@ interface ReviewMapViewProps {
   includeKinds?: ReadonlySet<ReviewStep['kind']>;
 }
 function ReviewMapView({
+  execution,
   review,
   changedPaths,
   onOpenLocation,
@@ -595,6 +633,7 @@ function ReviewMapView({
                   ?.filter((simulation) => simulation.changeTitle === change.title)
                   .map((simulation) => (
                     <BehaviorSimulation
+                      execution={execution}
                       key={simulation.id}
                       simulation={simulation}
                       changedPaths={changedPaths}

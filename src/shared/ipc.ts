@@ -20,6 +20,7 @@ import type {
   ReviewQuestionRequest,
   ReviewVerificationRequest,
 } from './review-activity';
+import type { ExecutionRequest, ExecutionStatus, ExecutionSupport } from './review-execution';
 
 export interface PlotApi {
   listAccounts(): Promise<AccountList>;
@@ -45,6 +46,10 @@ export interface PlotApi {
   askReview(ref: PullRequestRef, request: ReviewQuestionRequest): Promise<void>;
   verifyReview(ref: PullRequestRef, request: ReviewVerificationRequest): Promise<void>;
   cancelReviewActivity(ref: PullRequestRef, kind: 'question' | 'verification'): Promise<void>;
+  getReviewExecutionSupport(): Promise<ExecutionSupport>;
+  getReviewExecution(ref: PullRequestRef): Promise<ExecutionStatus>;
+  runReviewExecution(ref: PullRequestRef, request: ExecutionRequest): Promise<void>;
+  cancelReviewExecution(ref: PullRequestRef): Promise<void>;
   getAiSettings(): Promise<AiSettings>;
   updateAiSettings(settings: AiSettings): Promise<AiSettings>;
   detectAiProviders(): Promise<AiProviderStatus[]>;
@@ -96,6 +101,10 @@ const METHODS: Record<IpcMethod, true> = {
   askReview: true,
   verifyReview: true,
   cancelReviewActivity: true,
+  getReviewExecutionSupport: true,
+  getReviewExecution: true,
+  runReviewExecution: true,
+  cancelReviewExecution: true,
   getAiSettings: true,
   updateAiSettings: true,
   detectAiProviders: true,

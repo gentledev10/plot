@@ -144,14 +144,17 @@ describe('review questions and independent checks', () => {
       verificationReason: 'The caller already guards this input.',
     });
   });
-  it('never labels malformed output as a successful check with no findings', async () => {
-    const { service } = setup(vi.fn().mockResolvedValue({ output: { unexpected: true } }));
-    await service.verifyReview(ref, { head });
-    await vi.waitFor(async () =>
-      expect((await service.getReviewActivity(ref)).verificationTask.state).toBe('failed'),
-    );
-    expect((await service.getReviewActivity(ref)).verifications).toEqual([]);
-  });
+  it.each([{ unexpected: true }, { summary: 'Check complete', findings: [null] }])(
+    'never labels malformed output as a successful check with no findings: %j',
+    async (output) => {
+      const { service } = setup(vi.fn().mockResolvedValue({ output }));
+      await service.verifyReview(ref, { head });
+      await vi.waitFor(async () =>
+        expect((await service.getReviewActivity(ref)).verificationTask.state).toBe('failed'),
+      );
+      expect((await service.getReviewActivity(ref)).verifications).toEqual([]);
+    },
+  );
   it('rejects outdated revisions before starting an AI request', async () => {
     const run = vi.fn();
     const { service } = setup(run);

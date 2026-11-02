@@ -1,4 +1,5 @@
 import type { CodeLocation } from '@shared/review';
+import type { FunctionBinding, ScenarioBinding } from '@shared/review-execution';
 import {
   type ReviewSimulation,
   SCENARIO_CATEGORIES,
@@ -21,6 +22,11 @@ const object = <T extends Record<string, unknown>>(properties: T) => ({
 });
 const location = { anyOf: [object({ path: text, line: { type: 'integer' } }), { type: 'null' }] };
 const base = { id: text, label: text, location };
+const binding = object({
+  path: text,
+  exportName: text,
+  args: { type: 'array', items: { anyOf: [object({ input: text }), object({ value: scalar })] } },
+});
 const program = object({
   entry: text,
   nodes: {
@@ -48,6 +54,7 @@ export const SIMULATIONS_SCHEMA = {
     changeTitle: text,
     title: text,
     scope: text,
+    binding: { anyOf: [object({ before: binding, after: binding }), { type: 'null' }] },
     inputs: {
       type: 'array',
       items: object({
@@ -244,6 +251,7 @@ export function parseSimulations(raw: unknown, changes: ReadonlySet<string>): Re
       changeTitle: item.changeTitle.trim(),
       title: item.title.trim(),
       scope: item.scope.trim().slice(0, 1600),
+      ...(parseBinding(item.binding, ids) ? { binding: parseBinding(item.binding, ids) } : {}),
       inputs,
       before,
       after,
@@ -252,4 +260,36 @@ export function parseSimulations(raw: unknown, changes: ReadonlySet<string>): Re
     if (result.length === 2) break;
   }
   return result;
+}
+
+function parseBinding(raw: unknown, inputs: Set<string>): ScenarioBinding | undefined {
+  if (!record(raw)) return;
+  const parse = (v: unknown): FunctionBinding | undefined => {
+    if (
+      !record(v) ||
+      typeof v.path !== 'string' ||
+      !/\.(mjs|cjs|js|ts)$/.test(v.path) ||
+      v.path.startsWith('/') ||
+      v.path.includes('\\') ||
+      v.path.includes('\0') ||
+      v.path.split('/').some((p) => !p || p === '..' || p === '.') ||
+      typeof v.exportName !== 'string' ||
+      !/^[a-zA-Z_$][\w$]{0,127}$/.test(v.exportName) ||
+      !Array.isArray(v.args) ||
+      v.args.length > 8
+    )
+      return;
+    const args: FunctionBinding['args'] = [];
+    for (const arg of v.args) {
+      if (!record(arg)) return;
+      if (typeof arg.input === 'string' && inputs.has(arg.input) && !('value' in arg))
+        args.push({ input: arg.input });
+      else if (value(arg.value) && !('input' in arg)) args.push({ value: arg.value });
+      else return;
+    }
+    return { path: v.path, exportName: v.exportName, args };
+  };
+  const before = parse(raw.before);
+  const after = parse(raw.after);
+  return before && after ? { before, after } : undefined;
 }

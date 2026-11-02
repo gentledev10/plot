@@ -28,3 +28,16 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  runtime-macos:
+    runs-on: macos-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run src/main/system/review-runtime.test.ts src/main/services/review-execution-service.test.ts

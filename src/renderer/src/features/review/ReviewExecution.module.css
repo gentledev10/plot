@@ -1,0 +1,75 @@
+.panel {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.panel p {
+  line-height: 1.6;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  margin: 8px 0;
+}
+.panel h4,
+.panel h5 {
+  font-size: var(--font-size);
+  margin: 0 0 8px;
+}
+.panel button {
+  font: inherit;
+  padding: 6px 9px;
+  color: var(--color-accent);
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+}
+.panel button:disabled {
+  opacity: 0.5;
+}
+.panel pre {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 260px;
+  overflow: auto;
+}
+.panel summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+.results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.result {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 10px;
+  min-width: 0;
+}
+.panel .stale {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+.paths {
+  font-family: var(--font-mono);
+}
+.panel table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+}
+.panel th,
+.panel td {
+  padding: 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+.panel td strong {
+  color: var(--color-danger);
+}

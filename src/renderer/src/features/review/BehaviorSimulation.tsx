@@ -12,6 +12,7 @@ import {
 import { type ReactNode, useEffect, useId, useMemo, useState } from 'react';
 import { useT } from '../language/LanguageProvider';
 import styles from './BehaviorSimulation.module.css';
+import { type ExecutionContext, ReviewExecution } from './ReviewExecution';
 import { VectorDiagram } from './VectorDiagram';
 
 const categories: Record<ScenarioCategory, string> = {
@@ -29,12 +30,14 @@ export function BehaviorSimulation({
   onOpenLocation,
   link,
   onExpand,
+  execution,
 }: {
   simulation: ReviewSimulation;
   changedPaths: ReadonlySet<string>;
   onOpenLocation(location: CodeLocation): void;
   link(location: CodeLocation | undefined): ReactNode;
   onExpand?(): void;
+  execution?: ExecutionContext;
 }) {
   const t = useT();
   const id = useId();
@@ -195,6 +198,9 @@ export function BehaviorSimulation({
             );
           })}
         </details>
+        {execution && (
+          <ReviewExecution context={execution} simulation={simulation} inputs={inputs} />
+        )}
       </div>
     </details>
   );

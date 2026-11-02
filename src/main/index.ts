@@ -56,8 +56,10 @@ import { createFontService } from './services/font-service';
 import { createGitHubService, openPullRequestFinder } from './services/github-service';
 import { createLocalService } from './services/local-service';
 import { createReviewActivityService } from './services/review-activity-service';
+import { createReviewExecutionService } from './services/review-execution-service';
 import { createReviewService } from './services/review-service';
 import { runCommand, runCommandForBuffer } from './system/process';
+import { createReviewRuntime } from './system/review-runtime';
 import { mergePaths, resolveLoginShellPath } from './system/shell-env';
 
 registerAppScheme();
@@ -207,6 +209,18 @@ function createApi(): PlotApi {
     ...createDiffService({ connections, repositories }),
     ...reviews,
     ...reviewActivities,
+    ...createReviewExecutionService({
+      connections,
+      repositories,
+      reviews: reviewStore,
+      runtime: createReviewRuntime(),
+      root: join(userData, 'review-executions'),
+      language: async () =>
+        reviewLanguage(
+          parseLanguages((await preferences.all())[LANGUAGE_PREFERENCE]),
+          systemLocale(),
+        ),
+    }),
     ...ai,
     async setThemeSource(source) {
       nativeTheme.themeSource = source;

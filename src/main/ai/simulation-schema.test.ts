@@ -4,6 +4,29 @@ import { parseSimulations } from './simulation-schema';
 
 const changes = new Set(['Shipping threshold']);
 describe('parseSimulations', () => {
+  it('keeps only bounded native function bindings, never expressions or unknown input references', () => {
+    const raw = shippingSimulation();
+    raw.binding = {
+      before: {
+        path: 'src/shipping.ts',
+        exportName: 'shipping',
+        args: [{ input: 'amount' }, { value: true }],
+      },
+      after: {
+        path: 'src/shipping.ts',
+        exportName: 'shipping',
+        args: [{ input: 'amount' }, { value: true }],
+      },
+    };
+    expect(parseSimulations([raw], changes)[0]?.binding).toEqual(raw.binding);
+    for (const path of ['../private.mjs', '/tmp/private.mjs', 'src\\escape.mjs']) {
+      raw.binding.after.path = path;
+      expect(parseSimulations([raw], changes)[0]?.binding).toBeUndefined();
+    }
+    raw.binding.after.path = 'src/shipping.ts';
+    raw.binding.after.args = [{ input: 'unknown' }];
+    expect(parseSimulations([raw], changes)[0]?.binding).toBeUndefined();
+  });
   it('preserves complete models, typed invalid-input cases and safe current-code locations', () => {
     const input = shippingSimulation();
     const amount = input.cases[0]?.inputs[0];

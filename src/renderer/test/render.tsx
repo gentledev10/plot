@@ -37,6 +37,14 @@ export function fakeApi(overrides: Partial<PlotApi> = {}): PlotApi {
       questionTask: { state: 'idle' },
       verificationTask: { state: 'idle' },
     }),
+    getReviewExecutionSupport: vi
+      .fn()
+      .mockResolvedValue({ available: false, reason: 'Execution is unavailable in this fixture.' }),
+    getReviewExecution: vi
+      .fn()
+      .mockResolvedValue({ head: 'd'.repeat(40), reports: [], task: { state: 'idle' } }),
+    runReviewExecution: notStubbed('runReviewExecution'),
+    cancelReviewExecution: vi.fn().mockResolvedValue(undefined),
     askReview: notStubbed('askReview'),
     verifyReview: notStubbed('verifyReview'),
     cancelReviewActivity: vi.fn().mockResolvedValue(undefined),

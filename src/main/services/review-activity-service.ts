@@ -199,6 +199,11 @@ export function createReviewActivityService({
               'The independent check did not return a valid report.',
             );
           const findings = parseFindings(output, context.lines);
+          if (findings.length !== Math.min(output.findings.length, 8))
+            throw new AppError(
+              'ai-invalid-output',
+              'The independent check returned malformed candidates. Try the check again.',
+            );
           if (findings.length) {
             note('Rechecking candidates in a separate AI session');
             const checked = await run(

@@ -22,6 +22,7 @@ import { isLocalCompare, isLocalRepositoryId, type LocalTarget } from '@shared/l
 import { isPullRequestRef } from '@shared/pull-request-ref';
 import { isRepositoryRef } from '@shared/repository-ref';
 import type { ReviewQuestionRequest, ReviewVerificationRequest } from '@shared/review-activity';
+import { type ExecutionRequest, NODE_TEST_PATH } from '@shared/review-execution';
 import { AppError } from '../errors';
 
 export type ArgumentParsers = {
@@ -52,6 +53,10 @@ export const argumentParsers: ArgumentParsers = {
   startReview: ([ref]) => [pullRequestRef(ref)],
   cancelReview: ([ref]) => [pullRequestRef(ref)],
   getReviewActivity: ([ref]) => [pullRequestRef(ref)],
+  getReviewExecutionSupport: () => [],
+  getReviewExecution: ([ref]) => [pullRequestRef(ref)],
+  runReviewExecution: ([ref, request]) => [pullRequestRef(ref), executionRequest(request)],
+  cancelReviewExecution: ([ref]) => [pullRequestRef(ref)],
   askReview: ([ref, request]) => [pullRequestRef(ref), reviewQuestion(request)],
   verifyReview: ([ref, request]) => [pullRequestRef(ref), reviewScope(request)],
   cancelReviewActivity: ([ref, kind]) => {
@@ -83,6 +88,48 @@ export const argumentParsers: ArgumentParsers = {
   readLocalBlob: ([id, blob]) => [localRepositoryId(id), objectId(blob)],
   readLocalFile: ([id, path]) => [localRepositoryId(id), relativePath(path)],
 };
+
+function executionRequest(value: unknown): ExecutionRequest {
+  const scope = reviewScope(value);
+  const raw = value as Record<string, unknown>;
+  if (
+    raw.kind === 'tests' &&
+    Array.isArray(raw.paths) &&
+    raw.paths.length >= 1 &&
+    raw.paths.length <= 8
+  ) {
+    const paths = [...new Set(raw.paths.map(relativePath))];
+    if (paths.every((path) => NODE_TEST_PATH.test(path))) return { ...scope, kind: 'tests', paths };
+  }
+  if (
+    raw.kind === 'scenario' &&
+    typeof raw.simulationId === 'string' &&
+    /^[a-zA-Z0-9_-]{1,48}$/.test(raw.simulationId) &&
+    Array.isArray(raw.inputs) &&
+    raw.inputs.length >= 1 &&
+    raw.inputs.length <= 4
+  ) {
+    const inputs: Extract<ExecutionRequest, { kind: 'scenario' }>['inputs'] = [];
+    for (const entry of raw.inputs) {
+      const { id, value } = (entry ?? {}) as Record<string, unknown>;
+      if (
+        typeof id !== 'string' ||
+        !/^[a-zA-Z0-9_-]{1,48}$/.test(id) ||
+        inputs.some((v) => v.id === id) ||
+        !(
+          value === null ||
+          typeof value === 'boolean' ||
+          (typeof value === 'number' && Number.isFinite(value)) ||
+          (typeof value === 'string' && value.length <= 300)
+        )
+      )
+        throw new AppError('invalid-argument', 'Expected bounded scalar input values.');
+      inputs.push({ id, value });
+    }
+    return { ...scope, kind: 'scenario', simulationId: raw.simulationId, inputs };
+  }
+  throw new AppError('invalid-argument', 'Select a bound scenario or up to eight Node test files.');
+}
 
 function reviewScope(value: unknown): ReviewVerificationRequest {
   const { head, unitId } = (value ?? {}) as Record<string, unknown>;

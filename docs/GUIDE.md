@@ -74,6 +74,18 @@ Accounts on GitHub Enterprise Cloud live on github.com, so choose GitHub.com for
 
 You can connect several accounts, including accounts on company servers, and switch between them in Settings > Accounts. Pull requests on a company server open with the account connected for that server. Tokens are encrypted with your macOS keychain and only sent to the server they belong to.
 
+## Read and check a PR by purpose
+
+After generating an overview, **Read by change** groups related implementation, changed tests, documentation and explanation by behavior. Choose a unit to focus the diff and its diagrams; **All files and review steps** restores the full review, including custom steps. Files without an AI association remain accessible under **Other files**. Linked-file counts describe navigation, not how much code the AI inspected.
+
+Select up to 120 lines on either side of the diff and choose **Ask about selected code**, or ask a question for the current unit. Answers use source snapshots from that PR revision, keep the selected side and range, and link supported current-code citations. **Independent check** makes a separate AI inspection and a second session rechecks its candidates. Supported, dismissed and uncertain describe code analysis, not executed tests. Questions and independent reports are saved by PR revision and AI language. Each explicit request counts toward the selected AI tool's usage; changing units does not start a request.
+
+**Try inputs and error cases** evaluates an AI explanation model immediately. When that model also has a native function binding, **Run actual code with these values** compares the real exported function in merge-base and head snapshots. Editing inputs marks earlier execution results as stale. The function's complete JSON return or exception is shown separately from the model's simplified outcome and its fixed assumptions.
+
+Related changed Node `.test`/`.spec` files can also run against both versions. Both use the exact PR-head test assertions, so a new test may expose either an intended behavior difference or a regression. The comparison shows top-level test outcomes and retains raw output; skipped tests are not passes. Nested or duplicate test names need the raw output.
+
+Actual execution currently requires macOS's available sandbox and a compatible installed Node.js runtime (22 or newer with the required test flags). It starts only on an explicit click, uses disposable snapshots, blocks network access, private file contents and child processes, and writes only to temporary scratch space. Plot does not install dependencies or run package scripts. Functions needing service/browser setup, object arguments, missing dependencies, other test frameworks and repositories above 20,000 tracked files may be unavailable. A setup error is reported as such. Execution can be cancelled, is time limited, and results remain available for the current app session. The original configurable five-step review and custom steps remain available.
+
 ## Local changes
 
 Choose **Open a local folder…** on the start screen, or **Local changes → Choose a folder…**. You do not need a GitHub account or an AI tool. Plot shows branch changes, including uncommitted and untracked files, and refreshes as files change. Choose **Uncommitted only** to compare your working tree with the latest commit. AI overviews are currently available for pull requests only.

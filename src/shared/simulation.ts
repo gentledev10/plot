@@ -1,4 +1,5 @@
 import type { CodeLocation } from './review';
+import type { ScenarioBinding } from './review-execution';
 
 export type ScenarioValue = string | number | boolean | null;
 export const SCENARIO_OPERATORS = [
@@ -53,6 +54,7 @@ export interface ScenarioProgram {
 }
 
 export interface ReviewSimulation {
+  binding?: ScenarioBinding;
   id: string;
   changeTitle: string;
   title: string;
