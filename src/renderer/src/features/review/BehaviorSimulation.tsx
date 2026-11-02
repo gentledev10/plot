@@ -12,6 +12,7 @@ import {
 import { type ReactNode, useEffect, useId, useMemo, useState } from 'react';
 import { useT } from '../language/LanguageProvider';
 import styles from './BehaviorSimulation.module.css';
+import type { DiagramRole } from './diagram-design';
 import { type ExecutionContext, ReviewExecution } from './ReviewExecution';
 import { VectorDiagram } from './VectorDiagram';
 
@@ -224,6 +225,16 @@ function ScenarioSide({
   link(location: CodeLocation | undefined): ReactNode;
 }) {
   const t = useT();
+  const nodeRoles = useMemo(
+    () =>
+      new Map<string, DiagramRole>(
+        program.nodes.map((node) => [
+          node.id,
+          node.kind === 'condition' ? 'decision' : 'component',
+        ]),
+      ),
+    [program],
+  );
   const fullGraph = useMemo<Architecture>(
     () => ({
       nodes: program.nodes.map((node) => ({
@@ -274,6 +285,7 @@ function ScenarioSide({
       <p className={styles.legend}>{t('Highlighted: path for the current inputs')}</p>
       <VectorDiagram
         graph={graph}
+        nodeRoles={nodeRoles}
         flow
         direction="DOWN"
         label={t(side === 'before' ? 'Before model' : 'After model')}

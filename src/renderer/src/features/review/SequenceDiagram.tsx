@@ -103,7 +103,8 @@ export function SequenceDiagram({
               location && onOpen && changedPaths.has(location.path)
                 ? () => onOpen(location)
                 : undefined;
-            const textX = participant.x + 57;
+            const showIcon = participant.role !== 'component';
+            const textX = showIcon ? participant.x + 57 : participant.center;
             const textY = 28 + layout.headerHeight / 2 - (participant.lines.length - 1) * 9.5;
             return (
               // biome-ignore lint/a11y/noStaticElementInteractions: only verified current-code participants receive button semantics
@@ -143,23 +144,33 @@ export function SequenceDiagram({
                   rx="16"
                   filter={`url(#${id}-shadow)`}
                 />
-                <rect
-                  className={styles.nodeIcon}
-                  x={participant.x + 12}
-                  y={28 + layout.headerHeight / 2 - 17}
-                  width="34"
-                  height="34"
-                  rx="10"
-                />
-                <g className={styles.glyph}>
-                  <DiagramGlyph
-                    role={participant.role}
-                    x={participant.x + 19}
-                    y={28 + layout.headerHeight / 2 - 10}
-                    size={20}
-                  />
-                </g>
-                <text className={styles.nodeText} x={textX} y={textY} dominantBaseline="central">
+                {showIcon && (
+                  <>
+                    <rect
+                      className={styles.nodeIcon}
+                      x={participant.x + 12}
+                      y={28 + layout.headerHeight / 2 - 17}
+                      width="34"
+                      height="34"
+                      rx="10"
+                    />
+                    <g className={styles.glyph}>
+                      <DiagramGlyph
+                        role={participant.role}
+                        x={participant.x + 19}
+                        y={28 + layout.headerHeight / 2 - 10}
+                        size={20}
+                      />
+                    </g>
+                  </>
+                )}
+                <text
+                  className={styles.nodeText}
+                  x={textX}
+                  y={textY}
+                  dominantBaseline="central"
+                  textAnchor={showIcon ? 'start' : 'middle'}
+                >
                   {participant.lines.map((line, index) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: immutable text fragments can repeat
                     <tspan key={`${index}-${line}`} x={textX} dy={index ? 19 : 0}>

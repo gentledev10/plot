@@ -1,5 +1,4 @@
 import {
-  Boxes,
   Cpu,
   Database,
   GitBranch,
@@ -23,7 +22,6 @@ const icons = {
   queue: ListOrdered,
   config: SlidersHorizontal,
   decision: GitBranch,
-  component: Boxes,
 };
 
 export function DiagramGlyph({
@@ -37,6 +35,7 @@ export function DiagramGlyph({
   y: number;
   size?: number;
 }) {
+  if (role === 'component') return null;
   const Icon = icons[role];
   return <Icon aria-hidden="true" x={x} y={y} width={size} height={size} strokeWidth={1.7} />;
 }

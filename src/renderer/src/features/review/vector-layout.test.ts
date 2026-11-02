@@ -21,9 +21,12 @@ const graph: Architecture = {
 };
 
 describe('vector layout', () => {
-  it('lays a selected scenario path vertically without shrinking a long horizontal chain', async () => {
+  it('preserves scenario conditions when only one selected branch is shown vertically', async () => {
     const chain = { ...graph, groups: [], nodes: graph.nodes.map(({ group: _, ...node }) => node) };
-    const result = await layoutVectorGraph(chain, true, 'DOWN');
+    const result = await layoutVectorGraph(chain, true, 'DOWN', new Map([['entry', 'decision']]));
+    expect(result.nodes.find((node) => chain.nodes[node.index]?.id === 'entry')?.role).toBe(
+      'decision',
+    );
     expect(result.height).toBeGreaterThan(result.width);
     for (let i = 1; i < result.nodes.length; i++) {
       const previous = result.nodes[i - 1];

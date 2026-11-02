@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useT } from '../language/LanguageProvider';
 import { DiagramCanvas } from './DiagramCanvas';
 import { DiagramGlyph } from './DiagramGlyph';
+import type { DiagramRole } from './diagram-design';
 import styles from './VisualWalkthrough.module.css';
 import { labelLines, layoutVectorGraph, type VectorLayout } from './vector-layout';
 
@@ -14,6 +15,7 @@ export function VectorDiagram({
   changedPaths,
   trace,
   direction,
+  nodeRoles,
 }: {
   graph: Architecture;
   flow?: boolean;
@@ -22,6 +24,7 @@ export function VectorDiagram({
   changedPaths: ReadonlySet<string>;
   trace?: { nodes: ReadonlySet<string>; edges: ReadonlySet<number> };
   direction?: 'DOWN' | 'RIGHT';
+  nodeRoles?: ReadonlyMap<string, DiagramRole>;
 }) {
   const t = useT();
   const [layout, setLayout] = useState<VectorLayout>();
@@ -32,7 +35,7 @@ export function VectorDiagram({
     setLayout(undefined);
     setFailed(false);
     setActive(undefined);
-    layoutVectorGraph(graph, flow, direction)
+    layoutVectorGraph(graph, flow, direction, nodeRoles)
       .then((result) => {
         if (current) setLayout(result);
       })
@@ -42,7 +45,7 @@ export function VectorDiagram({
     return () => {
       current = false;
     };
-  }, [graph, flow, direction]);
+  }, [graph, flow, direction, nodeRoles]);
   if (failed) return <p>{t('This diagram could not be drawn.')}</p>;
   if (!layout) return <p role="status">{t('Drawing diagram…')}</p>;
   const selected = active === undefined ? undefined : graph.nodes[active]?.id;
@@ -136,7 +139,8 @@ export function VectorDiagram({
                 ? () => onOpen(location)
                 : undefined;
             const radius = node.role === 'app' ? 42 : 16;
-            const textX = node.x + 73;
+            const showIcon = !flow && node.role !== 'component';
+            const textX = node.x + (showIcon ? 73 : node.width / 2);
             const textY = node.y + node.height / 2 - (node.lines.length - 1) * 9.5;
             const decision = node.role === 'decision';
             const shape = decision
@@ -197,22 +201,32 @@ export function VectorDiagram({
                     rx="2"
                   />
                 )}
-                <rect
-                  className={styles.nodeIcon}
-                  x={node.x + 16}
-                  y={node.y + node.height / 2 - 21}
-                  width="42"
-                  height="42"
-                  rx={node.role === 'app' ? 21 : 12}
-                />
-                <g className={styles.glyph}>
-                  <DiagramGlyph
-                    role={node.role}
-                    x={node.x + 25}
-                    y={node.y + node.height / 2 - 12}
-                  />
-                </g>
-                <text className={styles.nodeText} x={textX} y={textY} dominantBaseline="central">
+                {showIcon && (
+                  <>
+                    <rect
+                      className={styles.nodeIcon}
+                      x={node.x + 16}
+                      y={node.y + node.height / 2 - 21}
+                      width="42"
+                      height="42"
+                      rx={node.role === 'app' ? 21 : 12}
+                    />
+                    <g className={styles.glyph}>
+                      <DiagramGlyph
+                        role={node.role}
+                        x={node.x + 25}
+                        y={node.y + node.height / 2 - 12}
+                      />
+                    </g>
+                  </>
+                )}
+                <text
+                  className={styles.nodeText}
+                  x={textX}
+                  y={textY}
+                  dominantBaseline="central"
+                  textAnchor={showIcon ? 'start' : 'middle'}
+                >
                   {node.lines.map((line, index) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: immutable label fragments can repeat
                     <tspan key={`${index}-${line}`} x={textX} dy={index ? 19 : 0}>
@@ -238,6 +252,8 @@ export function VectorDiagram({
 }
 
 function AreaHeading({ group }: { group: VectorLayout['groups'][number] }) {
+  const showIcon = group.role !== 'component';
+  const textX = group.x + (showIcon ? 53 : 22);
   const lines = labelLines(group.label, (group.width - 72) / 15).slice(0, 2);
   return (
     <g className={styles.area} data-palette={group.palette}>
@@ -249,26 +265,30 @@ function AreaHeading({ group }: { group: VectorLayout['groups'][number] }) {
         height="42"
         rx="12"
       />
-      <rect
-        className={styles.areaIcon}
-        x={group.x + 17}
-        y={group.y + 17}
-        width="26"
-        height="26"
-        rx="8"
-      />
-      <g className={styles.glyph}>
-        <DiagramGlyph role={group.role} x={group.x + 22} y={group.y + 22} size={16} />
-      </g>
+      {showIcon && (
+        <>
+          <rect
+            className={styles.areaIcon}
+            x={group.x + 17}
+            y={group.y + 17}
+            width="26"
+            height="26"
+            rx="8"
+          />
+          <g className={styles.glyph}>
+            <DiagramGlyph role={group.role} x={group.x + 22} y={group.y + 22} size={16} />
+          </g>
+        </>
+      )}
       <text
         className={styles.areaTitle}
-        x={group.x + 53}
+        x={textX}
         y={group.y + 30 - (lines.length - 1) * 8}
         dominantBaseline="central"
       >
         {lines.map((line, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: static lines can repeat and have no state
-          <tspan key={`${index}-${line}`} x={group.x + 53} dy={index ? 16 : 0}>
+          <tspan key={`${index}-${line}`} x={textX} dy={index ? 16 : 0}>
             {line}
           </tspan>
         ))}

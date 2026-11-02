@@ -80,16 +80,20 @@ export async function layoutVectorGraph(
   graph: Architecture,
   flow = false,
   direction?: 'DOWN' | 'RIGHT',
+  nodeRoles?: ReadonlyMap<string, DiagramRole>,
 ): Promise<VectorLayout> {
   const { default: ELK } = await import('elkjs/lib/elk.bundled.js');
   const ids = new Map(graph.nodes.map((node, index) => [node.id, `n${index}`]));
-  const roles = graph.nodes.map((_, index) => nodeRole(graph, index, flow));
+  const roles = graph.nodes.map(
+    (node, index) => nodeRoles?.get(node.id) ?? nodeRole(graph, index, flow),
+  );
+  const lines = (label: string) => labelLines(label, flow ? 13 : 10.5);
   const children: ElkNode[] = graph.nodes.map((node, index) => ({
     id: `n${index}`,
     width: 244,
     height: Math.max(
-      roles[index] === 'decision' ? 100 : 80,
-      labelLines(node.label).length * 19 + 32,
+      roles[index] === 'decision' ? (flow ? 84 : 100) : flow ? 64 : 80,
+      lines(node.label).length * 19 + 32,
     ),
   }));
   const grouped = new Set<string>();
@@ -169,11 +173,13 @@ export async function layoutVectorGraph(
         y: top,
         width: node.width ?? 164,
         height: node.height ?? 56,
-        lines: labelLines(graph.nodes[index]?.label ?? ''),
+        lines: lines(graph.nodes[index]?.label ?? ''),
         role,
-        palette: group
-          ? diagramPalette(diagramRole(group.label), group.id)
-          : diagramPalette(role, graph.nodes[index]?.id),
+        palette: flow
+          ? diagramPalette(role)
+          : group
+            ? diagramPalette(diagramRole(group.label), group.id)
+            : diagramPalette(role, graph.nodes[index]?.id),
       });
     } else if (/^g\d+$/.test(node.id)) {
       const group = graph.groups?.[Number(node.id.slice(1))];
