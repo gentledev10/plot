@@ -23,14 +23,14 @@ The output includes `Plot-<version>-arm64.dmg`, `Plot-<version>-x64.dmg`, ZIP eq
 
 Before running `.github/workflows/release.yml`, configure repository secrets through GitHub's settings:
 
-| Secret                 | Value                                                                 |
-| ---------------------- | --------------------------------------------------------------------- |
-| `MAC_CSC_LINK`          | Base64-encoded Developer ID Application certificate exported as `.p12` |
-| `MAC_CSC_KEY_PASSWORD`  | Password protecting that `.p12`                                       |
-| `APPLE_API_KEY_BASE64`  | Base64-encoded compatible App Store Connect API private key (`.p8`)    |
-| `APPLE_API_KEY_ID`      | Key ID of that API key                                                |
-| `APPLE_API_ISSUER`      | Issuer ID of that API key                                             |
-| `APPLE_TEAM_ID`        | Team that issued the Developer ID certificate                         |
+| Secret                 | Value                                                                  |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `MAC_CSC_LINK`         | Base64-encoded Developer ID Application certificate exported as `.p12` |
+| `MAC_CSC_KEY_PASSWORD` | Password protecting that `.p12`                                        |
+| `APPLE_API_KEY_BASE64` | Base64-encoded compatible App Store Connect API private key (`.p8`)    |
+| `APPLE_API_KEY_ID`     | Key ID of that API key                                                 |
+| `APPLE_API_ISSUER`     | Issuer ID of that API key                                              |
+| `APPLE_TEAM_ID`        | Team that issued the Developer ID certificate                          |
 
 Use existing compatible credentials where possible. Do not commit private keys, certificates, passwords or exports. The App Store Connect upload key used by iOS projects does not itself provide a Developer ID signing identity. Creating or changing Apple credentials is a separate account action.
 
