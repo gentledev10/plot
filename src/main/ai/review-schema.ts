@@ -16,6 +16,7 @@ import type {
 } from '@shared/review';
 import { isCustomStepId } from '@shared/review-plan';
 import { AppError } from '../errors';
+import { parseSimulations, SIMULATIONS_SCHEMA } from './simulation-schema';
 
 const text = { type: 'string' } as const;
 
@@ -101,6 +102,7 @@ export const REVIEW_SCHEMA = {
   type: 'object',
   properties: {
     summary: text,
+    simulations: SIMULATIONS_SCHEMA,
     changes: {
       type: 'array',
       items: {
@@ -218,6 +220,7 @@ export const REVIEW_SCHEMA = {
     'readingOrder',
     'customSections',
     'reviewPoints',
+    'simulations',
   ],
   additionalProperties: false,
 } as const;
@@ -242,9 +245,18 @@ export function parseReviewMap(value: unknown): ReviewMap {
   if (!isObject(value) || typeof value.summary !== 'string') {
     throw new AppError('ai-invalid-output', 'The AI overview did not have the expected shape.');
   }
+  const changes = list(value.changes, LIMITS.changes, toKeyChange);
   return {
     summary: clip(value.summary, LIMITS.text),
-    changes: list(value.changes, LIMITS.changes, toKeyChange),
+    changes,
+    ...(Array.isArray(value.simulations)
+      ? {
+          simulations: parseSimulations(
+            value.simulations,
+            new Set(changes.map((change) => change.title)),
+          ),
+        }
+      : {}),
     flows: list(value.flows, LIMITS.flows, toFlow),
     architecture: toArchitecture(value.architecture),
     ...(Array.isArray(value.visuals)

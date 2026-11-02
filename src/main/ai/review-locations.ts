@@ -14,6 +14,18 @@ export function verifyLocations(review: ReviewMap, lineCount: LineCounter): Revi
   return {
     ...review,
     changes: review.changes.map(check),
+    ...(review.simulations
+      ? {
+          simulations: review.simulations.map((simulation) => ({
+            ...simulation,
+            before: {
+              ...simulation.before,
+              nodes: simulation.before.nodes.map(({ location: _, ...node }) => node),
+            },
+            after: { ...simulation.after, nodes: simulation.after.nodes.map(check) },
+          })),
+        }
+      : {}),
     flows: review.flows.map((flow) => ({ ...flow, after: flow.after.map(check) })),
     architecture: { ...review.architecture, nodes: review.architecture.nodes.map(check) },
     ...(review.visuals

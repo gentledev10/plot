@@ -51,6 +51,7 @@ describe('REVIEW_SCHEMA', () => {
       'readingOrder',
       'customSections',
       'reviewPoints',
+      'simulations',
     ]);
   });
 

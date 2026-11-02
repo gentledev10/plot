@@ -1,6 +1,7 @@
 import type { AiProviderId } from './ai';
 import type { ErrorPayload } from './errors';
 import type { Language } from './language';
+import type { ReviewSimulation } from './simulation';
 
 export interface CodeLocation {
   path: string;
@@ -100,6 +101,7 @@ export interface ReviewMap {
   flows: Flow[];
   architecture: Architecture;
   visuals?: ReviewVisual[];
+  simulations?: ReviewSimulation[];
   impacts: Impact[];
   reviewPoints?: ReviewPoint[];
   readingOrder: ReadingStep[];
