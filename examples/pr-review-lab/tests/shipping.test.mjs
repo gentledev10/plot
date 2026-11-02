@@ -20,3 +20,8 @@ test('잘못된 형식과 서비스 장애는 거부', () => {
     assert.deepEqual(shippingFee(amount), { error: 400 });
   assert.deepEqual(shippingFee(50000, false, false), { error: 503 });
 });
+
+test('경계값 바로 위와 새 회원 기준 직전도 확인', () => {
+  assert.deepEqual(shippingFee(expected.standardThreshold + 1), { fee: 0 });
+  assert.deepEqual(shippingFee(expected.memberThreshold - 1, true), { fee: 3000 });
+});

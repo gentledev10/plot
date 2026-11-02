@@ -19,3 +19,13 @@ test('본인 초안 주문과 관리자 주문은 허용', () => {
   assert.equal(canCheckout('member', true, 'draft'), true);
   assert.equal(canCheckout('admin', false, 'draft'), true);
 });
+
+test('회원과 쿠폰은 최대 15퍼센트까지 합산', () => {
+  assert.equal(discountPercent(true, true), 15);
+  assert.equal(discountPercent(false, true), 5);
+});
+test('운영 담당자만 다른 소유자의 승인 대기 주문 처리', () => {
+  assert.equal(canCheckout('operations', false, 'pending-approval'), true);
+  assert.equal(canCheckout('member', true, 'pending-approval'), false);
+  assert.equal(canCheckout('operations', false, 'paid'), false);
+});

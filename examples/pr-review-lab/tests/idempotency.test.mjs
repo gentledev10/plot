@@ -17,3 +17,11 @@ test('같은 요청을 반복해도 한 번만 결제', async () => {
   assert.equal(first.id, second.id);
   assert.equal(deps.gateway.calls, 1);
 });
+
+test('장바구니 버전이 바뀌면 새 금액으로 새 주문 생성', async () => {
+  const deps = services();
+  const first = await checkout(request(), deps);
+  const second = await checkout(request({ cartVersion: 2, amount: 60000 }), deps);
+  assert.notEqual(first.id, second.id);
+  assert.equal(deps.gateway.calls, 2);
+});

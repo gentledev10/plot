@@ -1,3 +1,3 @@
-export function orderKey(customerId, cartId, cartVersion) {
-  return `${customerId}:${cartId}:${cartVersion}`;
+export function orderKey(customerId, cartId, _cartVersion) {
+  return `${customerId}:${cartId}`;
 }

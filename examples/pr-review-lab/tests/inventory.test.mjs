@@ -18,3 +18,12 @@ test('결제 실패 후 재고를 원래대로 반환', () => {
   release(inventory, reservation);
   assert.equal(inventory.get('demo-book'), 6);
 });
+
+test('조회 이후 재고가 바뀌었다면 예약을 거부', () => {
+  const inventory = new Map([['demo-book', 8]]);
+  assert.deepEqual(reserve(inventory, 'demo-book', 2, { expectedAvailable: 9 }), {
+    error: 409,
+    reason: 'STALE_INVENTORY',
+  });
+  assert.equal(inventory.get('demo-book'), 8);
+});
