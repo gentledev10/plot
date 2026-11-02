@@ -2,6 +2,7 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { StoredReview } from '@shared/review';
+import { shippingSimulation } from '@shared/simulation.fixture';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createFileReviewStore } from './review-store';
 
@@ -33,6 +34,24 @@ afterEach(async () => {
 });
 
 describe('createFileReviewStore', () => {
+  it('retains interactive programs and typed failure cases when a saved review is reopened', async () => {
+    const store = createFileReviewStore(root);
+    const simulation = shippingSimulation();
+    await store.write(ref, {
+      ...stored,
+      review: {
+        ...stored.review,
+        changes: [
+          { title: simulation.changeTitle, before: 'Old threshold', after: 'New threshold' },
+        ],
+        simulations: [simulation],
+      },
+    });
+    const saved = (await store.read(ref, head))?.review.simulations?.[0];
+    expect(saved?.cases).toEqual(simulation.cases);
+    expect(saved?.before.nodes[0]).not.toHaveProperty('location');
+    expect(saved?.after.nodes).toEqual(simulation.after.nodes);
+  });
   it('keeps English and Korean reviews for the same commit without overwriting either', async () => {
     const store = createFileReviewStore(root);
     await store.write(ref, { ...stored, language: 'en' });

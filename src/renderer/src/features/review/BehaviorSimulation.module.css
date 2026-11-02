@@ -1,0 +1,146 @@
+.container {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  min-width: 0;
+}
+.container > summary {
+  color: var(--color-accent);
+  cursor: pointer;
+  padding: 4px 0;
+}
+.body {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  min-width: 0;
+}
+.heading {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+}
+.heading h4,
+.body p,
+.side h5 {
+  margin: 0;
+}
+.heading h4,
+.side h5 {
+  font-size: var(--font-size);
+}
+.heading button,
+.views button {
+  font: inherit;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-accent);
+  padding: 4px 8px;
+}
+.views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+.views button[aria-pressed="true"] {
+  background: var(--color-bg-selected);
+  border-color: var(--color-accent);
+}
+.notice,
+.legend,
+.scope {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+.notice {
+  border-left: 2px solid var(--color-border-strong);
+  padding-left: 10px;
+}
+.scenario {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 10px;
+}
+.input {
+  display: grid;
+  gap: 6px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.input legend {
+  padding: 0 0 6px;
+}
+.body select,
+.input > input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-editor);
+  color: var(--color-text);
+  padding: 6px 28px 6px 8px;
+}
+.nullInput {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.nullInput input {
+  margin: 0;
+}
+.result {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.7;
+}
+.pair {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+@container (min-width: 1000px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.side {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+.outcome {
+  line-height: 1.6;
+}
+.outcome[data-error="true"] {
+  color: var(--color-danger);
+}
+.trace summary,
+.scope summary {
+  cursor: pointer;
+}
+.trace ol {
+  padding-left: 22px;
+  margin: 8px 0 0;
+}
+.trace li {
+  margin-bottom: 6px;
+  overflow-wrap: anywhere;
+}
+.scope p {
+  margin-top: 8px;
+}

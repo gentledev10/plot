@@ -12,12 +12,16 @@ export function VectorDiagram({
   label,
   onOpen,
   changedPaths,
+  trace,
+  direction,
 }: {
   graph: Architecture;
   flow?: boolean;
   label: string;
   onOpen?(location: CodeLocation): void;
   changedPaths: ReadonlySet<string>;
+  trace?: { nodes: ReadonlySet<string>; edges: ReadonlySet<number> };
+  direction?: 'DOWN' | 'RIGHT';
 }) {
   const t = useT();
   const [layout, setLayout] = useState<VectorLayout>();
@@ -28,7 +32,7 @@ export function VectorDiagram({
     setLayout(undefined);
     setFailed(false);
     setActive(undefined);
-    layoutVectorGraph(graph, flow)
+    layoutVectorGraph(graph, flow, direction)
       .then((result) => {
         if (current) setLayout(result);
       })
@@ -38,7 +42,7 @@ export function VectorDiagram({
     return () => {
       current = false;
     };
-  }, [graph, flow]);
+  }, [graph, flow, direction]);
   if (failed) return <p>{t('This diagram could not be drawn.')}</p>;
   if (!layout) return <p role="status">{t('Drawing diagram…')}</p>;
   const selected = active === undefined ? undefined : graph.nodes[active]?.id;
@@ -58,6 +62,7 @@ export function VectorDiagram({
       height={layout.height}
       label={label}
       kind={flow ? 'flow' : 'architecture'}
+      minimumScale={trace ? 0.8 : 0}
     >
       {(id) => (
         <>
@@ -82,6 +87,7 @@ export function VectorDiagram({
                 key={edge.index}
                 className={styles.edge}
                 data-active={highlighted}
+                data-traced={trace ? trace.edges.has(edge.index) : undefined}
                 data-dimmed={selected !== undefined && !highlighted}
                 data-inferred={source?.evidence === 'inferred'}
               >
@@ -145,6 +151,7 @@ export function VectorDiagram({
                 data-palette={node.palette}
                 data-status={source?.status}
                 data-active={active === node.index}
+                data-traced={trace ? trace.nodes.has(source?.id ?? '') : undefined}
                 data-dimmed={selected !== undefined && !connected.has(source?.id ?? '')}
                 data-inferred={source?.evidence === 'inferred'}
                 role={open ? 'button' : undefined}

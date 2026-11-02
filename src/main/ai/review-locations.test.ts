@@ -1,4 +1,5 @@
 import type { ReviewMap } from '@shared/review';
+import { shippingSimulation } from '@shared/simulation.fixture';
 import { describe, expect, it } from 'vitest';
 import { verifyLocations } from './review-locations';
 
@@ -23,6 +24,11 @@ const review: ReviewMap = {
 const lines = (path: string) => (path === 'src/a.ts' ? 5 : undefined);
 
 describe('verifyLocations', () => {
+  it('checks current simulation nodes and removes old-code navigation', () => {
+    const result = verifyLocations({ ...review, simulations: [shippingSimulation()] }, () => 2);
+    expect(result.simulations?.[0]?.before.nodes[0]).not.toHaveProperty('location');
+    expect(result.simulations?.[0]?.after.nodes[0]?.location?.verified).toBe(false);
+  });
   it('verifies only the current side of a visual comparison', () => {
     const graph = {
       nodes: [

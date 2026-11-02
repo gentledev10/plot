@@ -35,6 +35,7 @@ import { usePullRequestDiff } from '../diff/queries';
 import { useCommand, useShortcutLabel, withShortcut } from '../keymap/KeymapProvider';
 import { useLanguage, useT } from '../language/LanguageProvider';
 import { architectureOverview } from './architecture-overview';
+import { BehaviorSimulation } from './BehaviorSimulation';
 import { MermaidDiagram } from './MermaidDiagram';
 import {
   architectureToMermaid,
@@ -421,6 +422,18 @@ function ReviewMapView({ review, changedPaths, onOpenLocation, onExpandMap }: Re
                     </>
                   )}
                 </dl>
+                {review.simulations
+                  ?.filter((simulation) => simulation.changeTitle === change.title)
+                  .map((simulation) => (
+                    <BehaviorSimulation
+                      key={simulation.id}
+                      simulation={simulation}
+                      changedPaths={changedPaths}
+                      onOpenLocation={onOpenLocation}
+                      link={link}
+                      onExpand={onExpandMap}
+                    />
+                  ))}
               </li>
             ))}
           </ProgressiveList>

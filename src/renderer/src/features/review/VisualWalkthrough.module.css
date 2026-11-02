@@ -173,9 +173,14 @@
   outline: none;
 }
 .node[data-active="true"] .nodeBody,
+.node[data-traced="true"] .nodeBody,
 .node:focus-visible .nodeBody {
   stroke: var(--drawing-accent);
   stroke-width: 2.5;
+}
+.node[data-traced="true"] .nodeBody {
+  fill: color-mix(in srgb, var(--drawing-blue) 12%, var(--drawing-surface));
+  stroke: var(--drawing-blue);
 }
 .node[data-dimmed="true"] {
   opacity: 0.38;
@@ -229,11 +234,13 @@
 .edge[data-dimmed="true"] {
   opacity: 0.18;
 }
-.edge[data-active="true"] .wire {
+.edge[data-active="true"] .wire,
+.edge[data-traced="true"] .wire {
   stroke: var(--drawing-blue);
   stroke-width: 2.5;
 }
-.edge[data-active="true"] .edgeText {
+.edge[data-active="true"] .edgeText,
+.edge[data-traced="true"] .edgeText {
   fill: var(--drawing-ink);
 }
 .lane {

@@ -28,11 +28,34 @@ describe('behavior explanation models', () => {
     inputs.set('authorized', false);
     expect(evaluateScenario(simulation.after, inputs).outcome?.value).toBe(403);
   });
+  it('exposes a removed validation guard instead of silently copying the old behavior', () => {
+    const changed = shippingSimulation();
+    changed.after.nodes = changed.after.nodes.filter((node) => node.id !== 'positive');
+    const numberCheck = changed.after.nodes.find((node) => node.id === 'numeric');
+    if (numberCheck?.kind === 'condition') numberCheck.yes = 'threshold';
+    const inputs = scenarioDefaults(changed);
+    inputs.set('amount', -1);
+    expect(evaluateScenario(changed.before, inputs).outcome).toMatchObject({
+      kind: 'error',
+      value: 400,
+    });
+    expect(evaluateScenario(changed.after, inputs).outcome).toMatchObject({
+      kind: 'return',
+      value: 3000,
+    });
+  });
   it('reports gaps in model branch exploration without calling it code coverage', () => {
     expect(scenarioCoverage(simulation, 'after')).toEqual({ covered: 10, total: 10 });
     expect(
       scenarioCoverage({ ...simulation, cases: simulation.cases.slice(0, 1) }, 'after'),
     ).toEqual({ covered: 5, total: 10 });
+  });
+  it('leaves wrong-type numeric comparisons unresolved rather than inventing an outcome', () => {
+    const program = { ...simulation.after, entry: 'threshold' };
+    const inputs = scenarioDefaults(simulation);
+    inputs.set('amount', '40000');
+    expect(evaluateScenario(program, inputs).outcome).toBeUndefined();
+    expect(evaluateScenario(program, inputs).incomplete).toBe(true);
   });
   it('stops for missing inputs, disconnected references and cycles', () => {
     expect(evaluateScenario(simulation.after, new Map()).incomplete).toBe(true);

@@ -9,12 +9,14 @@ export function DiagramCanvas({
   label,
   kind,
   children,
+  minimumScale = 0,
 }: {
   width: number;
   height: number;
   label: string;
   kind: 'architecture' | 'flow' | 'sequence';
   children(id: string): ReactNode;
+  minimumScale?: number;
 }) {
   const t = useT();
   const tone = useAppearance().theme.kind;
@@ -28,7 +30,7 @@ export function DiagramCanvas({
     observer.observe(canvas.current);
     return () => observer.disconnect();
   }, []);
-  const scale = readable ? 1 : Math.min(1, available / width, 780 / height);
+  const scale = readable ? 1 : Math.max(minimumScale, Math.min(1, available / width, 780 / height));
   return (
     <>
       <fieldset className={styles.controls} aria-label={t('Diagram size')}>

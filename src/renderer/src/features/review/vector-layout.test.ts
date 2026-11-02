@@ -21,6 +21,16 @@ const graph: Architecture = {
 };
 
 describe('vector layout', () => {
+  it('lays a selected scenario path vertically without shrinking a long horizontal chain', async () => {
+    const chain = { ...graph, groups: [], nodes: graph.nodes.map(({ group: _, ...node }) => node) };
+    const result = await layoutVectorGraph(chain, true, 'DOWN');
+    expect(result.height).toBeGreaterThan(result.width);
+    for (let i = 1; i < result.nodes.length; i++) {
+      const previous = result.nodes[i - 1];
+      const current = result.nodes[i];
+      expect(current?.y).toBeGreaterThan((previous?.y ?? 0) + (previous?.height ?? 0));
+    }
+  });
   it('keeps subsystem boundaries and routes every relationship to real components', async () => {
     const result = await layoutVectorGraph(graph);
     expect(result.nodes).toHaveLength(4);

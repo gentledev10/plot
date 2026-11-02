@@ -17,6 +17,7 @@ A Mac app for understanding pull requests and local code changes. Read side-by-s
 
 - **Read the change in context.** Browse GitHub pull requests or paste a PR URL. Navigate side-by-side or unified diffs with a file tree, collapsed unchanged lines and configurable shortcuts.
 - **Understand the story.** Optional AI overviews explain the purpose, key changes and review questions, with before-and-after diagrams and links back to the code. Use your own Claude Code or Codex CLI account.
+- **Explore behavior.** For suitable conditional logic, expand **Try inputs and error cases** inside a key change. Change inputs or select boundary, invalid-input and failure scenarios to compare paths and predicted results before and after. These are bounded AI explanation models; they do not execute repository code, confirm bugs or measure test coverage. Broader calculations, loops and concurrency are outside this first version.
 - **Check your work as it happens.** Open a local repository to inspect branch changes, including uncommitted files. The diff refreshes as you or an AI agent edits files.
 
 ## Get started

@@ -10,6 +10,7 @@ export const SCENARIO_OPERATORS = [
   'lte',
   'is-number',
   'is-empty',
+  'truthy',
   'contains',
 ] as const;
 export type ScenarioOperator = (typeof SCENARIO_OPERATORS)[number];
@@ -100,12 +101,17 @@ export function evaluateScenario(
     const input = inputs.get(node.input) ?? null;
     const branch = compare(input, node.operator, node.value);
     trace.push({ id, branch, input });
+    if (branch === undefined) break;
     id = branch ? node.yes : node.no;
   }
   return { nodes: trace, incomplete: true };
 }
 
-function compare(left: ScenarioValue, operator: ScenarioOperator, right: ScenarioValue): boolean {
+function compare(
+  left: ScenarioValue,
+  operator: ScenarioOperator,
+  right: ScenarioValue,
+): boolean | undefined {
   switch (operator) {
     case 'eq':
       return left === right;
@@ -115,16 +121,20 @@ function compare(left: ScenarioValue, operator: ScenarioOperator, right: Scenari
       return typeof left === 'number' && Number.isFinite(left);
     case 'is-empty':
       return left === null || left === '';
+    case 'truthy':
+      return Boolean(left);
     case 'contains':
-      return typeof left === 'string' && typeof right === 'string' && left.includes(right);
+      return typeof left === 'string' && typeof right === 'string'
+        ? left.includes(right)
+        : undefined;
     case 'gt':
-      return typeof left === 'number' && typeof right === 'number' && left > right;
+      return typeof left === 'number' && typeof right === 'number' ? left > right : undefined;
     case 'gte':
-      return typeof left === 'number' && typeof right === 'number' && left >= right;
+      return typeof left === 'number' && typeof right === 'number' ? left >= right : undefined;
     case 'lt':
-      return typeof left === 'number' && typeof right === 'number' && left < right;
+      return typeof left === 'number' && typeof right === 'number' ? left < right : undefined;
     case 'lte':
-      return typeof left === 'number' && typeof right === 'number' && left <= right;
+      return typeof left === 'number' && typeof right === 'number' ? left <= right : undefined;
   }
 }
 

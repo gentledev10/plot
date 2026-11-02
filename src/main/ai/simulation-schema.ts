@@ -10,7 +10,9 @@ import {
 } from '@shared/simulation';
 
 const text = { type: 'string' } as const;
-const scalar = { type: ['string', 'number', 'boolean', 'null'] } as const;
+const scalar = {
+  anyOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }, { type: 'null' }],
+} as const;
 const object = <T extends Record<string, unknown>>(properties: T) => ({
   type: 'object',
   properties,
@@ -203,6 +205,7 @@ export function parseSimulations(raw: unknown, changes: ReadonlySet<string>): Re
       if (
         !record(scenario) ||
         !identifier(scenario.id) ||
+        ['default', 'custom'].includes(scenario.id) ||
         !label(scenario.label) ||
         !SCENARIO_CATEGORIES.includes(scenario.category as never) ||
         typeof scenario.question !== 'string' ||

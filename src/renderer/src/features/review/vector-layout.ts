@@ -76,7 +76,11 @@ export interface VectorLayout {
   }[];
 }
 
-export async function layoutVectorGraph(graph: Architecture, flow = false): Promise<VectorLayout> {
+export async function layoutVectorGraph(
+  graph: Architecture,
+  flow = false,
+  direction?: 'DOWN' | 'RIGHT',
+): Promise<VectorLayout> {
   const { default: ELK } = await import('elkjs/lib/elk.bundled.js');
   const ids = new Map(graph.nodes.map((node, index) => [node.id, `n${index}`]));
   const roles = graph.nodes.map((_, index) => nodeRole(graph, index, flow));
@@ -105,7 +109,7 @@ export async function layoutVectorGraph(graph: Architecture, flow = false): Prom
     id: 'root',
     layoutOptions: {
       'elk.algorithm': 'layered',
-      'elk.direction': flow ? 'RIGHT' : 'DOWN',
+      'elk.direction': direction ?? (flow ? 'RIGHT' : 'DOWN'),
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
       'elk.edgeRouting': 'ORTHOGONAL',
       'elk.spacing.nodeNode': '24',
