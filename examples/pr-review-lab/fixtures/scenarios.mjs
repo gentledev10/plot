@@ -28,3 +28,16 @@ export function services(responses) {
     recorder: createEventRecorder(),
   };
 }
+
+export const paymentScenarios = Object.freeze({
+  temporaryFailure: [
+    { ok: false, status: 503 },
+    { ok: true, status: 200 },
+  ],
+  rateLimited: [
+    { ok: false, status: 429 },
+    { ok: true, status: 200 },
+  ],
+  declined: [{ ok: false, status: 402 }],
+  timedOut: [{ throwCode: 'ETIMEDOUT' }],
+});
