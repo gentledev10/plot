@@ -1,3 +1,4 @@
+import { type FlowRole, flowRole } from '@shared/flowchart';
 import type { Architecture } from '@shared/review';
 import type { ElkNode } from 'elkjs/lib/elk-api';
 import {
@@ -8,6 +9,7 @@ import {
   nodeRole,
   roundedConnection,
 } from './diagram-design';
+import { attachToFlowSymbol, flowDimensions } from './flowchart-geometry';
 
 export function labelLines(label: string, capacity = 10.5): string[] {
   const lines: string[] = [];
@@ -50,6 +52,7 @@ export interface VectorLayout {
     height: number;
     lines: string[];
     role: DiagramRole;
+    flowRole?: FlowRole;
     palette: DiagramPalette;
   }[];
   groups: {
@@ -80,21 +83,18 @@ export async function layoutVectorGraph(
   graph: Architecture,
   flow = false,
   direction?: 'DOWN' | 'RIGHT',
-  nodeRoles?: ReadonlyMap<string, DiagramRole>,
 ): Promise<VectorLayout> {
   const { default: ELK } = await import('elkjs/lib/elk.bundled.js');
   const ids = new Map(graph.nodes.map((node, index) => [node.id, `n${index}`]));
-  const roles = graph.nodes.map(
-    (node, index) => nodeRoles?.get(node.id) ?? nodeRole(graph, index, flow),
-  );
-  const lines = (label: string) => labelLines(label, flow ? 13 : 10.5);
+  const roles = graph.nodes.map((_, index) => nodeRole(graph, index, flow));
+  const flowRoles = graph.nodes.map((_, index) => flowRole(graph, index));
+  const lines = (label: string, index: number) =>
+    labelLines(label, flow && flowRoles[index] === 'decision' ? 10.5 : flow ? 13 : 10.5);
   const children: ElkNode[] = graph.nodes.map((node, index) => ({
     id: `n${index}`,
-    width: 244,
-    height: Math.max(
-      roles[index] === 'decision' ? (flow ? 84 : 100) : flow ? 64 : 80,
-      lines(node.label).length * 19 + 32,
-    ),
+    ...(flow
+      ? flowDimensions(flowRoles[index] ?? 'process', lines(node.label, index))
+      : { width: 244, height: Math.max(80, lines(node.label, index).length * 19 + 32) }),
   }));
   const grouped = new Set<string>();
   const areas = (graph.groups ?? []).flatMap((group, index) => {
@@ -113,7 +113,7 @@ export async function layoutVectorGraph(
     id: 'root',
     layoutOptions: {
       'elk.algorithm': 'layered',
-      'elk.direction': direction ?? (flow ? 'RIGHT' : 'DOWN'),
+      'elk.direction': direction ?? 'DOWN',
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
       'elk.edgeRouting': 'ORTHOGONAL',
       'elk.spacing.nodeNode': '24',
@@ -173,8 +173,9 @@ export async function layoutVectorGraph(
         y: top,
         width: node.width ?? 164,
         height: node.height ?? 56,
-        lines: lines(graph.nodes[index]?.label ?? ''),
+        lines: lines(graph.nodes[index]?.label ?? '', index),
         role,
+        ...(flow ? { flowRole: flowRoles[index] } : {}),
         palette: flow
           ? diagramPalette(role)
           : group
@@ -204,16 +205,35 @@ export async function layoutVectorGraph(
     nodes,
     groups,
     edges: (result.edges ?? []).map((edge) => {
+      const edgeIndex = Number(edge.id.slice(1));
+      const relation = graph.edges[edgeIndex];
+      const source = nodes.find((node) => graph.nodes[node.index]?.id === relation?.from);
+      const target = nodes.find((node) => graph.nodes[node.index]?.id === relation?.to);
       const container = (edge as typeof edge & { container?: string }).container ?? 'root';
       const offset = origins.get(container) ?? { x: 0, y: 0 };
       return {
-        index: Number(edge.id.slice(1)),
+        index: edgeIndex,
         path: (edge.sections ?? [])
-          .map((section) => {
-            const points = [section.startPoint, ...(section.bendPoints ?? []), section.endPoint];
-            return roundedConnection(
-              points.map((point) => ({ x: point.x + offset.x, y: point.y + offset.y })),
-            );
+          .map((section, sectionIndex, sections) => {
+            const points = [
+              section.startPoint,
+              ...(section.bendPoints ?? []),
+              section.endPoint,
+            ].map((point) => ({ x: point.x + offset.x, y: point.y + offset.y }));
+            const first = points[0];
+            const next = points[1];
+            const last = points.at(-1);
+            const previous = points.at(-2);
+            if (sectionIndex === 0 && source?.flowRole && first && next)
+              points[0] = attachToFlowSymbol(source.flowRole, source, first, next);
+            if (sectionIndex === sections.length - 1 && target?.flowRole && last && previous)
+              points[points.length - 1] = attachToFlowSymbol(
+                target.flowRole,
+                target,
+                last,
+                previous,
+              );
+            return roundedConnection(points);
           })
           .join(' '),
         labels: (edge.labels ?? []).map((label) => ({

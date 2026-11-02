@@ -1,6 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { parseReviewMap, REVIEW_SCHEMA } from './review-schema';
 
+it('preserves explicit flowchart roles while keeping legacy and unknown roles safe', () => {
+  const review = parseReviewMap(
+    output({
+      architecture: {
+        nodes: [
+          { id: 'condition', label: 'Check', status: 'unchanged', flowRole: 'decision' },
+          { id: 'legacy', label: 'Old node', status: 'unchanged' },
+          { id: 'unknown', label: 'Unknown', status: 'unchanged', flowRole: 'run-script' },
+        ],
+        edges: [],
+      },
+    }),
+  );
+  expect(review.architecture.nodes[0]?.flowRole).toBe('decision');
+  expect(review.architecture.nodes[1]).not.toHaveProperty('flowRole');
+  expect(review.architecture.nodes[2]).not.toHaveProperty('flowRole');
+});
+
 function output(overrides: Record<string, unknown> = {}) {
   return {
     summary: 'Adds a dark theme toggle.',

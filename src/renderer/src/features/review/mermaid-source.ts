@@ -1,3 +1,4 @@
+import { flowRole } from '@shared/flowchart';
 import type { ChangeStatus, Flow, FlowStep, ReviewMap } from '@shared/review';
 import type { ColorScheme } from '../../lib/color-scheme';
 
@@ -87,13 +88,23 @@ export function architectureToMermaid(
   architecture: ReviewMap['architecture'],
   scheme: ColorScheme,
   direction: 'LR' | 'TD' = 'LR',
+  flow = false,
 ): ArchitectureDiagram {
   const nodeIds = architecture.nodes.map((node) => node.id);
   const idOf = (id: string) => `n${nodeIds.indexOf(id)}`;
-  const nodes = architecture.nodes.map(
-    (node, index) =>
-      `  n${index}["${safeLabel(node.label)}"]${node.status === 'unchanged' ? '' : `:::${node.status}`}`,
-  );
+  const nodes = architecture.nodes.map((node, index) => {
+    const role = flow ? flowRole(architecture, index) : 'process';
+    const label = `"${safeLabel(node.label)}"`;
+    const shape =
+      role === 'decision'
+        ? `{${label}}`
+        : role === 'start' || role === 'end'
+          ? `([${label}])`
+          : role === 'input' || role === 'output'
+            ? `[/${label}/]`
+            : `[${label}]`;
+    return `  n${index}${shape}${node.status === 'unchanged' ? '' : `:::${node.status}`}`;
+  });
   const groups = (architecture.groups ?? []).filter((group) =>
     architecture.nodes.some((node) => node.group === group.id),
   );

@@ -39,6 +39,7 @@ import { useCommand, useShortcutLabel, withShortcut } from '../keymap/KeymapProv
 import { useLanguage, useT } from '../language/LanguageProvider';
 import { architectureOverview } from './architecture-overview';
 import { BehaviorSimulation } from './BehaviorSimulation';
+import { FlowchartLegend } from './FlowchartLegend';
 import { MermaidDiagram } from './MermaidDiagram';
 import {
   architectureToMermaid,
@@ -886,6 +887,7 @@ function ArchitectureView({
         displayed,
         scheme,
         showingAreas || diagramKind === 'flowchart' ? 'TD' : 'LR',
+        !showingAreas && diagramKind === 'flowchart',
       ).source;
     const names = new Map(architecture.nodes.map((node) => [node.id, node.label]));
     return sequenceToMermaid(
@@ -899,6 +901,7 @@ function ArchitectureView({
   return (
     <>
       {architecture.summary && <p className={styles.mapSummary}>{architecture.summary}</p>}
+      {diagramKind === 'flowchart' && <FlowchartLegend />}
       {areas && (
         <fieldset className={styles.mapViews} aria-label={t('Map detail')}>
           <button type="button" aria-pressed={!detail} onClick={() => setDetail(false)}>

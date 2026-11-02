@@ -7,6 +7,40 @@ import {
   sequenceToMermaid,
 } from './mermaid-source';
 
+it('exports the same conventional symbols for a custom flowchart, leaving component boxes unchanged', async () => {
+  const graph = {
+    nodes: [
+      { id: 'start', label: 'Start', status: 'unchanged' as const, flowRole: 'start' as const },
+      { id: 'read', label: 'Read input', status: 'unchanged' as const, flowRole: 'input' as const },
+      { id: 'check', label: 'Valid?', status: 'unchanged' as const, flowRole: 'decision' as const },
+      {
+        id: 'work',
+        label: 'Calculate',
+        status: 'unchanged' as const,
+        flowRole: 'process' as const,
+      },
+      {
+        id: 'write',
+        label: 'Write output',
+        status: 'unchanged' as const,
+        flowRole: 'output' as const,
+      },
+      { id: 'end', label: 'End', status: 'unchanged' as const, flowRole: 'end' as const },
+    ],
+    edges: [],
+  };
+  const source = architectureToMermaid(graph, 'light', 'TD', true).source;
+  const { default: mermaid } = await import('mermaid');
+  await expect(mermaid.parse(source)).resolves.toMatchObject({ diagramType: 'flowchart-v2' });
+  expect(source).toContain('n0(["Start"])');
+  expect(source).toContain('n1[/"Read input"/]');
+  expect(source).toContain('n2{"Valid?"}');
+  expect(source).toContain('n3["Calculate"]');
+  expect(source).toContain('n4[/"Write output"/]');
+  expect(source).toContain('n5(["End"])');
+  expect(architectureToMermaid(graph, 'light').source).toContain('n2["Valid?"]');
+});
+
 describe('safeLabel', () => {
   it('keeps readable text, including non-Latin scripts', () => {
     expect(safeLabel('UserService.save(user)')).toBe('UserService.save(user)');

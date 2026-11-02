@@ -1,6 +1,6 @@
 export const REVIEW_PLAN_PREFERENCE = 'review-plan';
 export const MAX_CUSTOM_STEPS = 6;
-const ANALYSIS_VERSION = 9;
+const ANALYSIS_VERSION = 10;
 export const BUILTIN_STEPS = [
   {
     id: 'summary',

@@ -22,8 +22,15 @@ const graph: Architecture = {
 
 describe('vector layout', () => {
   it('preserves scenario conditions when only one selected branch is shown vertically', async () => {
-    const chain = { ...graph, groups: [], nodes: graph.nodes.map(({ group: _, ...node }) => node) };
-    const result = await layoutVectorGraph(chain, true, 'DOWN', new Map([['entry', 'decision']]));
+    const chain: Architecture = {
+      ...graph,
+      groups: [],
+      nodes: graph.nodes.map(({ group: _, ...node }) => ({
+        ...node,
+        ...(node.id === 'entry' ? { flowRole: 'decision' as const } : {}),
+      })),
+    };
+    const result = await layoutVectorGraph(chain, true, 'DOWN');
     expect(result.nodes.find((node) => chain.nodes[node.index]?.id === 'entry')?.role).toBe(
       'decision',
     );

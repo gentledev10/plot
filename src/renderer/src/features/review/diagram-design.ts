@@ -1,3 +1,4 @@
+import { flowRole } from '@shared/flowchart';
 import type { Architecture } from '@shared/review';
 
 export type DiagramRole =
@@ -37,17 +38,7 @@ export function diagramRole(label: string): DiagramRole {
 export function nodeRole(graph: Architecture, index: number, flow: boolean): DiagramRole {
   const node = graph.nodes[index];
   if (!node) return 'component';
-  const outgoing = graph.edges.filter((edge) => edge.from === node.id);
-  if (
-    flow &&
-    outgoing.length > 1 &&
-    outgoing.some((edge) =>
-      /^(yes|no|true|false|hit|miss|예|아니오|있음|없음|성공|실패)(?=$|[\s:：,.;(])/i.test(
-        edge.label ?? '',
-      ),
-    )
-  )
-    return 'decision';
+  if (flow && flowRole(graph, index) === 'decision') return 'decision';
   return diagramRole(node.label);
 }
 

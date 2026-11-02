@@ -12,7 +12,6 @@ import {
 import { type ReactNode, useEffect, useId, useMemo, useState } from 'react';
 import { useT } from '../language/LanguageProvider';
 import styles from './BehaviorSimulation.module.css';
-import type { DiagramRole } from './diagram-design';
 import { type ExecutionContext, ReviewExecution } from './ReviewExecution';
 import { VectorDiagram } from './VectorDiagram';
 
@@ -225,36 +224,44 @@ function ScenarioSide({
   link(location: CodeLocation | undefined): ReactNode;
 }) {
   const t = useT();
-  const nodeRoles = useMemo(
-    () =>
-      new Map<string, DiagramRole>(
-        program.nodes.map((node) => [
-          node.id,
-          node.kind === 'condition' ? 'decision' : 'component',
-        ]),
-      ),
-    [program],
-  );
+  const startId = useMemo(() => {
+    let id = '_plot_start';
+    while (program.nodes.some((node) => node.id === id)) id += '_';
+    return id;
+  }, [program]);
   const fullGraph = useMemo<Architecture>(
     () => ({
-      nodes: program.nodes.map((node) => ({
-        id: node.id,
-        label: scenarioNodeLabel(node),
-        status: 'unchanged',
-        ...(side === 'after' && node.location ? { location: node.location } : {}),
-      })),
-      edges: program.nodes.flatMap((node) =>
-        node.kind === 'condition'
-          ? [
-              { from: node.id, to: node.yes, label: t('Yes') },
-              { from: node.id, to: node.no, label: t('No') },
-            ]
-          : [],
-      ),
+      nodes: [
+        { id: startId, label: t('Start'), flowRole: 'start', status: 'unchanged' },
+        ...program.nodes.map((node) => ({
+          id: node.id,
+          label:
+            node.kind === 'condition'
+              ? scenarioNodeLabel(node)
+              : t('End: {result}', { result: scenarioNodeLabel(node) }),
+          status: 'unchanged' as const,
+          flowRole: node.kind === 'condition' ? ('decision' as const) : ('end' as const),
+          ...(side === 'after' && node.location ? { location: node.location } : {}),
+        })),
+      ],
+      edges: [
+        ...program.nodes.flatMap((node) =>
+          node.kind === 'condition'
+            ? [
+                { from: node.id, to: node.yes, label: t('Yes') },
+                { from: node.id, to: node.no, label: t('No') },
+              ]
+            : [],
+        ),
+        { from: startId, to: program.entry },
+      ],
     }),
-    [program, side, t],
+    [program, side, t, startId],
   );
-  const visited = new Map(trace.nodes.map((node) => [node.id, node]));
+  const visited = new Map([
+    ...trace.nodes.map((node) => [node.id, node] as const),
+    [startId, { id: startId }] as const,
+  ]);
   const edges = new Set<number>();
   let index = 0;
   for (const node of program.nodes) {
@@ -263,6 +270,7 @@ function ScenarioSide({
     if (branch !== undefined) edges.add(index + (branch ? 0 : 1));
     index += 2;
   }
+  edges.add(index);
   const signature = trace.nodes.map((node) => `${node.id}:${node.branch}`).join(',');
   // Reuse layout while values change within the same path.
   // biome-ignore lint/correctness/useExhaustiveDependencies: signature represents the visited ids and branch choices, avoiding layout on every keystroke
@@ -285,7 +293,6 @@ function ScenarioSide({
       <p className={styles.legend}>{t('Highlighted: path for the current inputs')}</p>
       <VectorDiagram
         graph={graph}
-        nodeRoles={nodeRoles}
         flow
         direction="DOWN"
         label={t(side === 'before' ? 'Before model' : 'After model')}
@@ -326,7 +333,10 @@ function ScenarioSide({
 }
 
 function scenarioNodeLabel(node: ScenarioProgram['nodes'][number]): string {
-  if (node.kind !== 'condition') return `${node.label}: ${displayValue(node.value)}`;
+  if (node.kind !== 'condition')
+    return includesValue(node.label, node.value)
+      ? node.label
+      : `${node.label}: ${displayValue(node.value)}`;
   const symbols: Record<string, string> = {
     eq: '===',
     neq: '!==',
@@ -350,6 +360,18 @@ function displayValue(value: ScenarioValue): string {
 
 function outcomeLabel(trace: ScenarioTrace, t: ReturnType<typeof useT>): string {
   return trace.outcome
-    ? `${trace.outcome.label} (${displayValue(trace.outcome.value)})`
+    ? includesValue(trace.outcome.label, trace.outcome.value)
+      ? trace.outcome.label
+      : `${trace.outcome.label} (${displayValue(trace.outcome.value)})`
     : t('Model could not determine a result');
+}
+
+function includesValue(label: string, value: ScenarioValue): boolean {
+  const compact = label.replace(/[\s,]/g, '');
+  const literal = displayValue(value).replace(/[\s,]/g, '');
+  return (
+    compact === literal ||
+    [':', '='].some((separator) => compact.endsWith(`${separator}${literal}`)) ||
+    compact.endsWith(`(${literal})`)
+  );
 }

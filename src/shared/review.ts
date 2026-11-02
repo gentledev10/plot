@@ -1,5 +1,6 @@
 import type { AiProviderId } from './ai';
 import type { ErrorPayload } from './errors';
+import type { FlowRole } from './flowchart';
 import type { Language } from './language';
 import type { ReviewUnit } from './review-unit';
 import type { ReviewSimulation } from './simulation';
@@ -33,6 +34,7 @@ export interface Flow {
 export type ChangeStatus = 'added' | 'changed' | 'removed' | 'unchanged';
 
 export interface ArchitectureNode {
+  flowRole?: FlowRole;
   id: string;
   label: string;
   status: ChangeStatus;

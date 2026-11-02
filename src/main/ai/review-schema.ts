@@ -1,3 +1,4 @@
+import { FLOW_ROLES, type FlowRole } from '@shared/flowchart';
 import type {
   Architecture,
   ArchitectureEdge,
@@ -58,12 +59,13 @@ const architectureSchema = {
         properties: {
           id: text,
           label: text,
+          flowRole: { anyOf: [{ type: 'string', enum: FLOW_ROLES }, { type: 'null' }] },
           status: { type: 'string', enum: ['added', 'changed', 'removed', 'unchanged'] },
           group: { type: ['string', 'null'] },
           evidence: { type: 'string', enum: ['code', 'docs', 'inferred'] },
           location: optionalLocation,
         },
-        required: ['id', 'label', 'status', 'group', 'evidence', 'location'],
+        required: ['id', 'label', 'flowRole', 'status', 'group', 'evidence', 'location'],
         additionalProperties: false,
       },
     },
@@ -437,6 +439,9 @@ function toNode(item: Json): ArchitectureNode | undefined {
     {
       id: clip(item.id, LIMITS.label),
       label: clip(item.label, LIMITS.label),
+      ...(FLOW_ROLES.includes(item.flowRole as FlowRole)
+        ? { flowRole: item.flowRole as FlowRole }
+        : {}),
       status: item.status as ChangeStatus,
       ...(nonEmpty(item.group) ? { group: clip(item.group, LIMITS.label) } : {}),
       ...(['code', 'docs', 'inferred'].includes(String(item.evidence))

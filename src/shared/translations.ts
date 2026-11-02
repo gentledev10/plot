@@ -1,6 +1,14 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  'Flowchart symbols': '순서도 기호',
+  'Start / end': '시작·종료',
+  Process: '처리',
+  Decision: '조건 판단',
+  'Input / output': '입력·출력',
+  Start: '시작',
+  'End: {result}': '종료: {result}',
+
   'Top-level test comparison': '최상위 테스트 비교',
   'New failure': '새로 발생한 실패',
   'Not captured': '결과 없음',

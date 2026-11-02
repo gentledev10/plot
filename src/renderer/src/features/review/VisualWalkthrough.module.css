@@ -289,3 +289,30 @@
   margin: 6px 0;
   overflow-wrap: anywhere;
 }
+.symbols {
+  margin: 8px 0 12px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+.symbols summary {
+  cursor: pointer;
+}
+.symbols ul {
+  display: flex;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 8px 0;
+  margin: 0;
+}
+.symbols li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.symbols svg {
+  flex: none;
+  fill: var(--color-bg-panel);
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
