@@ -5,6 +5,7 @@ import { AppearanceProvider } from '../features/appearance/AppearanceProvider';
 import { KeymapProvider } from '../features/keymap/KeymapProvider';
 import { LanguageProvider } from '../features/language/LanguageProvider';
 import { ReviewPlanProvider } from '../features/review/ReviewPlanProvider';
+import { ReviewReadingProvider } from '../features/review/ReviewReadingProvider';
 import { isRetryable } from '../lib/api';
 
 type SubscribeToMenu = (listener: MenuCommandListener) => () => void;
@@ -82,7 +83,9 @@ export function AppProviders({
           <AppearanceProvider onThemeSource={(source) => void api.setThemeSource(source)}>
             <LanguageProvider api={api}>
               <ReviewPlanProvider api={api}>
-                <KeymapProvider platform={platform}>{children}</KeymapProvider>
+                <KeymapProvider platform={platform}>
+                  <ReviewReadingProvider>{children}</ReviewReadingProvider>
+                </KeymapProvider>
               </ReviewPlanProvider>
             </LanguageProvider>
           </AppearanceProvider>

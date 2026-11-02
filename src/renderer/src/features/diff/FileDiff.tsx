@@ -1,4 +1,5 @@
 import type { BlobContent, ChangedFile } from '@shared/diff';
+import type { ReviewRange } from '@shared/review-unit';
 import { lazy, type Ref, Suspense } from 'react';
 import { StatusMessage } from '../../components/StatusMessage';
 import { formatBytes } from '../../lib/format';
@@ -21,6 +22,7 @@ interface FileDiffProps {
   onChangesComputed?(total: number): void;
   onReveal?(position: ChangePosition): void;
   viewerRef?: Ref<DiffViewerHandle>;
+  focusRanges?: { original: ReviewRange[]; modified: ReviewRange[] };
 }
 export function FileDiff({
   target,
@@ -31,6 +33,7 @@ export function FileDiff({
   onChangesComputed,
   onReveal,
   viewerRef,
+  focusRanges,
 }: FileDiffProps) {
   const t = useT();
   const isSubmodule = file.kind === 'submodule';
@@ -98,6 +101,7 @@ export function FileDiff({
         revealLine={revealLine}
         onChangesComputed={onChangesComputed}
         onReveal={onReveal}
+        focusRanges={focusRanges}
       />
     </Suspense>
   );

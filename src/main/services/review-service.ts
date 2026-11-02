@@ -21,6 +21,7 @@ import { verifyLocations } from '../ai/review-locations';
 import { buildReviewPrompt, CONTEXT_FILES } from '../ai/review-prompt';
 import { parseReviewMap, REVIEW_SCHEMA } from '../ai/review-schema';
 import type { ReviewStore } from '../ai/review-store';
+import { linkReviewUnits } from '../ai/review-unit-schema';
 import { AppError, toErrorPayload } from '../errors';
 import type { RepositoryCache } from '../git/repository-cache';
 import type { GitHubConnections } from '../github/connections';
@@ -156,7 +157,10 @@ export function createReviewService({
         signal: controller.signal,
         onActivity: note,
       });
-      const parsed = parseReviewMap(result.output);
+      const parsed = linkReviewUnits(
+        parseReviewMap(result.output),
+        new Set(files.map((file) => file.path)),
+      );
       const customIds = new Set(
         reviewPlan.steps.filter((step) => step.kind === 'custom').map((step) => step.id),
       );
@@ -179,6 +183,7 @@ export function createReviewService({
           ...parsed,
           summary: kinds.has('summary') ? parsed.summary : '',
           changes: kinds.has('changes') ? parsed.changes : [],
+          ...(parsed.units ? { units: kinds.has('changes') ? parsed.units : [] } : {}),
           flows: kinds.has('flows') ? parsed.flows : [],
           architecture: kinds.has('architecture')
             ? ensureArchitectureGroups(parsed.architecture, language)

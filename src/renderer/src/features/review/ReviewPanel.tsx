@@ -1,5 +1,6 @@
 import { AI_PROVIDERS, type AiProviderId } from '@shared/ai';
 import type { PullRequestRef } from '@shared/github';
+import { pullRequestKey } from '@shared/pull-request-ref';
 import type {
   Architecture,
   CodeLocation,
@@ -14,6 +15,7 @@ import {
   reviewContentKey,
   stepTitle,
 } from '@shared/review-plan';
+import type { ReviewUnit } from '@shared/review-unit';
 import {
   ChevronDown,
   ChevronRight,
@@ -46,6 +48,7 @@ import {
 import { useReviewActions, useReviewStatus } from './queries';
 import styles from './ReviewPanel.module.css';
 import { useReviewPlan } from './ReviewPlanProvider';
+import { useReviewReading } from './ReviewReadingProvider';
 import { VisualWalkthrough } from './VisualWalkthrough';
 
 interface ReviewPanelProps {
@@ -147,6 +150,7 @@ function PullRequestReview({
   const t = useT();
   const { language } = useLanguage();
   const { plan } = useReviewPlan();
+  const reading = useReviewReading();
   const status = useReviewStatus(target);
   const ai = useAiSettings();
   const { start, cancel } = useReviewActions(target);
@@ -258,12 +262,37 @@ function PullRequestReview({
                 </button>
               </div>
             )}
-            <ReviewMapView
-              review={current.review}
-              changedPaths={changedPaths}
-              onOpenLocation={onOpenLocation}
-              onExpandMap={!maximizing.maximized ? maximizing.onToggleMaximize : undefined}
-            />
+            {reading.focus?.target === pullRequestKey(target) &&
+            reading.focus.head === current.head &&
+            reading.focus.mode === 'unit' &&
+            plan.steps.some((step) => step.kind === 'changes' && step.visible) &&
+            current.review.units?.some((unit) => unit.id === reading.focus?.unitId) ? (
+              <UnitReview
+                unit={
+                  current.review.units.find(
+                    (unit) => unit.id === reading.focus?.unitId,
+                  ) as ReviewUnit
+                }
+                review={current.review}
+                changedPaths={changedPaths}
+                onOpenLocation={onOpenLocation}
+                onExpandMap={!maximizing.maximized ? maximizing.onToggleMaximize : undefined}
+                onShowAll={() =>
+                  reading.select({
+                    target: pullRequestKey(target),
+                    head: current.head,
+                    mode: 'all',
+                  })
+                }
+              />
+            ) : (
+              <ReviewMapView
+                review={current.review}
+                changedPaths={changedPaths}
+                onOpenLocation={onOpenLocation}
+                onExpandMap={!maximizing.maximized ? maximizing.onToggleMaximize : undefined}
+              />
+            )}
             <p className={styles.footnote}>
               {t('Generated')}
               {current.provider &&
@@ -367,13 +396,144 @@ function useElapsed(startedAt: string): string {
   const seconds = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1_000));
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
+function UnitReview({
+  unit,
+  review,
+  changedPaths,
+  onOpenLocation,
+  onExpandMap,
+  onShowAll,
+}: {
+  unit: ReviewUnit;
+  review: ReviewMap;
+  changedPaths: ReadonlySet<string>;
+  onOpenLocation(location: CodeLocation): void;
+  onExpandMap?(): void;
+  onShowAll(): void;
+}) {
+  const t = useT();
+  const { plan } = useReviewPlan();
+  const simulations = review.simulations?.filter(
+    (simulation) =>
+      unit.simulationIds.includes(simulation.id) ||
+      unit.changeTitles.includes(simulation.changeTitle),
+  );
+  const changes = new Set([
+    ...unit.changeTitles,
+    ...(simulations?.map((simulation) => simulation.changeTitle) ?? []),
+  ]);
+  const scoped: ReviewMap = {
+    ...review,
+    summary: '',
+    changes: review.changes.filter((change) => changes.has(change.title)),
+    visuals: review.visuals?.filter((visual) => unit.visualTitles.includes(visual.title)),
+    simulations,
+    architecture: { nodes: [], edges: [] },
+    flows: [],
+    impacts: [],
+    readingOrder: [],
+    reviewPoints: review.reviewPoints?.filter((point) =>
+      unit.reviewPointTitles.includes(point.title),
+    ),
+  };
+  const tests = unit.files.filter((file) => file.role === 'test');
+  return (
+    <>
+      <section className={styles.unitIntro} aria-label={unit.title}>
+        <button type="button" className={styles.link} onClick={onShowAll}>
+          {t('Show the whole PR review')}
+        </button>
+        {review.summary && plan.steps.some((step) => step.kind === 'summary' && step.visible) && (
+          <p className={styles.muted}>{review.summary}</p>
+        )}
+        <h3>{unit.title}</h3>
+        <p>{unit.summary}</p>
+        {unit.rationale && (
+          <p>
+            <strong>{t('Why this change')}: </strong>
+            {unit.rationale}{' '}
+            <span className={styles.evidence}>
+              {t(
+                unit.rationaleEvidence === 'code'
+                  ? 'Code reference'
+                  : unit.rationaleEvidence === 'description'
+                    ? 'PR description'
+                    : 'Inference — check this',
+              )}
+            </span>
+          </p>
+        )}
+        <h4>{t('Related implementation and tests')}</h4>
+        <ul className={styles.list}>
+          {unit.files.map((file) => (
+            <li key={file.path}>
+              <span className={styles.evidence}>
+                {t(
+                  file.role === 'test'
+                    ? 'Test'
+                    : file.role === 'implementation'
+                      ? 'Implementation'
+                      : file.role === 'configuration'
+                        ? 'Configuration'
+                        : file.role === 'documentation'
+                          ? 'Documentation'
+                          : 'File',
+                )}
+              </span>
+              <LocationLink
+                location={{ path: file.path, line: file.ranges[0]?.startLine ?? 1 }}
+                changedPaths={changedPaths}
+                onOpen={onOpenLocation}
+              />
+              <span className={styles.reason}>{file.reason}</span>
+            </li>
+          ))}
+        </ul>
+        <p className={styles.muted}>
+          {t(
+            tests.length
+              ? 'These test files are reading links, not test results.'
+              : 'No changed tests are linked to this unit. Existing tests may still cover it.',
+          )}
+        </p>
+      </section>
+      <ReviewMapView
+        review={scoped}
+        changedPaths={changedPaths}
+        onOpenLocation={onOpenLocation}
+        onExpandMap={onExpandMap}
+        includeKinds={new Set(['changes', 'architecture', 'reviewPoints'])}
+      />
+      {plan.steps.some((step) => step.kind === 'custom' && step.visible) && (
+        <details className={styles.unitIntro}>
+          <summary>{t('Custom steps for the whole PR')}</summary>
+          <ReviewMapView
+            review={review}
+            changedPaths={changedPaths}
+            onOpenLocation={onOpenLocation}
+            onExpandMap={onExpandMap}
+            includeKinds={new Set(['custom'])}
+          />
+        </details>
+      )}
+    </>
+  );
+}
+
 interface ReviewMapViewProps {
   review: ReviewMap;
   changedPaths: ReadonlySet<string>;
   onOpenLocation(location: CodeLocation): void;
   onExpandMap?(): void;
+  includeKinds?: ReadonlySet<ReviewStep['kind']>;
 }
-function ReviewMapView({ review, changedPaths, onOpenLocation, onExpandMap }: ReviewMapViewProps) {
+function ReviewMapView({
+  review,
+  changedPaths,
+  onOpenLocation,
+  onExpandMap,
+  includeKinds,
+}: ReviewMapViewProps) {
   const t = useT();
   const { plan } = useReviewPlan();
   const link = (location: CodeLocation | undefined) =>
@@ -550,7 +710,7 @@ function ReviewMapView({ review, changedPaths, onOpenLocation, onExpandMap }: Re
     }
   };
   const cards = plan.steps
-    .filter((step) => step.visible)
+    .filter((step) => step.visible && (!includeKinds || includeKinds.has(step.kind)))
     .map((step) => ({ step, body: content(step) }))
     .filter(({ body }) => body !== null);
   return (

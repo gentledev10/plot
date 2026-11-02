@@ -437,3 +437,15 @@
   margin: 0 0 6px;
   color: var(--color-text-muted);
 }
+.unitIntro {
+  padding: 12px;
+  user-select: text;
+  overflow-wrap: anywhere;
+}
+.unitIntro p {
+  line-height: 1.6;
+}
+.unitIntro h4 {
+  font-size: var(--font-size);
+  margin: 14px 0 6px;
+}

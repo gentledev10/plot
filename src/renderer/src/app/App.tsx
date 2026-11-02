@@ -20,6 +20,7 @@ import { useLocalRepositories, useLocalRepositoryActions } from '../features/loc
 import { PullRequestWorkspace } from '../features/pull-request/PullRequestWorkspace';
 import { RepositoryPullsPanel } from '../features/repositories/RepositoryPullsPanel';
 import { ReviewPanel } from '../features/review/ReviewPanel';
+import { useReviewReading } from '../features/review/ReviewReadingProvider';
 import { SettingsDialog, type SettingsSection } from '../features/settings/SettingsDialog';
 import { usePreference } from '../lib/preferences';
 import styles from './App.module.css';
@@ -44,6 +45,7 @@ import { ResizeHandle } from './ResizeHandle';
 import { ToolWindowBar, ToolWindowButton } from './ToolWindowBar';
 export function App() {
   const t = useT();
+  const reading = useReviewReading();
   const currentAccount = useCurrentAccount();
   const platform = usePlatform();
   const [open, setOpen] = useState<DiffTarget>();
@@ -84,6 +86,7 @@ export function App() {
   const localChangesShortcut = useShortcutLabel('view.toggleLocalChanges');
   const reviewShortcut = useShortcutLabel('view.toggleReview');
   function show(target: DiffTarget) {
+    reading.reset();
     setContextReview(false);
     setOpen(target);
     setLastOpened(target);
@@ -121,6 +124,7 @@ export function App() {
     return repository?.name ?? 'Local repository';
   }
   function backToList() {
+    reading.reset();
     setContextReview(false);
     setMaximized(false);
     setOpen(undefined);
@@ -128,6 +132,12 @@ export function App() {
     setReveal(undefined);
   }
   function openLocation(location: CodeLocation) {
+    if (
+      reading.focus &&
+      reading.focus.mode !== 'all' &&
+      !reading.focus.paths?.includes(location.path)
+    )
+      reading.select({ ...reading.focus, mode: 'all', unitId: undefined });
     setMaximized(false);
     setSelectedPath(location.path);
     setReveal({
@@ -135,6 +145,11 @@ export function App() {
       line: location.line,
       key: Date.now(),
     });
+  }
+  function selectFile(path: string) {
+    if (reading.focus && !reading.focus.paths?.includes(path))
+      reading.select({ ...reading.focus, mode: 'all', unitId: undefined });
+    setSelectedPath(path);
   }
   function toggle(panel: PanelId) {
     setMaximized(false);
@@ -305,7 +320,7 @@ export function App() {
               title={titleOf(open)}
               backLabel={browsing ? formatRepositoryRef(browsing) : 'Pull requests'}
               selectedPath={selectedPath}
-              onSelectFile={setSelectedPath}
+              onSelectFile={selectFile}
               onBack={backToList}
             />
           ) : browsing ? (
@@ -336,7 +351,7 @@ export function App() {
                 <LocalPullRequestLink repositoryId={open.repositoryId} onOpen={openPullRequest} />
               }
               selectedPath={selectedPath}
-              onSelectFile={setSelectedPath}
+              onSelectFile={selectFile}
               onBack={backToList}
             />
           ) : (

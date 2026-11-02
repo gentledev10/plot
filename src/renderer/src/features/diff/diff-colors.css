@@ -14,3 +14,7 @@
   background: var(--diff-modified-word);
   border-radius: 2px;
 }
+.review-unit-line-marker {
+  border-left: 3px solid var(--color-accent);
+  margin-left: 3px;
+}

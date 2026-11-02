@@ -1,3 +1,4 @@
+import type { ReviewRange } from '@shared/review-unit';
 import { type Ref, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { useAppearance } from '../appearance/AppearanceProvider';
 import { codeFontStack, editorTheme, editorThemeName } from '../appearance/appearance';
@@ -27,7 +28,8 @@ export interface DiffViewerHandle {
 
 export interface LineRequest {
   line: number;
-  key: number;
+  key: number | string;
+  side?: 'original' | 'modified';
 }
 
 export interface DiffSettings {
@@ -46,6 +48,7 @@ interface DiffViewerProps {
   onChangesComputed?(total: number): void;
   onReveal?(position: ChangePosition): void;
   ref?: Ref<DiffViewerHandle>;
+  focusRanges?: { original: ReviewRange[]; modified: ReviewRange[] };
 }
 
 const EDITOR_OPTIONS: monaco.editor.IStandaloneDiffEditorConstructionOptions = {
@@ -87,6 +90,7 @@ export function DiffViewer({
   onChangesComputed,
   onReveal,
   ref,
+  focusRanges,
 }: DiffViewerProps) {
   const container = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null);
@@ -122,6 +126,8 @@ export function DiffViewer({
     decorationsRef.current = {
       original: editor.getOriginalEditor().createDecorationsCollection(),
       modified: editor.getModifiedEditor().createDecorationsCollection(),
+      focusOriginal: editor.getOriginalEditor().createDecorationsCollection(),
+      focusModified: editor.getModifiedEditor().createDecorationsCollection(),
     };
 
     const diffUpdates = editor.onDidUpdateDiff(() => {
@@ -178,11 +184,35 @@ export function DiffViewer({
       return;
     }
     pendingJump.current = undefined;
-    const modified = editor.getModifiedEditor();
+    const modified =
+      revealLine.side === 'original' ? editor.getOriginalEditor() : editor.getModifiedEditor();
     modified.setPosition({ lineNumber: revealLine.line, column: 1 });
     modified.revealLineInCenter(revealLine.line);
     caretTouched.current = true;
   }, [revealLine]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: decorations must be reapplied after replacing models, even when their ranges are unchanged
+  useEffect(() => {
+    const editor = editorRef.current;
+    const collections = decorationsRef.current;
+    if (!editor || !collections) return;
+    for (const side of ['original', 'modified'] as const) {
+      const model =
+        side === 'original'
+          ? editor.getOriginalEditor().getModel()
+          : editor.getModifiedEditor().getModel();
+      const count = model?.getLineCount() ?? 0;
+      const decorations = (focusRanges?.[side] ?? [])
+        .filter((range) => range.startLine <= count)
+        .map((range) => ({
+          range: new monaco.Range(range.startLine, 1, Math.min(range.endLine, count), 1),
+          options: { isWholeLine: true, linesDecorationsClassName: 'review-unit-line-marker' },
+        }));
+      (side === 'original' ? collections.focusOriginal : collections.focusModified).set(
+        decorations,
+      );
+    }
+  }, [focusRanges, path, original, modified]);
 
   useEffect(() => {
     editorRef.current?.updateOptions({
@@ -256,6 +286,8 @@ export function DiffViewer({
 interface DecorationCollections {
   original: monaco.editor.IEditorDecorationsCollection;
   modified: monaco.editor.IEditorDecorationsCollection;
+  focusOriginal: monaco.editor.IEditorDecorationsCollection;
+  focusModified: monaco.editor.IEditorDecorationsCollection;
 }
 
 function reveal(editor: monaco.editor.IStandaloneDiffEditor, changes: LineChange[], index: number) {

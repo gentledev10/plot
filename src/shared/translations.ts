@@ -1,6 +1,26 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  'Read by change': '변경 목적별로 읽기',
+  'All files and review steps': '전체 파일과 리뷰 단계',
+  'Other files ({count})': '묶음 밖의 파일 ({count})',
+  'Previous change': '이전 변경',
+  'Next change': '다음 변경',
+  'Reading units link {linked} of {total} changed files. This does not measure AI inspection.':
+    '읽기 단위에 변경 파일 {total}개 중 {linked}개가 연결되어 있습니다. AI의 실제 검토 범위를 뜻하지는 않습니다.',
+  'Files in this change': '이 변경의 파일',
+  Test: '테스트',
+  Implementation: '구현',
+  Configuration: '설정',
+  Documentation: '문서',
+  'Show the whole PR review': '전체 PR 리뷰 보기',
+  'Why this change': '변경 이유',
+  'Related implementation and tests': '관련 구현과 테스트',
+  'These test files are reading links, not test results.':
+    '테스트 코드를 읽는 링크입니다. 테스트 실행 결과는 아닙니다.',
+  'No changed tests are linked to this unit. Existing tests may still cover it.':
+    '이 단위에 연결된 변경 테스트는 없습니다. 기존 테스트가 검증하고 있을 수 있습니다.',
+  'Custom steps for the whole PR': '전체 PR에 대한 사용자 단계',
   Yes: '예',
   No: '아니요',
   'Not modeled': '모델로 판단할 수 없음',

@@ -1,3 +1,4 @@
+import type { ReviewUnitFile } from '@shared/review-unit';
 import { type ReactNode, useMemo, useRef, useState } from 'react';
 import { StatusMessage } from '../../components/StatusMessage';
 import { usePreference } from '../../lib/preferences';
@@ -26,6 +27,8 @@ interface DiffWorkspaceProps extends WorkspaceSelection {
   target: DiffTarget;
   header: ReactNode;
   onRefresh(): void;
+  focusFiles?: ReviewUnitFile[];
+  scopeKey?: string;
 }
 const DEFAULT_SETTINGS: DiffSettings = {
   collapseUnchanged: true,
@@ -46,14 +49,29 @@ export function DiffWorkspace({
   selectedPath,
   reveal,
   onSelectPath,
+  focusFiles,
+  scopeKey,
 }: DiffWorkspaceProps) {
   const t = useT();
   const diff = useTargetDiff(target);
-  const files = useMemo(
-    () => (diff.data ? filesInTreeOrder(buildFileTree(diff.data.files)) : []),
-    [diff.data],
-  );
+  const files = useMemo(() => {
+    const all = diff.data ? filesInTreeOrder(buildFileTree(diff.data.files)) : [];
+    return focusFiles
+      ? focusFiles.flatMap((entry) => all.filter((file) => file.path === entry.path))
+      : all;
+  }, [diff.data, focusFiles]);
   const current = files.find((file) => file.path === selectedPath) ?? files[0];
+  const focused = focusFiles?.find((file) => file.path === current?.path);
+  const focusReveal = useMemo(() => {
+    const range = focused?.ranges[0] ?? focused?.beforeRanges[0];
+    return range
+      ? {
+          line: range.startLine,
+          side: focused?.ranges.length ? ('modified' as const) : ('original' as const),
+          key: `${scopeKey}:${current?.path}`,
+        }
+      : undefined;
+  }, [focused, scopeKey, current?.path]);
   const [settings, setSettings] = usePreference('diff.settings', DEFAULT_SETTINGS);
   const [jump, setJump] = useState<{
     path: string;
@@ -204,6 +222,34 @@ export function DiffWorkspace({
     const revealHere = reveal?.path === current.path ? reveal : undefined;
     return (
       <>
+        {focusFiles && (
+          <nav className={styles.relatedFiles} aria-label={t('Files in this change')}>
+            {focusFiles.map((file) => (
+              <button
+                type="button"
+                key={file.path}
+                aria-pressed={file.path === current.path}
+                onClick={() => onSelectPath(file.path)}
+                title={file.reason}
+              >
+                <span>
+                  {t(
+                    file.role === 'test'
+                      ? 'Test'
+                      : file.role === 'implementation'
+                        ? 'Implementation'
+                        : file.role === 'configuration'
+                          ? 'Configuration'
+                          : file.role === 'documentation'
+                            ? 'Documentation'
+                            : 'File',
+                  )}
+                </span>{' '}
+                {file.path}
+              </button>
+            ))}
+          </nav>
+        )}
         <DiffToolbar
           file={current}
           position={state.position}
@@ -225,7 +271,10 @@ export function DiffWorkspace({
                   line: revealHere.line,
                   key: revealHere.key,
                 }
-              : undefined
+              : focusReveal
+          }
+          focusRanges={
+            focused ? { original: focused.beforeRanges, modified: focused.ranges } : undefined
           }
           onChangesComputed={(total) =>
             mergeFileState(current.path, {

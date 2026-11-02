@@ -16,6 +16,7 @@ import type {
 } from '@shared/review';
 import { isCustomStepId } from '@shared/review-plan';
 import { AppError } from '../errors';
+import { linkReviewUnits, parseReviewUnits, REVIEW_UNITS_SCHEMA } from './review-unit-schema';
 import { parseSimulations, SIMULATIONS_SCHEMA } from './simulation-schema';
 
 const text = { type: 'string' } as const;
@@ -102,6 +103,7 @@ export const REVIEW_SCHEMA = {
   type: 'object',
   properties: {
     summary: text,
+    units: REVIEW_UNITS_SCHEMA,
     simulations: SIMULATIONS_SCHEMA,
     changes: {
       type: 'array',
@@ -221,6 +223,7 @@ export const REVIEW_SCHEMA = {
     'customSections',
     'reviewPoints',
     'simulations',
+    'units',
   ],
   additionalProperties: false,
 } as const;
@@ -246,8 +249,9 @@ export function parseReviewMap(value: unknown): ReviewMap {
     throw new AppError('ai-invalid-output', 'The AI overview did not have the expected shape.');
   }
   const changes = list(value.changes, LIMITS.changes, toKeyChange);
-  return {
+  return linkReviewUnits({
     summary: clip(value.summary, LIMITS.text),
+    ...(Array.isArray(value.units) ? { units: parseReviewUnits(value.units) } : {}),
     changes,
     ...(Array.isArray(value.simulations)
       ? {
@@ -281,7 +285,7 @@ export function parseReviewMap(value: unknown): ReviewMap {
           ),
         }
       : {}),
-  };
+  });
 }
 
 function toVisual(item: Json): ReviewVisual | undefined {

@@ -52,6 +52,7 @@ describe('REVIEW_SCHEMA', () => {
       'customSections',
       'reviewPoints',
       'simulations',
+      'units',
     ]);
   });
 

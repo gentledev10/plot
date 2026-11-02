@@ -1,6 +1,7 @@
 import type { AiProviderId } from './ai';
 import type { ErrorPayload } from './errors';
 import type { Language } from './language';
+import type { ReviewUnit } from './review-unit';
 import type { ReviewSimulation } from './simulation';
 
 export interface CodeLocation {
@@ -96,6 +97,7 @@ export interface CustomReviewSection {
 }
 
 export interface ReviewMap {
+  units?: ReviewUnit[];
   summary: string;
   changes: KeyChange[];
   flows: Flow[];

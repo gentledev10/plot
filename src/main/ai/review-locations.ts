@@ -14,6 +14,17 @@ export function verifyLocations(review: ReviewMap, lineCount: LineCounter): Revi
   return {
     ...review,
     changes: review.changes.map(check),
+    ...(review.units
+      ? {
+          units: review.units.map((unit) => ({
+            ...unit,
+            files: unit.files.map((file) => ({
+              ...file,
+              ranges: file.ranges.filter((range) => range.endLine <= (lineCount(file.path) ?? 0)),
+            })),
+          })),
+        }
+      : {}),
     ...(review.simulations
       ? {
           simulations: review.simulations.map((simulation) => ({
