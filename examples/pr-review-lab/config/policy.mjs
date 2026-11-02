@@ -1,6 +1,6 @@
 export const policy = Object.freeze({
-  shipping: { standardFree: 50_000, memberFree: 30_000, fee: 3_000 },
-  pricing: { memberPercent: 5, couponPercent: 0, maxPercent: 5 },
-  inventory: { maxPerOrder: 5 },
-  payment: { maxAttempts: 1 },
+  shipping: { standardFree: 30_000, memberFree: 20_000, fee: 3_000 },
+  pricing: { memberPercent: 10, couponPercent: 5, maxPercent: 15 },
+  inventory: { maxPerOrder: 20 },
+  payment: { maxAttempts: 3 },
 });
