@@ -13,7 +13,7 @@
     "setup:electron": "install-electron",
     "postinstall": "npm run setup:electron",
     "predev": "npm run setup:electron",
-    "dev": "electron-vite dev",
+    "dev": "node scripts/dev.mjs",
     "icons": "swift build/generate-icon.swift",
     "build": "electron-vite build",
     "prepreview": "npm run setup:electron",
@@ -25,6 +25,7 @@
     "test:watch": "vitest",
     "dist:mac": "electron-vite build && electron-builder --mac",
     "test:e2e": "npm run build && node e2e/smoke.mjs",
+    "test:dev-runtime": "node e2e/dev-runtime.mjs",
     "capture:docs": "npm run build && node e2e/capture-demo.mjs",
     "release:prepare": "node scripts/prepare-release.mjs"
   },

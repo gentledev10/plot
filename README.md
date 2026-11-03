@@ -37,6 +37,8 @@ A GitHub account is needed for pull requests. Local changes work without signing
 
 Dependency installation also downloads the Electron runtime. `npm run dev` and `npm run preview` check it again before starting, reusing an existing installation. The first download requires network access. If it fails, see [Electron setup troubleshooting](docs/TROUBLESHOOTING.md#electron-uninstall-when-running-from-source).
 
+On macOS, `npm run dev` automatically prepares a locally signed development runtime named **Plot**, so the menu bar and Dock show Plot rather than Electron. This runtime is cached in the Git-ignored `.dev-runtime/` directory; it is not a packaged snapshot of the application. Every launch builds the current source, renderer edits refresh the window, and main/preload edits are watched. Updating Electron or the runtime preparation script or icon prepares a new runtime. No Apple signing account is needed; macOS may ask for Keychain access again when the development app identity changes.
+
 ### Read your first change
 
 1. **Open local work:** choose **Open a local folder…** on the start screen, or **Local changes → Choose a folder…**, and pick a Git repository.

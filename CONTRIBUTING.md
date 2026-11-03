@@ -15,6 +15,10 @@ npm run dev
 
 `npm ci` installs the Electron runtime through the project's `postinstall` hook. `npm run dev` and `npm run preview` also run the same idempotent check before starting, including when dependencies were installed with `--ignore-scripts`. Use `npm run setup:electron` to install or repair the runtime explicitly. The first download needs network access; see [troubleshooting](docs/TROUBLESHOOTING.md#electron-uninstall-when-running-from-source) if it fails.
 
+`npm run dev` prepares a macOS development runtime with the existing `electron-builder` dependency and the locally installed Electron distribution; it does not download a second Electron. It sets the Plot name/icon and a development-only bundle ID, restores Electron's source-app loader, and signs the result ad hoc without an Apple account. The internal executable remains named `Electron` so Electron still reports `app.isPackaged === false`. Plot's sources are not copied into the cached runtime, and release packaging is unchanged.
+
+The cache key includes Electron/builder versions, architecture, the preparation script, and the `.icns` icon. Current source is built on each launch; renderer edits refresh and main/preload edits rebuild via `electron-vite --watch`. The existing `Plot` user-data location is retained, with no account/settings migration. macOS may request Keychain access again for the new development identity. To repair a damaged cache, quit development instances and remove `.dev-runtime/` before running `npm run dev` again.
+
 The app starts without an account. Browser sign-in uses Plot's GitHub OAuth app. Only release builds carry the app's client secret, so a development build asks you to paste a one-time code on github.com instead of returning to the app by itself. A personal access token or the GitHub CLI work too.
 
 To try the full browser sign-in, or to use your own OAuth app in a fork, [register one](https://github.com/settings/applications/new) with the redirect URI `http://127.0.0.1/callback`, enable Device Flow, and put its values in `.env.local`:
@@ -38,6 +42,8 @@ npm run build
 ```
 
 `npm run format` fixes formatting and import order. On macOS, `npm run test:e2e` checks the built Electron app with isolated fixtures and does not use live accounts or paid AI calls.
+
+`npm run test:dev-runtime` checks the real `npm run dev` path on macOS: native app name, development mode, source path, profile preferences, renderer updates, main-process restart, cache reuse, signatures, and preservation of the original Electron bundle. Run it in a dedicated working tree: it temporarily edits and restores the main/renderer entry files. It uses an isolated profile and mock Keychain, not your real accounts; actual Keychain permission prompts are not covered. Reports go to `dist/dev-runtime-report.json` and `dist/dev-runtime-check.log`.
 
 To run the same smoke checks against a packaged app, set `PLOT_E2E_EXECUTABLE` to its `Contents/MacOS/Plot` executable and run `node e2e/smoke.mjs`. The test supplies an isolated login-shell path so installed CLI tools cannot replace its fixtures.
 
