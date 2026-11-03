@@ -35,6 +35,8 @@ npm run dev
 
 A GitHub account is needed for pull requests. Local changes work without signing in. AI tools are optional.
 
+Dependency installation also downloads the Electron runtime. `npm run dev` and `npm run preview` check it again before starting, reusing an existing installation. The first download requires network access. If it fails, see [Electron setup troubleshooting](docs/TROUBLESHOOTING.md#electron-uninstall-when-running-from-source).
+
 ### Read your first change
 
 1. **Open local work:** choose **Open a local folder…** on the start screen, or **Local changes → Choose a folder…**, and pick a Git repository.

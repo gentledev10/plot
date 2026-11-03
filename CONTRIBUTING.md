@@ -9,9 +9,11 @@ You need macOS and Node.js 22.12 or later.
 ```sh
 git clone https://github.com/gentledev10/plot.git
 cd plot
-npm install
+npm ci
 npm run dev
 ```
+
+`npm ci` installs the Electron runtime through the project's `postinstall` hook. `npm run dev` and `npm run preview` also run the same idempotent check before starting, including when dependencies were installed with `--ignore-scripts`. Use `npm run setup:electron` to install or repair the runtime explicitly. The first download needs network access; see [troubleshooting](docs/TROUBLESHOOTING.md#electron-uninstall-when-running-from-source) if it fails.
 
 The app starts without an account. Browser sign-in uses Plot's GitHub OAuth app. Only release builds carry the app's client secret, so a development build asks you to paste a one-time code on github.com instead of returning to the app by itself. A personal access token or the GitHub CLI work too.
 

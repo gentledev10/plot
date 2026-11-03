@@ -2,6 +2,30 @@
 
 [Back to the README](../README.md) · [User guide](GUIDE.md)
 
+## `Electron uninstall` when running from source
+
+This error from `electron-vite` means it cannot find Electron's runtime path file. It does not mean you need to uninstall Plot. Electron 42 and later no longer download the runtime during dependency installation; they normally download it on first use. The version of `electron-vite` used here looks for the path file directly instead of triggering that download.
+
+Plot explicitly runs the local Electron installer's `install-electron` command after `npm ci` / `npm install` and before `npm run dev` / `npm run preview`. An existing runtime is reused. If you installed dependencies with `--ignore-scripts`, the normal development or preview command still performs the setup unless you also disable its pre-hooks.
+
+To repair an existing checkout, run:
+
+```sh
+npm run setup:electron
+npm run dev
+```
+
+On an older checkout without `setup:electron`, use the installer already supplied by the Electron dependency (the `--no` flag prevents npm from installing an unrelated package):
+
+```sh
+npx --no install-electron
+npm run dev
+```
+
+If setup fails, read the download or extraction error above the npm error summary. Check network access to Electron's GitHub release downloads, corporate proxy settings, free disk space and permissions. Do not disable TLS verification. See Electron's [installation guide](https://www.electronjs.org/docs/latest/tutorial/installation) for supported download and proxy configuration. Setup failures stop startup rather than hiding the cause behind `Electron uninstall`.
+
+Use macOS 13+ and Node.js 22.12+. Do not copy `node_modules` from another machine or CPU architecture; install dependencies on the target Mac with `npm ci`. Windows and Linux are not supported by Plot.
+
 ## I only want to read local changes
 
 Choose **Open a local folder…** on the start screen, or **Local changes → Choose a folder…**. No GitHub sign-in or AI tool is required. The folder must be a Git repository. Install Git (or the Xcode Command Line Tools) if it is not available.

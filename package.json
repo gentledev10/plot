@@ -10,9 +10,13 @@
     "node": ">=22.12.0"
   },
   "scripts": {
+    "setup:electron": "install-electron",
+    "postinstall": "npm run setup:electron",
+    "predev": "npm run setup:electron",
     "dev": "electron-vite dev",
     "icons": "swift build/generate-icon.swift",
     "build": "electron-vite build",
+    "prepreview": "npm run setup:electron",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit --composite false -p tsconfig.node.json && tsc --noEmit --composite false -p tsconfig.web.json",
     "lint": "biome check --error-on-warnings .",
