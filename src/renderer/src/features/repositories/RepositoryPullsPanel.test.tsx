@@ -84,7 +84,7 @@ describe('RepositoryPullsPanel', () => {
 
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'State' }), 'Merged');
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Whose pull requests' }),
+      screen.getByRole('combobox', { name: 'Pull request scope' }),
       'Created by me',
     );
     const merged = await screen.findByRole('button', { name: /^#5/ });

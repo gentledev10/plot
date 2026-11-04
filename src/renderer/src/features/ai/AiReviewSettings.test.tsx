@@ -31,6 +31,16 @@ function setup(overrides: Parameters<typeof renderWithApi>[1] = {}) {
 }
 
 describe('AiReviewSettings', () => {
+  it('describes reasoning effort without promising a separate charge for every request', async () => {
+    setup();
+    expect(
+      await screen.findByText(/Higher reasoning effort may take longer and increase usage\./),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/Higher effort thinks longer and costs more/),
+    ).not.toBeInTheDocument();
+  });
+
   it('reloads cached models and tool status after the user updates their CLI', async () => {
     const listAiModels = vi
       .fn()

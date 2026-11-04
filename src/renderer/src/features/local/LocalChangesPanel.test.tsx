@@ -16,7 +16,11 @@ describe('LocalChangesPanel', () => {
       openLocalRepository,
     });
 
-    expect(await screen.findByText(/including work you have not committed/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'Open a Git repository folder to see its changes, including uncommitted work.',
+      ),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Choose a folder…' }));
 
     await vi.waitFor(() => expect(onOpen).toHaveBeenCalledWith(repository));

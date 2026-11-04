@@ -43,14 +43,22 @@ export const korean: Record<string, string> = {
 
   'Actual code execution': '실제 코드 실행',
   'Compare actual function results': '실제 함수 결과 비교',
-  'Run related Node tests': '관련 Node 테스트 실행',
+  'Compare tests with Node.js': 'Node.js 내장 테스트로 전·후 비교',
+  'Only tests that run directly with Node.js are supported. Vitest, Jest, package scripts and tests requiring installed dependencies are not supported in this isolated environment.':
+    'Node.js로 직접 실행할 수 있는 테스트만 지원합니다. 이 격리 환경에서는 Vitest·Jest, 패키지 스크립트, 의존성 설치가 필요한 테스트를 지원하지 않습니다.',
+  'The function could not be loaded or its result could not be displayed. Inspect the error below.':
+    '함수를 불러오지 못했거나 결과를 표시하지 못했습니다. 아래 오류를 확인하세요.',
+  'A required module or package could not be loaded. Dependencies are not installed in this isolated environment. This result alone does not establish a code defect.':
+    '필요한 모듈이나 패키지를 불러오지 못했습니다. 이 격리 환경에서는 의존성을 설치하지 않습니다. 이 결과만으로 코드에 문제가 있다고 판단할 수는 없습니다.',
+  'The process exited unsuccessfully. Inspect the output below to distinguish a test failure from a setup or sandbox restriction.':
+    '실행이 정상적으로 끝나지 않았습니다. 테스트 자체의 실패인지, 실행 설정이나 격리 환경의 제약 때문인지 아래 출력을 확인하세요.',
   'Runs only when you click, on isolated merge-base and PR-head snapshots. Network, private files and child processes are blocked. No dependencies are installed or package scripts run.':
     '직접 실행을 누르면 격리된 변경 전·후 코드에서 실행합니다. 네트워크·개인 파일·자식 프로세스 접근은 차단하며, 의존성을 설치하거나 패키지 스크립트를 실행하지 않습니다.',
   'Checking execution support…': '실행 환경 확인 중…',
   'This model has no executable function binding. Generate the review again or use the explanation model.':
     '이 모델에는 실제 함수 연결 정보가 없습니다. 리뷰를 다시 생성하거나 설명용 모델을 이용해 주세요.',
   'Run actual code with these values': '이 값으로 실제 코드 실행',
-  'Run the same head tests on both versions': '동일한 현재 테스트로 전·후 실행',
+  'Run PR tests against both versions': 'PR의 테스트로 변경 전·후 코드 실행',
   'Running isolated code': '격리된 코드 실행 중',
   'Cancel execution': '실행 취소',
   'Inputs changed. The results below belong to the previous values; run again to compare the current values.':
@@ -62,7 +70,7 @@ export const korean: Record<string, string> = {
   'Execution covers only the selected function inputs or test files. It does not prove the whole PR is correct. Results are kept for this app session.':
     '선택한 함수 입력값 또는 테스트 파일만 실행한 결과입니다. PR 전체의 정확성을 보장하지 않으며, 결과는 이번 앱 실행 동안 보관합니다.',
   Completed: '실행 완료',
-  'Failed or missing setup': '실패 또는 실행 환경 부족',
+  'Execution failed': '실행 실패',
   'Execution timed out': '실행 시간 초과',
   'Exit code': '종료 코드',
   'Function returned': '함수 반환값',
@@ -77,12 +85,12 @@ export const korean: Record<string, string> = {
   'A compatible Node.js runtime could not start in the execution sandbox. Install a current Node.js version.':
     '격리 환경에서 호환되는 Node.js를 실행할 수 없습니다. 최신 Node.js를 설치해 주세요.',
 
-  'Questions and independent checks': '질문과 독립 검토',
+  'Questions and AI code review': '질문과 AI 코드 검토',
   'Whole PR': '전체 PR',
   Scope: '범위',
   Revision: '버전',
-  'Each question or independent check starts a new request with your selected AI tool.':
-    '질문과 독립 검토는 선택한 AI 도구로 새 요청을 보냅니다.',
+  'Questions and code reviews send new requests to your selected AI tool. A code review may use two separate sessions with the same tool, not different AI models.':
+    '질문과 코드 검토는 선택한 AI 도구에 새 요청을 보냅니다. 코드 검토는 서로 다른 모델이 아니라 같은 도구의 별도 세션 두 개를 사용할 수 있습니다.',
   'Ask about this change': '이 변경에 질문하기',
   'Your question': '질문',
   'For example: what happens if this request times out?':
@@ -93,18 +101,18 @@ export const korean: Record<string, string> = {
   'Ask about selected code': '선택한 코드에 질문',
   'Select up to 120 lines on either side of the diff.':
     '변경 전이나 후 코드에서 최대 120줄을 선택하세요.',
-  'Independent AI check': '독립 AI 검토',
-  'One session proposes concrete issues; another session checks them against the code. AI support is not runtime confirmation.':
-    '별도 실행에서 문제 후보를 찾고 다른 실행에서 코드를 대조합니다. AI의 지지는 실제 실행으로 확인한 결과와 다릅니다.',
-  'Run independent check': '독립 검토 시작',
-  'Run independent check again': '독립 검토 다시 실행',
+  'AI code review': 'AI 코드 검토',
+  'A fresh AI session looks for possible bugs. If it finds any, a second session reviews the code evidence. No code or tests are executed, so these findings are not confirmed bugs.':
+    '새 AI 세션에서 버그가 의심되는 부분을 찾고, 발견한 항목이 있으면 두 번째 세션에서 코드 근거를 다시 검토합니다. 코드나 테스트를 실행하지 않으므로 실제 버그로 확정된 결과는 아닙니다.',
+  'Find possible bugs': '버그 의심 항목 찾기',
+  'Review code again': '코드 다시 검토',
   'No concrete candidate was reported in the supplied context. This is not an approval or a guarantee.':
     '제공된 맥락에서 구체적인 문제 후보가 보고되지 않았습니다. PR 승인이나 무결함을 뜻하지는 않습니다.',
   'High priority': '높은 우선순위',
   'Medium priority': '중간 우선순위',
   'Low priority': '낮은 우선순위',
-  'Supported by a second AI check': '두 번째 AI 검토에서 지지',
-  'Dismissed by the second check': '두 번째 검토에서 기각',
+  'Code evidence found in the second AI review': '두 번째 AI 검토에서도 코드 근거 확인',
+  'Ruled out in the second AI review': '두 번째 AI 검토에서 문제 후보 제외',
   'Uncertain — inspect the code': '불확실 · 코드 확인 필요',
   'Context supplied to AI': 'AI에 제공한 맥락',
   'Explicit source snapshots: {count}. Other changed files without a full snapshot: {omitted}. This does not measure which files the AI actually read.':
@@ -144,10 +152,10 @@ export const korean: Record<string, string> = {
     '테스트 코드를 읽는 링크입니다. 테스트 실행 결과는 아닙니다.',
   'No changed tests are linked to this unit. Existing tests may still cover it.':
     '이 단위에 연결된 변경 테스트는 없습니다. 기존 테스트가 검증하고 있을 수 있습니다.',
-  'Custom steps for the whole PR': '전체 PR에 대한 사용자 단계',
+  'Custom steps for the whole PR': '전체 PR에 대한 사용자 지정 단계',
   Yes: '예',
   No: '아니요',
-  'Not modeled': '모델로 판단할 수 없음',
+  'Not modeled': '모델에 포함되지 않음',
   'Behavior diagram view': '동작 그림 표시 방식',
   'Current input path': '현재 입력 경로',
   'All branches': '전체 분기',
@@ -163,7 +171,7 @@ export const korean: Record<string, string> = {
   'Normal input': '정상 입력',
   'Boundary value': '경계값',
   'Invalid input': '잘못된 입력',
-  'Dependency failure': '의존 서비스 실패',
+  'Dependency failure': '의존 대상 오류',
   Permission: '권한',
   'State transition': '상태 변화',
   'Before model': '변경 전 동작 모델',
@@ -202,7 +210,7 @@ export const korean: Record<string, string> = {
   'Based on code analysis. Tests were not run.':
     '코드를 읽어 분석했습니다. 테스트는 실행하지 않았습니다.',
   'Reading repository architecture context': '저장소의 구조 문서와 설정 확인 중',
-  'At a glance': '한눈 요약',
+  'At a glance': '한눈에 보기',
   'Change map': '변경 지도',
   'Key changes': '핵심 변경',
   'Review focus': '검토할 지점',
@@ -249,14 +257,14 @@ export const korean: Record<string, string> = {
   'Add a review step or restore the defaults before generating.':
     '리뷰를 생성하려면 단계를 추가하거나 기본 단계로 복원해 주세요.',
   'Give each custom step a title or instructions before generating.':
-    '리뷰를 생성하기 전에 각 사용자 단계의 제목이나 요청 내용을 입력해 주세요.',
+    '리뷰를 생성하기 전에 각 사용자 지정 단계의 제목이나 요청 내용을 입력해 주세요.',
   'All review cards are hidden. Enable Show in results in Review format to see them.':
     '모든 리뷰 카드가 숨겨져 있습니다. 리뷰 구성에서 ‘결과에 표시’를 켜 주세요.',
   'No relevant content was found for these steps.': '선택한 단계에 해당하는 내용이 없습니다.',
   'Saving…': '저장 중…',
   Retry: '다시 시도',
   'The AI overview did not include every custom step. Generate it again.':
-    'AI 리뷰에 일부 사용자 단계가 빠졌습니다. 다시 생성해 주세요.',
+    'AI 리뷰에 일부 사용자 지정 단계가 빠졌습니다. 다시 생성해 주세요.',
   'Review format': '리뷰 구성',
   'Execution flows': '실행 흐름',
   'The purpose and overall effect of the change.': '변경의 목적과 전체적인 효과를 설명합니다.',
@@ -269,7 +277,7 @@ export const korean: Record<string, string> = {
   'One AI analysis, arranged your way. Drag cards to change the reading order, or use the arrow buttons.':
     '한 번 분석한 결과를 원하는 순서로 읽어 보세요. 카드를 끌거나 화살표 버튼으로 순서를 바꿀 수 있습니다.',
   'Order, titles of built-in steps and visibility update saved reviews immediately. Instructions, detail and custom steps apply when you generate again. Hidden steps are still analyzed.':
-    '순서, 기본 단계의 제목, 표시 여부는 저장된 리뷰에 바로 적용됩니다. 지침·분량·사용자 단계 변경은 리뷰를 다시 생성할 때 반영됩니다. 숨긴 단계도 분석에는 포함됩니다.',
+    '순서, 기본 단계의 제목, 표시 여부는 저장된 리뷰에 바로 적용됩니다. 지침·분량·사용자 지정 단계 변경은 리뷰를 다시 생성할 때 반영됩니다. 숨긴 단계도 분석에는 포함됩니다.',
   'Saved automatically': '자동 저장됨',
   'Could not save the review format. Retry before generating.':
     '리뷰 구성을 저장하지 못했습니다. 리뷰 생성 전에 다시 시도해 주세요.',
@@ -298,7 +306,7 @@ export const korean: Record<string, string> = {
     '전제 조건과 확인이 필요한 질문을 정리하고 관련 코드를 연결해 주세요.',
   'Add step': '단계 추가',
   'Add up to {count} custom steps. Changes never start an AI analysis automatically.':
-    '사용자 단계를 최대 {count}개 추가할 수 있습니다. 구성을 바꿔도 AI 분석이 자동으로 실행되지 않습니다.',
+    '사용자 지정 단계를 최대 {count}개 추가할 수 있습니다. 구성을 바꿔도 AI 분석이 자동으로 실행되지 않습니다.',
   'Your review instructions changed. Generate again to apply them. The previous analysis is shown below.':
     '리뷰 지침이 바뀌었습니다. 다시 생성하면 반영됩니다. 아래에는 이전 분석을 표시합니다.',
   'Generate again to fill this step.': '리뷰를 다시 생성하면 이 단계의 내용이 채워집니다.',
@@ -368,9 +376,9 @@ export const korean: Record<string, string> = {
   'Could not load the overview': 'AI 리뷰를 불러올 수 없습니다',
   'Could not load your accounts': '계정을 불러올 수 없습니다',
   'Could not load your folders': '폴더를 불러올 수 없습니다',
-  'Could not load {value0}': '{value0}을 불러올 수 없습니다',
+  'Could not load {value0}': '불러올 수 없습니다: {value0}',
   'Could not make the overview': 'AI 리뷰를 생성할 수 없습니다',
-  'Could not open {value0}': '{value0}을 열 수 없습니다',
+  'Could not open {value0}': '열 수 없습니다: {value0}',
   'Could not read this folder': '이 폴더를 읽을 수 없습니다',
   'Create a classic token': '클래식 토큰 만들기',
   'Create a key': '키 만들기',
@@ -405,8 +413,8 @@ export const korean: Record<string, string> = {
   'GitHub CLI': 'GitHub CLI',
   'GitHub server': 'GitHub 서버',
   'GitHub.com': 'GitHub.com',
-  'Higher effort thinks longer and costs more.':
-    '추론 강도를 높이면 더 오래 생각하고 사용량이 늘어납니다.',
+  'Higher reasoning effort may take longer and increase usage.':
+    '추론 강도를 높이면 응답 시간이 길어지고 사용량이 늘어날 수 있습니다.',
   'How {value0} worked before': '변경 전 {value0} 흐름',
   'How {value0} works now': '변경 후 {value0} 흐름',
   'Ignore whitespace': '공백 변경 무시',
@@ -452,10 +460,11 @@ export const korean: Record<string, string> = {
   Now: '변경 후',
   'Only fixed-width system fonts': '설치된 고정폭 글꼴만 표시',
   Open: '열림',
+  'Open folder': '폴더 열기',
   'Open AI settings': 'AI 설정 열기',
   'Open GitHub again': 'GitHub 다시 열기',
-  'Open a git folder to see what changed in it, including work you have not committed.':
-    'Git 폴더를 열면 커밋하지 않은 작업을 포함한 변경 내용을 볼 수 있습니다.',
+  'Open a Git repository folder to see its changes, including uncommitted work.':
+    'Git 저장소 폴더를 열면 커밋하지 않은 작업을 포함한 변경 내용을 볼 수 있습니다.',
   'Open a local folder…': '로컬 폴더 열기…',
   'Open a local repository': '로컬 저장소 열기',
   'Open it in your editor to see the changes.': '변경 내용을 보려면 편집기에서 열어 주세요.',
@@ -561,7 +570,7 @@ export const korean: Record<string, string> = {
   'What else it affects': '다른 부분에 미치는 영향',
   'Whatever you set up in': '사용할 설정:',
   'Where to start reading': '권장 읽기 순서',
-  'Whose pull requests': '풀 리퀘스트 작성자',
+  'Pull request scope': '풀 리퀘스트 표시 범위',
   'Your pull requests': '내 풀 리퀘스트',
   'Your saved tool stays selected. Choose automatically to check this Mac instead.':
     '직접 선택한 도구를 유지합니다. 이 Mac의 상태에 맞추려면 자동 선택을 켜세요.',
@@ -701,7 +710,8 @@ export const korean: Record<string, string> = {
   'Automatic selection checks installation, sign-in and compatibility. Current tool: {value0}. If neither tool is ready, finish setup below.':
     '설치·로그인·호환 상태에 따라 자동 선택합니다. 현재 도구: {value0}. 사용할 도구가 없으면 아래에서 설정해 주세요.',
   'Default ({value0})': '기본값 ({value0})',
-  'These apply while macOS uses this appearance.': 'macOS가 현재 화면 모드를 사용할 때 적용됩니다.',
+  'These apply while macOS uses this appearance.':
+    'macOS가 이 화면 모드를 사용하는 동안 적용됩니다.',
   '{value0} (not installed)': '{value0} (설치되지 않음)',
   '{value0} is not installed on this Mac, so code is shown in {value1}.':
     '이 Mac에 {value0} 글꼴이 없어 {value1} 글꼴로 표시합니다.',
@@ -747,7 +757,7 @@ export const korean: Record<string, string> = {
   'Update to Claude Code 2.1.248 or later for read-only overviews.':
     '읽기 전용 AI 리뷰를 사용하려면 Claude Code 2.1.248 이상으로 업데이트해 주세요.',
   'Your installed Codex returned only retired models for ChatGPT sign-in. Update Codex, then reload models.':
-    '설치된 Codex가 ChatGPT 로그인에서 종료된 모델만 반환했습니다. Codex를 업데이트한 뒤 모델 목록을 다시 불러와 주세요.',
+    '설치된 Codex가 ChatGPT 로그인에서 지원이 종료된 모델만 반환했습니다. Codex를 업데이트한 뒤 모델 목록을 다시 불러와 주세요.',
   'Could not load available Codex models. Check your Codex sign-in and try again.':
     'Codex 모델을 불러올 수 없습니다. 로그인 상태를 확인한 뒤 다시 시도해 주세요.',
   'No Codex models are available. Check your sign-in in Settings > AI overview.':

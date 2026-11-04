@@ -94,7 +94,7 @@ export function LocalChangesPanel({ selectedId, active = true, onOpen }: LocalCh
             run: openFolder,
           }}
         >
-          {t('Open a git folder to see what changed in it, including work you have not committed.')}
+          {t('Open a Git repository folder to see its changes, including uncommitted work.')}
         </StatusMessage>
       );
     }

@@ -54,12 +54,14 @@ export function ReviewActivities({
   const questionBusy = questionJob?.state === 'running' || activity.ask.isPending;
   const verifyBusy = verifyJob?.state === 'running' || activity.verify.isPending;
   return (
-    <section className={styles.panel} aria-label={t('Questions and independent checks')}>
+    <section className={styles.panel} aria-label={t('Questions and AI code review')}>
       <p className={styles.scope}>
         {t('Scope')}: {scope}
       </p>
       <p className={styles.note}>
-        {t('Each question or independent check starts a new request with your selected AI tool.')}
+        {t(
+          'Questions and code reviews send new requests to your selected AI tool. A code review may use two separate sessions with the same tool, not different AI models.',
+        )}
       </p>
       {activity.query.isError && <p role="alert">{t(activity.query.error.message)}</p>}
       {data && !current && (
@@ -140,10 +142,10 @@ export function ReviewActivities({
         {questionJob?.state === 'failed' && <p role="alert">{t(questionJob.error.message)}</p>}
       </details>
       <div className={styles.verification}>
-        <h4>{t('Independent AI check')}</h4>
+        <h4>{t('AI code review')}</h4>
         <p className={styles.note}>
           {t(
-            'One session proposes concrete issues; another session checks them against the code. AI support is not runtime confirmation.',
+            'A fresh AI session looks for possible bugs. If it finds any, a second session reviews the code evidence. No code or tests are executed, so these findings are not confirmed bugs.',
           )}
         </p>
         <button
@@ -151,7 +153,7 @@ export function ReviewActivities({
           disabled={!current || verifyBusy}
           onClick={() => activity.verify.mutate({ head, unitId })}
         >
-          {t(report ? 'Run independent check again' : 'Run independent check')}
+          {t(report ? 'Review code again' : 'Find possible bugs')}
         </button>
         {verifyJob?.state === 'running' && (
           <>
@@ -189,9 +191,9 @@ export function ReviewActivities({
                   ·{' '}
                   {t(
                     finding.verdict === 'supported'
-                      ? 'Supported by a second AI check'
+                      ? 'Code evidence found in the second AI review'
                       : finding.verdict === 'dismissed'
-                        ? 'Dismissed by the second check'
+                        ? 'Ruled out in the second AI review'
                         : 'Uncertain — inspect the code',
                   )}
                 </p>

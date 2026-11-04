@@ -278,7 +278,7 @@ async function choosePaths(options: Electron.OpenDialogOptions): Promise<string[
 async function chooseRepositoryFolder(): Promise<string | undefined> {
   const [folder] = await choosePaths({
     title: createTranslator(mainLanguage)('Open a Local Repository'),
-    buttonLabel: createTranslator(mainLanguage)('Open'),
+    buttonLabel: createTranslator(mainLanguage)('Open folder'),
     properties: ['openDirectory'],
   });
   return folder;

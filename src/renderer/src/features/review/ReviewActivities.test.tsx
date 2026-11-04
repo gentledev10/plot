@@ -1,8 +1,11 @@
+import { LANGUAGE_PREFERENCE } from '@shared/language';
 import { pullRequestKey } from '@shared/pull-request-ref';
+import { createTranslator } from '@shared/translations';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithApi } from '../../../test/render';
+import { initializePreferences } from '../../lib/preferences';
 import { ReviewActivities } from './ReviewActivities';
 import { useReviewReading } from './ReviewReadingProvider';
 
@@ -36,6 +39,27 @@ function Harness() {
   );
 }
 describe('review questions UI', () => {
+  it.each(['en', 'ko'] as const)(
+    'explains the two-session review in %s without implying execution',
+    async (language) => {
+      initializePreferences(
+        { [LANGUAGE_PREFERENCE]: { app: language, review: language } },
+        () => {},
+      );
+      const t = createTranslator(language);
+      renderWithApi(<Harness />, { getReviewActivity: vi.fn().mockResolvedValue(idle) });
+      expect(screen.getByRole('heading', { name: t('AI code review') })).toBeVisible();
+      const button = screen.getByRole('button', { name: t('Find possible bugs') });
+      await vi.waitFor(() => expect(button).toBeEnabled());
+      expect(
+        screen.getByText(
+          t(
+            'A fresh AI session looks for possible bugs. If it finds any, a second session reviews the code evidence. No code or tests are executed, so these findings are not confirmed bugs.',
+          ),
+        ),
+      ).toBeVisible();
+    },
+  );
   it('opens the question for the exact selected side and source range', async () => {
     const user = userEvent.setup();
     const askReview = vi.fn().mockResolvedValue(undefined);
@@ -90,7 +114,9 @@ describe('review questions UI', () => {
       <ReviewActivities target={target} head={head} units={[]} onOpenLocation={() => {}} />,
       { getReviewActivity: vi.fn().mockResolvedValue({ ...idle, verifications: [report] }) },
     );
-    expect(await screen.findByText(/Supported by a second AI check/)).toBeVisible();
-    expect(screen.getByText(/AI support is not runtime confirmation/)).toBeVisible();
+    expect(await screen.findByText(/Code evidence found in the second AI review/)).toBeVisible();
+    expect(
+      screen.getByText(/No code or tests are executed, so these findings are not confirmed bugs/),
+    ).toBeVisible();
   });
 });

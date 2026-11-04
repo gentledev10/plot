@@ -524,7 +524,7 @@ function ModelFields({ settings, onSave, onReloadTools }: ModelFieldsProps) {
         {provider === 'codex'
           ? t('Default uses the recommended available model with isolated settings.')
           : t('Default uses the Claude Code default model.')}{' '}
-        {t('Higher effort thinks longer and costs more.')}
+        {t('Higher reasoning effort may take longer and increase usage.')}
       </span>
       <div className={styles.modelHelp}>
         <p className={styles.hint}>

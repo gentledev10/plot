@@ -106,7 +106,7 @@ export function RepositoryPullsPanel({
       <div className={styles.filters}>
         <Filter label={t('State')} value={state} options={STATES} onChange={setState} />
         <Filter
-          label={t('Whose pull requests')}
+          label={t('Pull request scope')}
           value={scope}
           options={SCOPES}
           onChange={setScope}

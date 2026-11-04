@@ -19,7 +19,7 @@ describe('language settings', () => {
     const t = createTranslator('ko');
     expect(t('Settings')).toBe('설정');
     expect(t('Could not open {value0}', { value0: 'Settings.tsx' })).toBe(
-      'Settings.tsx을 열 수 없습니다',
+      '열 수 없습니다: Settings.tsx',
     );
     expect(createTranslator('en')('Settings')).toBe('Settings');
   });

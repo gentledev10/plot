@@ -768,7 +768,7 @@ try {
   await settings.getByLabel('앱 표시 언어', { exact: true }).waitFor();
   await page.screenshot({ path: join(root, 'dist/e2e-language-settings.png'), scale: 'css' });
   await settings.getByRole('button', { name: '설정 닫기' }).click();
-  await page.getByRole('heading', { name: '한눈 요약', exact: true }).waitFor();
+  await page.getByRole('heading', { name: '한눈에 보기', exact: true }).waitFor();
   assert.ok(
     (
       await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.map((item) => item.label))
@@ -822,7 +822,7 @@ try {
   pass('Drag review cards into a new reading order without another AI call');
 
   await page.getByRole('button', { name: '리뷰 구성', exact: true }).click();
-  await settings.getByRole('button', { name: '한눈 요약 삭제', exact: true }).click();
+  await settings.getByRole('button', { name: '한눈에 보기 삭제', exact: true }).click();
   assert.equal(await steps.locator('[data-step-id="summary"]').count(), 0);
   await settings.getByRole('button', { name: '단계 추가', exact: true }).click();
   assert.equal(await settings.getByLabel('카드 제목', { exact: true }).inputValue(), '');
@@ -879,7 +879,7 @@ try {
   assert.equal(
     await overviewPanel
       .getByRole('article')
-      .filter({ has: page.getByRole('heading', { name: /^한눈 요약$/ }) })
+      .filter({ has: page.getByRole('heading', { name: /^한눈에 보기$/ }) })
       .count(),
     0,
   );

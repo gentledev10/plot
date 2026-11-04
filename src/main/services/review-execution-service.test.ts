@@ -137,6 +137,20 @@ describe.skipIf(process.platform !== 'darwin')('version-bound real code comparis
     expect(invalid.before.outcome).toEqual({ kind: 'return', value: { error: 400 } });
     expect(invalid.after.outcome).toEqual({ kind: 'return', value: { fee: 3000 } });
   }, 15000);
+  it('preserves missing framework errors instead of treating them as assertion evidence', async () => {
+    const { run, root } = await setup();
+    await writeFile(
+      join(root, 'after', 'shipping.test.mjs'),
+      "import { test } from 'vitest'; test('example', () => {});",
+    );
+    const report = await run({ head, kind: 'tests', paths: ['shipping.test.mjs'] });
+    for (const side of [report.before, report.after]) {
+      expect(side.status).toBe('failed');
+      expect(`${side.stdout}\n${side.stderr}`).toContain('ERR_MODULE_NOT_FOUND');
+      expect(`${side.stdout}\n${side.stderr}`).toContain('vitest');
+      expect(side.tests?.some((test) => test.name === 'example')).toBe(false);
+    }
+  });
   it('runs new head test assertions against both snapshots and detects a removed guard', async () => {
     const { run } = await setup();
     const report = await run({ head, kind: 'tests', paths: ['shipping.test.mjs'] });

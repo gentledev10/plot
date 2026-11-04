@@ -66,12 +66,19 @@ export function ReviewExecution({
   const canRun = support.data?.available && (simulation ? !!simulation.binding : !!paths?.length);
   return (
     <section className={styles.panel} aria-label={t('Actual code execution')}>
-      <h4>{t(simulation ? 'Compare actual function results' : 'Run related Node tests')}</h4>
+      <h4>{t(simulation ? 'Compare actual function results' : 'Compare tests with Node.js')}</h4>
       <p>
         {t(
           'Runs only when you click, on isolated merge-base and PR-head snapshots. Network, private files and child processes are blocked. No dependencies are installed or package scripts run.',
         )}
       </p>
+      {!simulation && (
+        <p>
+          {t(
+            'Only tests that run directly with Node.js are supported. Vitest, Jest, package scripts and tests requiring installed dependencies are not supported in this isolated environment.',
+          )}
+        </p>
+      )}
       {!support.data?.available && (
         <p>{t(support.data?.reason ?? 'Checking execution support…')}</p>
       )}
@@ -100,11 +107,7 @@ export function ReviewExecution({
           )
         }
       >
-        {t(
-          simulation
-            ? 'Run actual code with these values'
-            : 'Run the same head tests on both versions',
-        )}
+        {t(simulation ? 'Run actual code with these values' : 'Run PR tests against both versions')}
       </button>
       {running && (
         <>
@@ -233,7 +236,7 @@ function ExecutionResult({ title, result }: { title: string; result: ExecutionSi
   const t = useT();
   const status = {
     completed: 'Completed',
-    failed: 'Failed or missing setup',
+    failed: 'Execution failed',
     timeout: 'Execution timed out',
     cancelled: 'Cancelled',
   }[result.status];
@@ -263,7 +266,20 @@ function ExecutionResult({ title, result }: { title: string; result: ExecutionSi
           </pre>
         </>
       )}
-      <details>
+      {result.status === 'failed' && (
+        <p role="status">
+          {t(
+            result.outcome?.kind === 'setup-error'
+              ? 'The function could not be loaded or its result could not be displayed. Inspect the error below.'
+              : /ERR_MODULE_NOT_FOUND|MODULE_NOT_FOUND|Cannot find (?:package|module)/.test(
+                    `${result.stdout}\n${result.stderr}`,
+                  )
+                ? 'A required module or package could not be loaded. Dependencies are not installed in this isolated environment. This result alone does not establish a code defect.'
+                : 'The process exited unsuccessfully. Inspect the output below to distinguish a test failure from a setup or sandbox restriction.',
+          )}
+        </p>
+      )}
+      <details open={result.status !== 'completed'}>
         <summary>{t('Command and output')}</summary>
         <code>{result.command.join(' ')}</code>
         <pre>
