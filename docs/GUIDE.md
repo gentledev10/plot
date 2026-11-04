@@ -92,8 +92,7 @@ Actual execution currently requires macOS's available sandbox and a compatible i
 
 Choose **Open a local folder…** on the start screen, or **Local changes → Choose a folder…**. Reading local diffs does not require a GitHub account or an AI tool.
 
-- **Branch changes** lets you choose **Base branch** and **Compare branch** without checking out either branch. **Include uncommitted changes** adds the working tree only when comparing the currently checked-out branch. Turn it off for a committed snapshot.
-- **Uncommitted only** compares your working tree with `HEAD`, including staged, unstaged and untracked files.
+- **Uncommitted only** is the default. It compares your working tree with `HEAD`, including staged, unstaged and untracked files.
 - **Selected commits** shows the history of the chosen branch. Check one or several commits to inspect only their changes, not every commit between the first and last selection. The list shows up to 100 commits and tells you when older history is omitted. Selections that depend on omitted changes can conflict; Plot reports the conflict instead of silently including those commits.
 
 Open **AI overview** and explicitly choose **Explain local changes** to analyze the selected local diff. This uses the AI tool and response language configured in Settings, with the same provider usage costs as PR overviews. Local code is sent to the selected AI provider; it is not offline analysis. Local overviews use an isolated, bounded snapshot rather than running the AI in your working folder. Changed selections or working files need their own overview; changing the selection never starts an AI request automatically.

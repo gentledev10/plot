@@ -38,54 +38,26 @@ describe('LocalHeader history', () => {
   ])('translates %s through the canonical dictionary', (label) => {
     expect(createTranslator('ko')(label)).not.toBe(label);
   });
-  it('describes a branch snapshot without claiming to include working changes', async () => {
+  it('offers only uncommitted work and selected commits without branch comparison controls', async () => {
     renderWithApi(
-      <Header
-        initial={{
-          repositoryId: '0123456789abcdef',
-          compare: 'branch',
-          baseRef: 'main',
-          headRef: 'other',
-          includeUncommitted: false,
-        }}
-      />,
+      <Header initial={{ repositoryId: '0123456789abcdef', compare: 'uncommitted' }} />,
       {
-        getLocalHistory: vi.fn().mockResolvedValue({ branches: [], commits: [], hasMore: false }),
-        getLocalDiff: vi.fn().mockResolvedValue({
-          branch: 'other',
-          base: { name: 'main', commit: 'a'.repeat(40) },
-          files: [],
-        }),
+        getLocalDiff: vi.fn().mockResolvedValue({ branch: 'feature', base: null, files: [] }),
       },
     );
-    expect(await screen.findByText('Compared with main at aaaaaaa.')).toBeInTheDocument();
-    expect(screen.queryByText(/including uncommitted work/)).not.toBeInTheDocument();
-  });
-
-  it('keeps the checked working-changes default when explicitly selecting the checked-out branch', async () => {
-    renderWithApi(<Header initial={{ repositoryId: '0123456789abcdef', compare: 'branch' }} />, {
-      getLocalHistory: vi.fn().mockResolvedValue({
-        branches: [{ name: 'feature', current: true, remote: false }],
-        commits: [],
-        hasMore: false,
-      }),
-      getLocalDiff: vi.fn().mockResolvedValue({ branch: 'feature', base: null, files: [] }),
-    });
-    await screen.findAllByRole('option', { name: 'feature' });
-    await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Compare branch' }),
-      'feature',
-    );
+    expect(screen.getByRole('radio', { name: 'Uncommitted only' })).toBeChecked();
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
+    expect(screen.queryByRole('radio', { name: 'Branch changes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Base branch' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Compare branch' })).not.toBeInTheDocument();
     expect(
-      JSON.parse(
-        screen.getByRole('status', { name: 'Current comparison target' }).textContent ?? '{}',
-      ),
-    ).toEqual({
-      repositoryId: '0123456789abcdef',
-      compare: 'branch',
-      headRef: 'feature',
-      includeUncommitted: true,
-    });
+      screen.queryByRole('checkbox', { name: 'Include uncommitted changes' }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: 'Selected commits' }));
+    expect(
+      await screen.findByRole('combobox', { name: 'Commit history branch' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
   });
 
   it('drops selected commits that disappear from refreshed history', async () => {

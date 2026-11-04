@@ -18,7 +18,7 @@ A Mac app for understanding pull requests and local code changes. Read side-by-s
 - **Read the change in context.** Browse GitHub pull requests or paste a PR URL. Navigate side-by-side or unified diffs with a file tree, collapsed unchanged lines and configurable shortcuts.
 - **Understand the story.** Optional AI overviews explain the purpose, key changes and review questions, with before-and-after diagrams and links back to the code. Use your own Claude Code or Codex CLI account.
 - **Explore behavior.** For suitable conditional logic, expand **Try inputs and error cases** inside a key change. Change inputs or select boundary, invalid-input and failure scenarios to compare paths and predicted results before and after. These are bounded AI explanation models; they do not execute repository code, confirm bugs or measure test coverage. Broader calculations, loops and concurrency are outside this first version.
-- **Check your work and its history.** Open a local repository to compare branches, select one or several commits, or inspect uncommitted files. Choose whether to include working changes, and request an optional AI overview of the selected change.
+- **Check your work and selected commits.** Open a local repository to inspect uncommitted files or select one or several commits from a branch's history. Request an optional AI overview of the selected change.
 
 ## Get started
 
@@ -88,15 +88,15 @@ Read [AI setup and data access](docs/GUIDE.md#ai-overviews-and-your-code) and th
 
 ## Supported today
 
-| Area           | Support                                                                                  |
-| -------------- | ---------------------------------------------------------------------------------------- |
-| Platform       | macOS 13+; Windows and Linux are not supported                                           |
-| Pull requests  | GitHub.com and GitHub Enterprise Server; GitLab and Bitbucket PRs are not supported      |
-| Local work     | Git repositories, selectable branch comparisons, selected commits, and uncommitted files |
-| AI overview    | Pull requests and explicitly selected local changes                                      |
-| Review actions | Read and understand changes; comments, approvals and merging stay on GitHub              |
-| Languages      | English and Korean; the overview language can be selected separately                     |
-| Appearance     | Light, Dark and Darcula, code fonts, colors and resizable panels                         |
+| Area           | Support                                                                             |
+| -------------- | ----------------------------------------------------------------------------------- |
+| Platform       | macOS 13+; Windows and Linux are not supported                                      |
+| Pull requests  | GitHub.com and GitHub Enterprise Server; GitLab and Bitbucket PRs are not supported |
+| Local work     | Git repositories, selected commits, and uncommitted files                           |
+| AI overview    | Pull requests and explicitly selected local changes                                 |
+| Review actions | Read and understand changes; comments, approvals and merging stay on GitHub         |
+| Languages      | English and Korean; the overview language can be selected separately                |
+| Appearance     | Light, Dark and Darcula, code fonts, colors and resizable panels                    |
 
 For setup problems, see [Troubleshooting](docs/TROUBLESHOOTING.md). Report a reproducible bug or suggest a feature in [Issues](https://github.com/gentledev10/plot/issues/new/choose). Planned distribution work is tracked in the [release guide](docs/RELEASING.md).
 

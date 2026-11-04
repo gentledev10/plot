@@ -140,7 +140,13 @@ it('keys cache by exact target, language and content-affecting plan without auto
     steps: plan.steps.map((step) => ({ ...step, instructions: 'Different content instructions' })),
   };
   expect(await service.getLocalReviewStatus(target)).toEqual({ state: 'idle' });
-  expect(await service.getLocalReviewStatus({ ...target, compare: 'branch' })).toEqual({
+  expect(
+    await service.getLocalReviewStatus({
+      ...target,
+      compare: 'commits',
+      commits: ['a'.repeat(40)],
+    }),
+  ).toEqual({
     state: 'idle',
   });
   expect(agent.run).toHaveBeenCalledOnce();

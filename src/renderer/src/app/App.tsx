@@ -122,7 +122,7 @@ export function App() {
     show({
       kind: 'local',
       repositoryId: repository.id,
-      compare: 'branch',
+      compare: 'uncommitted',
     });
   }
   function chooseAndOpenLocalRepository() {

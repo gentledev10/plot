@@ -4,6 +4,42 @@ import { argumentParsers } from './arguments';
 const repositoryId = '0123456789abcdef';
 const sha = 'a'.repeat(40);
 describe('local history IPC arguments', () => {
+  it('rejects legacy whole-branch comparisons at every local target boundary', () => {
+    for (const method of [
+      'getLocalDiff',
+      'getLocalSignature',
+      'getLocalReviewStatus',
+      'startLocalReview',
+      'cancelLocalReview',
+    ] as const) {
+      expect(() => argumentParsers[method]([{ repositoryId, compare: 'branch' }])).toThrow(
+        expect.objectContaining({ code: 'invalid-argument' }),
+      );
+    }
+  });
+  it.each([
+    { compare: 'uncommitted', baseRef: undefined },
+    { compare: 'uncommitted', includeUncommitted: true },
+    { compare: 'uncommitted', includeUncommitted: undefined },
+    { compare: 'commits', commits: [sha], includeUncommitted: false },
+    { compare: 'commits', commits: [sha], unknownOption: true },
+  ])('rejects removed or unknown options at every boundary: %j', (options) => {
+    for (const method of [
+      'getLocalDiff',
+      'getLocalSignature',
+      'getLocalReviewStatus',
+      'startLocalReview',
+      'cancelLocalReview',
+    ] as const) {
+      expect(() => argumentParsers[method]([{ repositoryId, ...options }])).toThrow(
+        expect.objectContaining({ code: 'invalid-argument' }),
+      );
+    }
+  });
+  it('accepts a history branch on selected commits without broadening the selection', () => {
+    const target = { repositoryId, compare: 'commits', commits: [sha], headRef: 'origin/feature' };
+    expect(argumentParsers.getLocalDiff([target])).toEqual([target]);
+  });
   it.each([
     { compare: 'commits' },
     { compare: 'commits', commits: [] },
@@ -11,7 +47,7 @@ describe('local history IPC arguments', () => {
     { compare: 'commits', commits: [sha, sha] },
     { compare: 'commits', commits: ['--help'] },
     { compare: 'commits', commits: [sha], baseRef: 'main' },
-    { compare: 'commits', commits: [sha], headRef: 'HEAD' },
+    { compare: 'commits', commits: [sha], headRef: 'HEAD~1' },
     { compare: 'commits', commits: [sha], includeUncommitted: true },
     { compare: 'branch', commits: [sha] },
     { compare: 'branch', includeUncommitted: 'yes' },
@@ -41,10 +77,9 @@ describe('local history IPC arguments', () => {
   it('preserves supported targets for diff, signatures, and local reviews', () => {
     const target = {
       repositoryId,
-      compare: 'branch',
-      baseRef: 'main',
+      compare: 'commits',
+      commits: [sha],
       headRef: 'origin/feature',
-      includeUncommitted: false,
     };
     for (const method of [
       'getLocalDiff',

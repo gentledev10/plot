@@ -87,27 +87,8 @@ describe('createLocalGit', () => {
     await expect(local.topLevel(outside)).rejects.toMatchObject({ code: 'not-a-repository' });
   });
 
-  it('shows everything the branch changed since main, including work not yet committed', async () => {
-    const diff = await local.diff(repo, 'branch');
-
-    expect(diff.branch).toBe('feature');
-    expect(diff.base?.name).toBe('main');
-    expect(summary(diff.files)).toEqual([
-      'added notes.md',
-      'added outside-dir',
-      'added secret-link',
-      'modified src/app.ts',
-      'added src/new.ts',
-      'deleted src/old.ts',
-    ]);
-    expect(diff.files.find((file) => file.path === 'notes.md')).toMatchObject({
-      additions: 3,
-      deletions: 0,
-    });
-  });
-
-  it('counts the files a branch diff lists, with the branch name', async () => {
-    const diff = await local.diff(repo, 'branch');
+  it('counts the files an uncommitted diff lists, with the branch name', async () => {
+    const diff = await local.diff(repo, 'uncommitted');
     await expect(local.status(repo)).resolves.toEqual({
       branch: 'feature',
       changedFiles: diff.files.length,
@@ -139,17 +120,21 @@ describe('createLocalGit', () => {
   it('shows only uncommitted work when asked', async () => {
     const diff = await local.diff(repo, 'uncommitted');
     expect(diff.base?.name).toBe('HEAD');
+    expect(diff.files.find((file) => file.path === 'notes.md')).toMatchObject({
+      additions: 3,
+      deletions: 0,
+    });
     expect(summary(diff.files)).not.toContain('added src/new.ts');
     expect(summary(diff.files)).toContain('modified src/app.ts');
   });
 
   it('reads the base version from git and the current version from disk', async () => {
-    const diff = await local.diff(repo, 'branch');
+    const diff = await local.diff(repo, 'uncommitted');
     const app = diff.files.find((file) => file.path === 'src/app.ts');
 
     await expect(local.readBlob(repo, app?.oldBlob ?? '', 1_000)).resolves.toEqual({
       kind: 'text',
-      text: 'export const greeting = "hello";\n',
+      text: 'export const greeting = "hello, world";\n',
     });
     await expect(local.readFile(repo, 'src/app.ts', 1_000)).resolves.toEqual({
       kind: 'text',
@@ -175,11 +160,11 @@ describe('createLocalGit', () => {
   });
 
   it('changes its signature when a changed file is edited again', async () => {
-    const before = await local.signature(repo, 'branch');
-    expect(await local.signature(repo, 'branch')).toBe(before);
+    const before = await local.signature(repo, 'uncommitted');
+    expect(await local.signature(repo, 'uncommitted')).toBe(before);
 
     await write(repo, { 'src/app.ts': 'export const greeting = "hello, everyone and more";\n' });
-    expect(await local.signature(repo, 'branch')).not.toBe(before);
+    expect(await local.signature(repo, 'uncommitted')).not.toBe(before);
   });
 
   it('works in a repository without commits yet', async () => {
@@ -188,7 +173,7 @@ describe('createLocalGit', () => {
     await git(empty, 'init', '--quiet');
     await write(empty, { 'first.txt': 'first\n' });
 
-    const diff = await local.diff(empty, 'branch');
+    const diff = await local.diff(empty, 'uncommitted');
     expect(diff.base).toBeNull();
     expect(summary(diff.files)).toEqual(['added first.txt']);
     expect((await local.status(empty)).changedFiles).toBe(1);
@@ -196,9 +181,9 @@ describe('createLocalGit', () => {
 
   it('detects edits inside an existing untracked directory', async () => {
     await write(repo, { 'untracked/nested/note.txt': 'before\n' });
-    const before = await local.signature(repo, 'branch');
+    const before = await local.signature(repo, 'uncommitted');
     await write(repo, { 'untracked/nested/note.txt': 'after editing the same file\n' });
-    expect(await local.signature(repo, 'branch')).not.toBe(before);
+    expect(await local.signature(repo, 'uncommitted')).not.toBe(before);
   });
 
   it('detects new commits and branch switches even with a clean working tree', async () => {
@@ -209,14 +194,14 @@ describe('createLocalGit', () => {
     await git(clean, 'add', '.');
     await git(clean, 'commit', '--quiet', '-m', 'Base');
     await git(clean, 'switch', '--quiet', '-c', 'feature');
-    const before = await local.signature(clean, 'branch');
+    const before = await local.signature(clean, 'uncommitted');
     await write(clean, { 'second.txt': 'new commit\n' });
     await git(clean, 'add', '.');
     await git(clean, 'commit', '--quiet', '-m', 'More work');
-    const committed = await local.signature(clean, 'branch');
+    const committed = await local.signature(clean, 'uncommitted');
     expect(committed).not.toBe(before);
     await git(clean, 'switch', '--quiet', '-c', 'another-name');
-    expect(await local.signature(clean, 'branch')).not.toBe(committed);
+    expect(await local.signature(clean, 'uncommitted')).not.toBe(committed);
   });
 });
 

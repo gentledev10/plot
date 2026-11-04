@@ -35,12 +35,66 @@ async function commit(root: string, path: string, text: string, subject: string)
 }
 
 describe('local history', () => {
+  it('reports no changed files on a clean feature branch with committed changes', async () => {
+    const root = await repository();
+    await commit(root, 'base.txt', 'base\n', 'Base');
+    await git(root, 'switch', '-q', '-c', 'feature');
+    await commit(root, 'feature.txt', 'feature\n', 'Feature');
+    expect(await local.status(root)).toEqual({ branch: 'feature', changedFiles: 0 });
+    expect((await local.diff(root, 'uncommitted')).files).toEqual([]);
+  });
+  it('rejects removed comparisons and options even for direct adapter callers', async () => {
+    const root = await repository();
+    await commit(root, 'base.txt', 'base\n', 'Base');
+    for (const method of ['diff', 'signature'] as const) {
+      await expect(local[method](root, 'branch' as never)).rejects.toMatchObject({
+        code: 'invalid-argument',
+      });
+      await expect(
+        local[method](root, 'uncommitted', { baseRef: 'main' } as never),
+      ).rejects.toMatchObject({ code: 'invalid-argument' });
+      await expect(local[method](root, 'uncommitted', { headRef: 'main' })).rejects.toMatchObject({
+        code: 'invalid-argument',
+      });
+    }
+  });
+  it('uses headRef only as history metadata for selected commits', async () => {
+    const root = await repository();
+    await commit(root, 'base.txt', 'base\n', 'Base');
+    const selected = await commit(root, 'selected.txt', 'selected\n', 'Selected');
+    await commit(root, 'excluded.txt', 'excluded\n', 'Excluded');
+    const options = { commits: [selected] };
+    const diff = await local.diff(root, 'commits', options);
+    expect(diff.files.map((file) => file.path)).toEqual(['selected.txt']);
+    expect(await local.diff(root, 'commits', { ...options, headRef: 'main' })).toEqual(diff);
+    expect(
+      await local.signature(root, 'commits', { ...options, headRef: 'missing-history-branch' }),
+    ).toBe(await local.signature(root, 'commits', options));
+  });
+  it('counts staged, unstaged, and untracked changes but excludes committed branch files', async () => {
+    const root = await repository();
+    await commit(root, 'base.txt', 'base\n', 'Base');
+    await git(root, 'switch', '-q', '-c', 'feature');
+    await commit(root, 'feature.txt', 'committed\n', 'Feature');
+    await writeFile(join(root, 'base.txt'), 'unstaged\n');
+    await writeFile(join(root, 'staged.txt'), 'staged\n');
+    await git(root, 'add', 'staged.txt');
+    await writeFile(join(root, 'untracked.txt'), 'untracked\n');
+    expect(await local.status(root)).toEqual({ branch: 'feature', changedFiles: 3 });
+    const diff = await local.diff(root, 'uncommitted');
+    expect(diff.base?.commit).toBe(await git(root, 'rev-parse', 'HEAD'));
+    expect(diff.files.map((file) => file.path)).toEqual([
+      'base.txt',
+      'staged.txt',
+      'untracked.txt',
+    ]);
+  });
   it.each([
     'file-to-directory',
     'directory-to-file',
     'staged-file-to-directory',
     'staged-directory-to-file',
-  ] as const)('snapshots %s replacements without changing the user index', async (change) => {
+  ] as const)('shows %s replacements without changing the user index', async (change) => {
     const root = await repository();
     if (change.endsWith('file-to-directory')) {
       await commit(root, 'entry', 'before\n', 'File');
@@ -55,7 +109,7 @@ describe('local history', () => {
     }
     if (change.startsWith('staged-')) await git(root, 'add', '-A');
     const index = await readFile(join(root, '.git/index'));
-    const diff = await local.diff(root, 'uncommitted', { includeUncommitted: true });
+    const diff = await local.diff(root, 'uncommitted');
     expect(diff.files).toHaveLength(2);
     expect(diff.files.find((file) => file.status === 'added')?.path).toBe(
       change.endsWith('file-to-directory') ? 'entry/child.txt' : 'entry',
@@ -66,7 +120,7 @@ describe('local history', () => {
     expect(await readFile(join(root, '.git/index'))).toEqual(index);
   });
 
-  it('preserves tracked files outside a sparse checkout in uncommitted snapshots', async () => {
+  it('preserves tracked files outside a sparse checkout in uncommitted diffs', async () => {
     const root = await repository();
     await mkdir(join(root, 'visible'));
     await mkdir(join(root, 'omitted'));
@@ -75,7 +129,7 @@ describe('local history', () => {
     await git(root, 'sparse-checkout', 'set', '--cone', 'visible');
     await writeFile(join(root, 'visible/file.txt'), 'edited\n');
     const index = await readFile(join(root, '.git/index'));
-    const diff = await local.diff(root, 'uncommitted', { includeUncommitted: true });
+    const diff = await local.diff(root, 'uncommitted');
     expect(diff.files.map((file) => file.path)).toEqual(['visible/file.txt']);
     expect(await readFile(join(root, '.git/index'))).toEqual(index);
     await expect(readFile(join(root, 'omitted/file.txt'))).rejects.toMatchObject({
@@ -83,18 +137,18 @@ describe('local history', () => {
     });
   });
 
-  it('snapshots deleted nested directories without reading outside the repository', async () => {
+  it('shows deleted nested directories without reading outside the repository', async () => {
     const root = await repository();
     await mkdir(join(root, 'nested'));
     await commit(root, 'nested/file.txt', 'inside\n', 'Nested root');
     await rm(join(root, 'nested'), { recursive: true });
-    const diff = await local.diff(root, 'branch', { headRef: 'HEAD', includeUncommitted: true });
+    const diff = await local.diff(root, 'uncommitted');
     expect(diff.files).toMatchObject([
       { path: 'nested/file.txt', status: 'deleted', newBlob: null },
     ]);
   });
 
-  it('rejects symlinked parents while safely snapshotting a symlink itself', async () => {
+  it('rejects symlinked parents while safely reading a symlink itself', async () => {
     const root = await repository();
     const outside = await repository();
     await commit(root, 'base.txt', 'base\n', 'Base');
@@ -103,21 +157,17 @@ describe('local history', () => {
     await writeFile(join(outside, 'file.txt'), 'secret\n');
     await rm(join(root, 'nested'), { recursive: true });
     await symlink(outside, join(root, 'nested'));
-    await expect(
-      local.diff(root, 'branch', { headRef: 'HEAD', includeUncommitted: true }),
-    ).rejects.toMatchObject({ code: 'invalid-argument' });
+    await expect(local.readFile(root, 'nested/file.txt', 1000)).rejects.toMatchObject({
+      code: 'invalid-argument',
+    });
     await rm(join(root, 'nested'));
     await mkdir(join(root, 'nested'));
     await writeFile(join(root, 'nested/file.txt'), 'inside\n');
     await symlink(join(outside, 'file.txt'), join(root, 'link'));
-    const diff = await local.diff(root, 'branch', {
-      baseRef: 'HEAD',
-      headRef: 'HEAD',
-      includeUncommitted: true,
-    });
+    const diff = await local.diff(root, 'uncommitted');
     const link = diff.files.find((file) => file.path === 'link');
     expect(link?.kind).toBe('symlink');
-    await expect(local.readBlob(root, link?.newBlob ?? '', 1000)).resolves.toEqual({
+    await expect(local.readFile(root, link?.path ?? '', 1000)).resolves.toEqual({
       kind: 'text',
       text: join(outside, 'file.txt'),
     });
@@ -125,13 +175,11 @@ describe('local history', () => {
 
   it('prefers explicit local branch refs over an identically named tag', async () => {
     const root = await repository();
-    const first = await commit(root, 'base.txt', 'base\n', 'Base');
+    await commit(root, 'base.txt', 'base\n', 'Base');
     await git(root, 'tag', 'feature');
     await git(root, 'switch', '-q', '-c', 'feature');
     const latest = await commit(root, 'feature.txt', 'feature\n', 'Feature');
     expect((await local.history(root, 'feature')).commits[0]?.sha).toBe(latest);
-    const diff = await local.diff(root, 'branch', { baseRef: first, headRef: 'feature' });
-    expect(diff.files.map((file) => file.path)).toEqual(['feature.txt']);
   });
 
   it('does not read unchanged oversized files when capturing a small dirty diff', async () => {
@@ -145,29 +193,11 @@ describe('local history', () => {
       env,
       maxSnapshotCacheBytes: 1000,
     });
-    const diff = await bounded.diff(root, 'branch', { baseRef: 'main', includeUncommitted: true });
+    const diff = await bounded.diff(root, 'uncommitted');
     expect(diff.files.map((file) => file.path)).toEqual(['small.txt']);
-    expect(await bounded.readBlob(root, diff.files[0]?.newBlob ?? '', 100)).toEqual({
+    expect(await bounded.readFile(root, diff.files[0]?.path ?? '', 100)).toEqual({
       kind: 'text',
       text: 'after\n',
-    });
-  });
-
-  it('rejects oversized snapshot inputs before compression can hide their size', async () => {
-    const root = await repository();
-    await commit(root, 'base.txt', 'base\n', 'Base');
-    const bounded = createLocalGit({
-      run: runCommand,
-      runForBuffer: runCommandForBuffer,
-      env,
-      maxSnapshotCacheBytes: 1000,
-    });
-    await writeFile(join(root, 'base.txt'), 'x'.repeat(1001));
-    await expect(
-      bounded.diff(root, 'uncommitted', { includeUncommitted: true }),
-    ).rejects.toMatchObject({
-      code: 'git-failed',
-      message: expect.stringContaining('size limit'),
     });
   });
 
@@ -186,14 +216,16 @@ describe('local history', () => {
       env,
       maxSnapshotCacheBytes: 1000,
     });
-    await writeFile(join(root, 'base.txt'), 'small\n');
-    const options = { headRef: 'HEAD', includeUncommitted: true };
-    const first = await bounded.diff(root, 'branch', options);
-    await writeFile(
-      join(root, 'base.txt'),
-      Array.from({ length: 10000 }, (_, index) => `${index} unique content`).join('\n'),
-    );
-    await expect(bounded.diff(root, 'branch', options)).rejects.toMatchObject({
+    const small = await commit(root, 'base.txt', 'small\n', 'Small selected change');
+    const first = await bounded.diff(root, 'commits', { commits: [small] });
+    await commit(root, 'omitted.txt', 'not selected\n', 'Omitted dependency-free change');
+    for (let index = 0; index < 100; index++) {
+      await writeFile(join(root, `${index}-unique-selected-file-name.txt`), `${index}\n`);
+    }
+    await git(root, 'add', '-A');
+    await git(root, 'commit', '-q', '-m', 'Large selected tree');
+    const large = await git(root, 'rev-parse', 'HEAD');
+    await expect(bounded.diff(root, 'commits', { commits: [small, large] })).rejects.toMatchObject({
       code: 'git-failed',
       message: expect.stringContaining('cache'),
     });
@@ -203,18 +235,7 @@ describe('local history', () => {
     });
   });
 
-  it('supports explicitly requested uncommitted snapshots with no branch options', async () => {
-    const root = await repository();
-    await commit(root, 'base.txt', 'base\n', 'Base');
-    await git(root, 'switch', '-q', '-c', 'feature');
-    await commit(root, 'feature.txt', 'feature\n', 'Feature');
-    await writeFile(join(root, 'base.txt'), 'dirty\n');
-    const diff = await local.diff(root, 'uncommitted', { includeUncommitted: true });
-    expect(diff.files.map((file) => file.path)).toEqual(['base.txt']);
-    expect(diff.files[0]?.newBlob).toMatch(/^[0-9a-f]{40}$/);
-  });
-
-  it('does not invoke repository hooks or clean filters while snapshotting', async () => {
+  it('does not invoke repository hooks or clean filters while reading uncommitted changes', async () => {
     const root = await repository();
     await commit(root, 'base.txt', 'base\n', 'Base');
     const marker = join(root, 'executed');
@@ -227,7 +248,11 @@ describe('local history', () => {
     await git(root, 'config', 'filter.attack.clean', `touch '${marker}'`);
     await writeFile(join(root, '.gitattributes'), '*.txt filter=attack\n');
     await writeFile(join(root, 'base.txt'), 'dirty\n');
-    await local.diff(root, 'branch', { headRef: 'HEAD', includeUncommitted: true });
+    await local.diff(root, 'uncommitted');
+    await local.status(root);
+    await local.signature(root, 'uncommitted');
+    const sha = await git(root, 'rev-parse', 'HEAD');
+    await local.diff(root, 'commits', { commits: [sha] });
     await expect(readFile(marker)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
@@ -306,42 +331,14 @@ describe('local history', () => {
   it('does not add snapshot objects to the user repository', async () => {
     const root = await repository();
     await commit(root, 'base.txt', 'base\n', 'Base');
-    const before = await git(root, 'count-objects', '-v');
-    await writeFile(join(root, 'base.txt'), 'snapshot only\n');
-    const diff = await local.diff(root, 'branch', {
-      baseRef: 'main',
-      headRef: 'HEAD',
-      includeUncommitted: true,
-    });
-    expect(await git(root, 'count-objects', '-v')).toBe(before);
+    const selected = await commit(root, 'base.txt', 'snapshot only\n', 'Selected change');
+    const objects = await git(root, 'count-objects', '-v');
+    const diff = await local.diff(root, 'commits', { commits: [selected] });
+    expect(await git(root, 'count-objects', '-v')).toBe(objects);
     await expect(local.readBlob(root, diff.files[0]?.newBlob ?? '', 1000)).resolves.toEqual({
       kind: 'text',
       text: 'snapshot only\n',
     });
-  });
-
-  it('includes uncommitted snapshots only when head resolves to current HEAD', async () => {
-    const root = await repository();
-    await commit(root, 'base.txt', 'base\n', 'Base');
-    await git(root, 'switch', '-q', '-c', 'feature');
-    await commit(root, 'feature.txt', 'committed\n', 'Feature');
-    await writeFile(join(root, 'feature.txt'), 'dirty\n');
-    await writeFile(join(root, 'untracked.txt'), 'untracked\n');
-    const index = await readFile(join(root, '.git/index'));
-    const options = { baseRef: 'main', headRef: 'feature', includeUncommitted: true };
-    const diff = await local.diff(root, 'branch', options);
-    expect(diff.files.map((file) => file.path)).toEqual(['feature.txt', 'untracked.txt']);
-    await expect(local.readBlob(root, diff.files[0]?.newBlob ?? '', 1000)).resolves.toEqual({
-      kind: 'text',
-      text: 'dirty\n',
-    });
-    expect(await readFile(join(root, '.git/index'))).toEqual(index);
-    const before = await local.signature(root, 'branch', options);
-    await writeFile(join(root, 'feature.txt'), 'changed\n');
-    expect(await local.signature(root, 'branch', options)).not.toBe(before);
-    await expect(local.diff(root, 'branch', { ...options, headRef: 'main' })).rejects.toMatchObject(
-      { code: 'invalid-argument' },
-    );
   });
 
   it('replays only selected commits in ancestry order into an isolated index', async () => {
@@ -365,51 +362,6 @@ describe('local history', () => {
     expect(await readFile(join(root, '.git/index'))).toEqual(index);
     expect(await readFile(join(root, 'base.txt'), 'utf8')).toBe('dirty\n');
     expect(await git(root, 'rev-parse', 'HEAD')).toBe(last);
-  });
-
-  it('derives the automatic branch baseline from the selected head instead of checked-out HEAD', async () => {
-    const root = await repository();
-    const common = await commit(root, 'base.txt', 'base\n', 'Base');
-    await git(root, 'switch', '-q', '-c', 'other');
-    await commit(root, 'other.txt', 'other\n', 'Other');
-    await git(root, 'switch', '-q', 'main');
-    await commit(root, 'later-main.txt', 'later main\n', 'Advance main');
-    await git(root, 'switch', '-q', '-c', 'checked-out');
-    await commit(root, 'checked-out.txt', 'checked out\n', 'Checked out');
-    const diff = await local.diff(root, 'branch', { headRef: 'other', includeUncommitted: false });
-    expect(diff.files.map((file) => file.path)).toEqual(['other.txt']);
-    expect(diff.base).toEqual({ name: 'main', commit: common });
-    const uncommitted = await local.diff(root, 'uncommitted', {
-      headRef: 'other',
-      includeUncommitted: false,
-    });
-    expect(uncommitted.files).toEqual([]);
-    expect(uncommitted.base?.name).toBe('other');
-  });
-
-  it('compares arbitrary refs without checking out or including dirty files and keeps snapshot blobs stable', async () => {
-    const root = await repository();
-    await commit(root, 'base.txt', 'base\n', 'Base');
-    await git(root, 'switch', '-q', '-c', 'feature');
-    await commit(root, 'feature.txt', 'committed\n', 'Feature');
-    await writeFile(join(root, 'feature.txt'), 'dirty\n');
-    await writeFile(join(root, 'untracked.txt'), 'untracked\n');
-    const index = await readFile(join(root, '.git/index'));
-    const options = { baseRef: 'main', headRef: 'feature', includeUncommitted: false };
-    const diff = await local.diff(root, 'branch', options);
-    expect(diff.files.map((file) => file.path)).toEqual(['feature.txt']);
-    const blob = diff.files[0]?.newBlob;
-    expect(blob).toMatch(/^[0-9a-f]{40}$/);
-    await expect(local.readBlob(root, blob ?? '', 1000)).resolves.toEqual({
-      kind: 'text',
-      text: 'committed\n',
-    });
-    const signature = await local.signature(root, 'branch', options);
-    await writeFile(join(root, 'feature.txt'), 'dirtier\n');
-    expect(await local.signature(root, 'branch', options)).toBe(signature);
-    expect(await git(root, 'branch', '--show-current')).toBe('feature');
-    expect(await readFile(join(root, '.git/index'))).toEqual(index);
-    expect(await readFile(join(root, 'feature.txt'), 'utf8')).toBe('dirtier\n');
   });
 
   it('lists local and remote branches and structured commits for the requested ref', async () => {

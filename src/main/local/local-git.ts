@@ -13,12 +13,14 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, sep } from 'node:path';
 import type { BlobContent, ChangedFile } from '@shared/diff';
 import {
+  isLocalCompare,
   isLocalRef,
   type LocalCompare,
   type LocalDiff,
   type LocalHistory,
   type LocalStatus,
   type LocalTarget,
+  MAX_LOCAL_COMMITS,
 } from '@shared/local';
 import { AppError } from '../errors';
 import { classifyBlob, parseNumstat, parseRawDiff, toChangedFiles } from '../git/parse';
@@ -26,7 +28,6 @@ import { type BufferCommandRunner, CommandError, type CommandRunner } from '../s
 
 // Git's well-known id of the empty tree, used as the base of a repository with no commits yet.
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
-const BASE_CANDIDATES = ['main', 'master', 'origin/main', 'origin/master'];
 const DIFF_OPTIONS = ['diff', '--no-color', '--no-ext-diff', '--no-textconv', '-M', '-z'];
 const LINE_COUNT_LIMIT = 1024 * 1024;
 type CompareOptions = Omit<LocalTarget, 'repositoryId' | 'compare'>;
@@ -98,8 +99,28 @@ export function createLocalGit({
 
   async function git(root: string, args: readonly string[]): Promise<string> {
     try {
-      return (await run('git', [...prefix(root), ...args], { env: await objectEnvironment(root) }))
-        .stdout;
+      const filterKeys = ['diff', 'status'].includes(args[0] ?? '')
+        ? ((
+            await optional(root, [
+              'config',
+              '--null',
+              '--name-only',
+              '--get-regexp',
+              '^filter\\..*\\.(clean|process|required)$',
+            ])
+          )
+            ?.split('\0')
+            .filter(Boolean) ?? [])
+        : [];
+      const filterOverrides = filterKeys.flatMap((key) => [
+        '-c',
+        `${key}=${key.endsWith('.required') ? 'false' : ''}`,
+      ]);
+      return (
+        await run('git', [...prefix(root), ...filterOverrides, ...args], {
+          env: await objectEnvironment(root),
+        })
+      ).stdout;
     } catch (error) {
       throw toLocalGitError(args, error);
     }
@@ -119,36 +140,25 @@ export function createLocalGit({
     }
   }
 
-  async function base(
-    root: string,
-    compare: LocalCompare,
-    headName = 'HEAD',
-    headCommit?: string,
-  ): Promise<LocalDiff['base']> {
-    const head = headCommit ?? (await optional(root, ['rev-parse', '--verify', '--quiet', 'HEAD']));
-    if (!head) {
-      return null;
-    }
-    if (compare === 'uncommitted') {
-      return { name: headName, commit: head };
-    }
-    const name =
-      (await optional(root, ['symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD'])) ??
-      (await firstExisting(root, BASE_CANDIDATES));
-    if (!name) {
-      return { name: headName, commit: head };
-    }
-    const commit = await optional(root, ['merge-base', name, head]);
-    return commit ? { name, commit } : { name: headName, commit: head };
+  async function base(root: string): Promise<LocalDiff['base']> {
+    const head = await optional(root, ['rev-parse', '--verify', '--quiet', 'HEAD']);
+    return head ? { name: 'HEAD', commit: head } : null;
   }
 
-  async function firstExisting(root: string, names: readonly string[]): Promise<string | null> {
-    for (const name of names) {
-      if (await optional(root, ['rev-parse', '--verify', '--quiet', `${name}^{commit}`])) {
-        return name;
-      }
-    }
-    return null;
+  function validateComparison(compare: LocalCompare, options: CompareOptions): void {
+    const allowed = compare === 'commits' ? ['commits', 'headRef'] : [];
+    if (!isLocalCompare(compare) || Object.keys(options).some((key) => !allowed.includes(key)))
+      throw new AppError('invalid-argument', 'Expected uncommitted changes or selected commits.');
+    if (
+      compare === 'commits' &&
+      (!Array.isArray(options.commits) ||
+        options.commits.length < 1 ||
+        options.commits.length > MAX_LOCAL_COMMITS ||
+        new Set(options.commits).size !== options.commits.length ||
+        options.commits.some((sha) => !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(sha)) ||
+        (options.headRef !== undefined && !isLocalRef(options.headRef)))
+    )
+      throw new AppError('invalid-argument', 'Select between one and 100 unique commits.');
   }
 
   async function untracked(root: string): Promise<string[]> {
@@ -326,7 +336,7 @@ export function createLocalGit({
         } catch (error) {
           throw new AppError(
             'git-failed',
-            'Selected commits conflict when replayed without intervening commits. Select their dependencies or compare branches instead.',
+            'Selected commits conflict when replayed without intervening commits. Select their dependencies and try again.',
             { cause: error },
           );
         }
@@ -335,117 +345,8 @@ export function createLocalGit({
     });
   }
 
-  async function workingSnapshot(root: string, head: string): Promise<string> {
-    if (head !== (await resolveCommit(root, 'HEAD')))
-      throw new AppError(
-        'invalid-argument',
-        'Uncommitted changes can only be included for current HEAD.',
-      );
-    return isolatedIndex(root, async (indexGit, directory) => {
-      await indexGit(['read-tree', head]);
-      const sparseEntries = new Map<string, { mode: string; oid: string }>();
-      const submodules = new Set<string>();
-      for (const entry of (await git(root, ['ls-files', '--stage', '-t', '-z'])).split('\0')) {
-        const match = /^([A-Z]) (\d+) ([0-9a-f]+) 0\t([\s\S]+)$/.exec(entry);
-        if (!match) continue;
-        const [, tag = '', mode = '', oid = '', path = ''] = match;
-        if (tag === 'S') sparseEntries.set(path, { mode, oid });
-        if (mode === '160000') submodules.add(path);
-      }
-      const filterKeys =
-        (
-          await optional(root, [
-            'config',
-            '--null',
-            '--name-only',
-            '--get-regexp',
-            '^filter\\..*\\.(clean|process|required)$',
-          ])
-        )
-          ?.split('\0')
-          .filter(Boolean) ?? [];
-      const filterOverrides = filterKeys.flatMap((key) => [
-        '-c',
-        `${key}=${key.endsWith('.required') ? 'false' : ''}`,
-      ]);
-      const changed = new Set([
-        ...(
-          await git(root, [
-            ...filterOverrides,
-            ...DIFF_OPTIONS,
-            '--no-renames',
-            '--name-only',
-            head,
-            '--',
-          ])
-        )
-          .split('\0')
-          .filter(Boolean),
-        ...(await untracked(root)),
-      ]);
-      let snapshotBytes = 0;
-      for (const path of changed) {
-        const target = await insideRepository(root, path);
-        const info = await lstat(target).catch((error) => {
-          if (['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code ?? ''))
-            return undefined;
-          throw error;
-        });
-        if (!info) {
-          const sparse = sparseEntries.get(path);
-          if (sparse)
-            await indexGit(['update-index', '--add', '--cacheinfo', sparse.mode, sparse.oid, path]);
-          else await indexGit(['update-index', '--force-remove', '--', path]);
-          continue;
-        }
-        if (info.isDirectory()) {
-          if (!submodules.has(path)) await indexGit(['update-index', '--force-remove', '--', path]);
-          continue;
-        }
-        if (!info.isSymbolicLink() && !info.isFile())
-          throw new AppError(
-            'invalid-argument',
-            'Only regular files and symbolic links can be snapshotted.',
-          );
-        snapshotBytes += info.size;
-        if (snapshotBytes > maxSnapshotCacheBytes)
-          throw new AppError('git-failed', 'Snapshot cache input exceeds the size limit.');
-        const content = info.isSymbolicLink()
-          ? Buffer.from(await readlink(target))
-          : await readFile(target);
-        const payload = join(directory, 'content');
-        await writeFile(payload, content);
-        const oid = (await indexGit(['hash-object', '-w', '--no-filters', '--', payload])).trim();
-        const mode = info.isSymbolicLink() ? '120000' : info.mode & 0o111 ? '100755' : '100644';
-        await indexGit(['update-index', '--add', '--replace', '--cacheinfo', mode, oid, path]);
-      }
-      return (await indexGit(['write-tree'])).trim();
-    });
-  }
-
-  async function snapshot(
-    root: string,
-    options: CompareOptions,
-    compare: LocalCompare = 'branch',
-  ): Promise<{ from: string; to: string; name: string }> {
-    if (options.commits) return selectedSnapshot(root, options.commits);
-    const head = await resolveCommit(root, options.headRef ?? 'HEAD');
-    const to = options.includeUncommitted ? await workingSnapshot(root, head) : head;
-    const automaticBase = options.baseRef
-      ? null
-      : await base(root, compare, options.headRef ?? 'HEAD', head);
-    const from = options.baseRef
-      ? await resolveCommit(root, options.baseRef)
-      : (automaticBase?.commit ?? EMPTY_TREE);
-    return { from, to, name: options.baseRef ?? automaticBase?.name ?? 'Empty tree' };
-  }
-
-  async function snapshotDiff(
-    root: string,
-    options: CompareOptions,
-    compare: LocalCompare,
-  ): Promise<LocalDiff> {
-    const { from, to, name } = await snapshot(root, options, compare);
+  async function snapshotDiff(root: string, options: CompareOptions): Promise<LocalDiff> {
+    const { from, to, name } = await selectedSnapshot(root, options.commits ?? []);
     const [raw, numstat, branch] = await Promise.all([
       git(root, [...DIFF_OPTIONS, '--raw', '--no-abbrev', from, to, '--']),
       git(root, [...DIFF_OPTIONS, '--numstat', from, to, '--']),
@@ -514,11 +415,11 @@ export function createLocalGit({
       return top;
     },
 
-    // Counts the files a branch diff lists without comparing their lines.
+    // Counts uncommitted files without comparing their lines.
     async status(root) {
       const [branch, from, added] = await Promise.all([
         optional(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']),
-        base(root, 'branch'),
+        base(root),
         untracked(root),
       ]);
       const changed = await git(root, [...DIFF_OPTIONS, '--name-only', from?.commit ?? EMPTY_TREE]);
@@ -552,16 +453,11 @@ export function createLocalGit({
     },
 
     async diff(root, compare, options = {}) {
-      if (
-        compare === 'commits' ||
-        options.baseRef !== undefined ||
-        options.headRef !== undefined ||
-        options.includeUncommitted !== undefined
-      )
-        return snapshotDiff(root, options, compare);
+      validateComparison(compare, options);
+      if (compare === 'commits') return snapshotDiff(root, options);
       const [branch, from] = await Promise.all([
         optional(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']),
-        base(root, compare),
+        base(root),
       ]);
       const commit = from?.commit ?? EMPTY_TREE;
       const [numstat, raw, added] = await Promise.all([
@@ -578,18 +474,14 @@ export function createLocalGit({
     },
 
     async signature(root, compare, options = {}) {
-      if (
-        compare === 'commits' ||
-        options.baseRef !== undefined ||
-        options.headRef !== undefined ||
-        options.includeUncommitted !== undefined
-      ) {
+      validateComparison(compare, options);
+      if (compare === 'commits') {
         return createHash('sha1')
-          .update(JSON.stringify(await snapshot(root, options, compare)))
+          .update(JSON.stringify(await selectedSnapshot(root, options.commits ?? [])))
           .digest('hex');
       }
       const [from, head, branch, status] = await Promise.all([
-        base(root, compare),
+        base(root),
         optional(root, ['rev-parse', '--verify', '--quiet', 'HEAD']),
         optional(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']),
         git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=all']),

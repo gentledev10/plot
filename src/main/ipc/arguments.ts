@@ -196,46 +196,35 @@ function localRef(value: unknown): string {
 }
 
 function localTarget(value: unknown): LocalTarget {
-  const { repositoryId, compare } = (value ?? {}) as Record<string, unknown>;
+  const raw = (value ?? {}) as Record<string, unknown>;
+  const { repositoryId, compare } = raw;
   if (!isLocalCompare(compare)) {
-    throw new AppError('invalid-argument', 'Expected branch or uncommitted changes.');
+    throw new AppError('invalid-argument', 'Expected uncommitted changes or selected commits.');
   }
-  const raw = value as Record<string, unknown>;
-  if (raw.includeUncommitted !== undefined && typeof raw.includeUncommitted !== 'boolean') {
-    throw new AppError('invalid-argument', 'Expected a boolean for uncommitted changes.');
+  const allowed =
+    compare === 'commits'
+      ? ['repositoryId', 'compare', 'commits', 'headRef']
+      : ['repositoryId', 'compare'];
+  if (Object.keys(raw).some((key) => !allowed.includes(key))) {
+    throw new AppError('invalid-argument', 'That comparison cannot use these options.');
   }
   if (compare === 'commits') {
     if (
       !Array.isArray(raw.commits) ||
       raw.commits.length < 1 ||
       raw.commits.length > MAX_LOCAL_COMMITS ||
-      new Set(raw.commits).size !== raw.commits.length ||
-      raw.baseRef !== undefined ||
-      raw.headRef !== undefined ||
-      raw.includeUncommitted === true
+      new Set(raw.commits).size !== raw.commits.length
     ) {
-      throw new AppError(
-        'invalid-argument',
-        'Select between one and 100 unique commits without branch references or uncommitted changes.',
-      );
+      throw new AppError('invalid-argument', 'Select between one and 100 unique commits.');
     }
-  } else if (
-    raw.commits !== undefined ||
-    (compare === 'uncommitted' &&
-      (raw.baseRef !== undefined || raw.headRef !== undefined || raw.includeUncommitted === false))
-  ) {
-    throw new AppError('invalid-argument', 'That comparison cannot use these options.');
+    return {
+      repositoryId: localRepositoryId(repositoryId),
+      compare,
+      commits: raw.commits.map(objectId),
+      ...(raw.headRef !== undefined ? { headRef: localRef(raw.headRef) } : {}),
+    };
   }
-  return {
-    repositoryId: localRepositoryId(repositoryId),
-    compare,
-    ...(raw.baseRef !== undefined ? { baseRef: localRef(raw.baseRef) } : {}),
-    ...(raw.headRef !== undefined ? { headRef: localRef(raw.headRef) } : {}),
-    ...(raw.includeUncommitted !== undefined
-      ? { includeUncommitted: raw.includeUncommitted as boolean }
-      : {}),
-    ...(raw.commits !== undefined ? { commits: (raw.commits as unknown[]).map(objectId) } : {}),
-  };
+  return { repositoryId: localRepositoryId(repositoryId), compare };
 }
 
 function relativePath(value: unknown): string {

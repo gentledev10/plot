@@ -12,8 +12,11 @@ function Live({ initial }: { initial: LocalTarget }) {
   useLocalAutoRefresh(target);
   useTargetDiff({ kind: 'local', ...target });
   return (
-    <button type="button" onClick={() => setTarget({ ...target, headRef: 'other' })}>
-      Compare another branch
+    <button
+      type="button"
+      onClick={() => setTarget({ ...target, headRef: 'other', commits: ['b'.repeat(40)] })}
+    >
+      Select commits from another history branch
     </button>
   );
 }
@@ -31,14 +34,25 @@ describe('local refresh', () => {
   it('starts a new signature baseline when the comparison target changes', async () => {
     const getLocalSignature = vi
       .fn()
-      .mockImplementation(async (target: LocalTarget) => target.headRef ?? 'current');
+      .mockImplementation(
+        async (target: LocalTarget) =>
+          `${target.headRef ?? 'current'}:${target.commits?.join(',')}`,
+      );
     const getLocalDiff = vi.fn().mockResolvedValue({ branch: 'feature', base: null, files: [] });
     const { queryClient } = renderWithApi(
-      <Live initial={{ repositoryId: '0123456789abcdef', compare: 'branch' }} />,
+      <Live
+        initial={{
+          repositoryId: '0123456789abcdef',
+          compare: 'commits',
+          commits: ['a'.repeat(40)],
+        }}
+      />,
       { getLocalSignature, getLocalDiff },
     );
     await vi.waitFor(() => expect(getLocalDiff).toHaveBeenCalledTimes(1));
-    await userEvent.click(screen.getByRole('button', { name: 'Compare another branch' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Select commits from another history branch' }),
+    );
     await vi.waitFor(() => expect(getLocalSignature).toHaveBeenCalledTimes(2));
     await act(async () => {});
     expect(getLocalDiff).toHaveBeenCalledTimes(2);
@@ -47,8 +61,9 @@ describe('local refresh', () => {
     await vi.waitFor(() => expect(getLocalDiff).toHaveBeenCalledTimes(3));
     expect(getLocalDiff).toHaveBeenLastCalledWith({
       repositoryId: '0123456789abcdef',
-      compare: 'branch',
+      compare: 'commits',
       headRef: 'other',
+      commits: ['b'.repeat(40)],
     });
   });
 });

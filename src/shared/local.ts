@@ -1,6 +1,6 @@
 import type { ChangedFile } from './diff';
 
-export const LOCAL_COMPARES = ['branch', 'uncommitted', 'commits'] as const;
+export const LOCAL_COMPARES = ['uncommitted', 'commits'] as const;
 
 export type LocalCompare = (typeof LOCAL_COMPARES)[number];
 
@@ -13,9 +13,8 @@ export interface LocalRepository {
 export interface LocalTarget {
   repositoryId: string;
   compare: LocalCompare;
-  baseRef?: string;
+  // Selects commit history only; it never changes the comparison baseline.
   headRef?: string;
-  includeUncommitted?: boolean;
   commits?: string[];
 }
 

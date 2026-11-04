@@ -94,14 +94,14 @@ describe('argumentParsers', () => {
 
   it('accepts local repositories only by id, and paths only inside them', () => {
     const id = '0123456789abcdef';
-    expect(
-      argumentParsers.getLocalDiff([{ repositoryId: id, compare: 'branch', path: '/' }]),
-    ).toEqual([{ repositoryId: id, compare: 'branch' }]);
+    expect(argumentParsers.getLocalDiff([{ repositoryId: id, compare: 'uncommitted' }])).toEqual([
+      { repositoryId: id, compare: 'uncommitted' },
+    ]);
     expect(argumentParsers.readLocalFile([id, 'src/app.ts'])).toEqual([id, 'src/app.ts']);
 
     const invalid = expect.objectContaining({ code: 'invalid-argument' });
     expect(() =>
-      argumentParsers.getLocalDiff([{ repositoryId: '/Users/me', compare: 'branch' }]),
+      argumentParsers.getLocalDiff([{ repositoryId: '/Users/me', compare: 'uncommitted' }]),
     ).toThrow(invalid);
     expect(() => argumentParsers.getLocalDiff([{ repositoryId: id, compare: 'all' }])).toThrow(
       invalid,

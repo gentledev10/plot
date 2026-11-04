@@ -94,21 +94,44 @@ try {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.getByRole('button', { name: 'Open a local folder…', exact: true }).click();
-  const baseBranch = page.getByRole('combobox', { name: 'Base branch', exact: true });
-  const compareBranch = page.getByRole('combobox', { name: 'Compare branch', exact: true });
-  await baseBranch.selectOption('main');
-  await compareBranch.selectOption('feature');
-  await page.getByRole('checkbox', { name: 'Include uncommitted changes', exact: true }).uncheck();
-  await page.getByRole('treeitem').filter({ hasText: 'first.txt' }).waitFor();
-  assert.equal(await page.getByRole('treeitem').filter({ hasText: 'dirty.txt' }).count(), 0);
-  await page.getByRole('treeitem').filter({ hasText: 'middle.txt' }).waitFor();
-  pass('Compare selected branches without dirty files');
-  mkdirSync(join(root, 'dist'), { recursive: true });
-  await page.screenshot({ path: join(root, 'dist/local-history-branches.png'), scale: 'css' });
-  await page.getByRole('checkbox', { name: 'Include uncommitted changes', exact: true }).check();
+  assert.equal(
+    await page.getByRole('radio', { name: 'Uncommitted only', exact: true }).isChecked(),
+    true,
+  );
+  assert.equal(await page.getByRole('radio', { name: 'Branch changes', exact: true }).count(), 0);
+  assert.equal(await page.getByRole('combobox', { name: 'Base branch', exact: true }).count(), 0);
+  assert.equal(
+    await page.getByRole('combobox', { name: 'Compare branch', exact: true }).count(),
+    0,
+  );
+  assert.equal(
+    await page.getByRole('checkbox', { name: 'Include uncommitted changes', exact: true }).count(),
+    0,
+  );
   await page.getByRole('treeitem').filter({ hasText: 'dirty.txt' }).waitFor();
-  pass('Include working changes only on the checked-out branch');
+  assert.equal(await page.getByRole('treeitem').filter({ hasText: 'first.txt' }).count(), 0);
+  assert.equal(await page.getByRole('treeitem').filter({ hasText: 'middle.txt' }).count(), 0);
+  pass('Default to uncommitted files without whole-branch comparison controls');
+  await page.getByRole('treeitem').filter({ hasText: 'dirty.txt' }).click();
+  await page.waitForFunction(() =>
+    document
+      .querySelector('.editor.modified .view-lines')
+      ?.textContent?.includes('working-tree-only'),
+  );
+  mkdirSync(join(root, 'dist'), { recursive: true });
+  await page.screenshot({ path: join(root, 'dist/local-history-uncommitted.png'), scale: 'css' });
   await page.getByRole('radio', { name: 'Selected commits', exact: true }).check();
+  await page
+    .getByRole('combobox', { name: 'Commit history branch', exact: true })
+    .selectOption('main');
+  await page
+    .getByRole('checkbox', { name: /First selected change/ })
+    .waitFor({ state: 'detached' });
+  await page.getByRole('checkbox', { name: /Create baseline/ }).waitFor();
+  await page
+    .getByRole('combobox', { name: 'Commit history branch', exact: true })
+    .selectOption('feature');
+  pass('Choose a branch only to browse its commit history');
   await page.getByRole('checkbox', { name: /First selected change/ }).check();
   await page.getByRole('checkbox', { name: /Last selected change/ }).check();
   await page.getByRole('treeitem').filter({ hasText: 'first.txt' }).waitFor();
