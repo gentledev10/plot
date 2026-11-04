@@ -1,6 +1,6 @@
 import type { LocalTarget } from '@shared/local';
 import { pullRequestKey } from '@shared/pull-request-ref';
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { hashKey, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useApi } from '../../app/providers';
 import { diffKeys } from '../diff/queries';
@@ -11,13 +11,21 @@ export const localKeys = {
   status: (repositoryId: string) => ['local-status', repositoryId] as const,
   pullRequest: (repositoryId: string, branch: string | null) =>
     ['local-pull-request', repositoryId, branch] as const,
-  signature: ({ repositoryId, compare }: LocalTarget) =>
-    ['local-signature', repositoryId, compare] as const,
+  signature: (target: LocalTarget) => ['local-signature', target.repositoryId, target] as const,
+  history: (repositoryId: string, ref?: string) => ['local-history', repositoryId, ref] as const,
 };
 
 export const LOCAL_REFRESH_MS = 2_000;
 
 export const LOCAL_STATUS_REFRESH_MS = 5_000;
+
+export function useLocalHistory(repositoryId: string, ref?: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: localKeys.history(repositoryId, ref),
+    queryFn: () => api.getLocalHistory(repositoryId, ref),
+  });
+}
 
 export function useLocalRepositories() {
   const api = useApi();
@@ -92,19 +100,21 @@ export function useLocalAutoRefresh(target: LocalTarget): void {
   const signature = useQuery({
     queryKey: localKeys.signature(target),
     queryFn: () => api.getLocalSignature(target),
+    enabled: target.compare !== 'commits' || Boolean(target.commits?.length),
     refetchInterval: LOCAL_REFRESH_MS,
     staleTime: 0,
   });
-  const previous = useRef<string | undefined>(undefined);
+  const previous = useRef<{ key: string; value: string } | undefined>(undefined);
   const { repositoryId } = target;
+  const key = hashKey(localKeys.signature(target));
 
   useEffect(() => {
     if (signature.data === undefined) {
       return;
     }
-    if (previous.current !== undefined && previous.current !== signature.data) {
+    if (previous.current?.key === key && previous.current.value !== signature.data) {
       void client.invalidateQueries({ queryKey: diffKeys.local(repositoryId) });
     }
-    previous.current = signature.data;
-  }, [signature.data, client, repositoryId]);
+    previous.current = { key, value: signature.data };
+  }, [signature.data, client, repositoryId, key]);
 }

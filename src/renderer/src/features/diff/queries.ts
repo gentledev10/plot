@@ -14,8 +14,8 @@ export const diffKeys = {
   blob: (ref: PullRequestRef, blob: string | null) =>
     ['blob', ref.owner.toLowerCase(), ref.repo.toLowerCase(), blob] as const,
   local: (repositoryId: string) => ['local', repositoryId] as const,
-  localDiff: ({ repositoryId, compare }: LocalTarget) =>
-    ['local', repositoryId, compare, 'diff'] as const,
+  localDiff: (target: LocalTarget) =>
+    ['local', target.repositoryId, target.compare, target, 'diff'] as const,
 };
 
 export function usePullRequestDiff(ref: PullRequestRef) {
@@ -31,7 +31,7 @@ export function useLocalDiff(target: LocalTarget) {
   const api = useApi();
   return useQuery<LocalDiff>({
     queryKey: diffKeys.localDiff(target),
-    queryFn: () => api.getLocalDiff(target),
+    queryFn: () => localDiff(api, target),
   });
 }
 
@@ -46,9 +46,15 @@ export function useTargetDiff(target: DiffTarget) {
         }
       : {
           queryKey: diffKeys.localDiff(localTargetOf(target)),
-          queryFn: () => api.getLocalDiff(localTargetOf(target)),
+          queryFn: () => localDiff(api, localTargetOf(target)),
         },
   );
+}
+
+function localDiff(api: PlotApi, target: LocalTarget): Promise<LocalDiff> {
+  return target.compare === 'commits' && !target.commits?.length
+    ? Promise.resolve({ branch: null, base: null, files: [] })
+    : api.getLocalDiff(target);
 }
 
 export type FileSide = 'original' | 'modified';
@@ -80,8 +86,8 @@ function contentQuery(
     };
   }
   const { repositoryId } = target;
-  if (side === 'original') {
-    const blob = submodule ? null : file.oldBlob;
+  if (side === 'original' || file.newBlob !== null) {
+    const blob = submodule ? null : side === 'original' ? file.oldBlob : file.newBlob;
     return {
       queryKey: [...diffKeys.local(repositoryId), 'blob', blob],
       queryFn: () => (blob ? api.readLocalBlob(repositoryId, blob) : Promise.resolve(EMPTY)),

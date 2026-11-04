@@ -1,6 +1,27 @@
 import type { Language } from './language';
 
 export const korean: Record<string, string> = {
+  'Explain local changes': '로컬 변경 설명',
+  'Reading local changes…': '로컬 변경 분석 중…',
+  'your chosen AI provider': '선택한 AI 제공업체',
+  'The selected local diff and file contents are sent to {provider} when you generate an overview. This uses your provider account and may incur usage charges.':
+    '개요를 생성하면 선택한 로컬 변경과 파일 내용이 {provider}에 전송됩니다. 사용자의 제공업체 계정을 사용하며 사용 요금이 발생할 수 있습니다.',
+  'Only selected file snapshots are shared. Your original repository is not checked out or modified. Tests are not run.':
+    '선택한 파일 스냅샷만 공유합니다. 원본 저장소를 체크아웃하거나 수정하지 않으며 테스트를 실행하지 않습니다.',
+  'Base branch': '기준 브랜치',
+  'Compare branch': '비교 브랜치',
+  'Include uncommitted changes': '커밋하지 않은 변경 포함',
+  'Commit history branch': '커밋 기록 브랜치',
+  'Selected commits': '선택한 커밋',
+  'Select commits': '커밋 선택',
+  'Automatic base': '자동 기준',
+  'Current checkout': '현재 체크아웃',
+  'Loading local history…': '로컬 기록 불러오는 중…',
+  'Could not load local history': '로컬 기록을 불러오지 못했습니다',
+  'No commits on this branch.': '이 브랜치에는 커밋이 없습니다.',
+  'Showing the latest 100 commits.': '최근 커밋 100개를 표시합니다.',
+  'Select commits to compare their changes.': '변경을 비교할 커밋을 선택하세요.',
+  'Compared with {name} at {commit}.': '{name}의 {commit} 커밋과 비교합니다.',
   'Flowchart symbols': '순서도 기호',
   'Start / end': '시작·종료',
   Process: '처리',

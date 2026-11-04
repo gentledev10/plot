@@ -196,6 +196,9 @@ export function DiffWorkspace({
     </section>
   );
   function renderBody() {
+    if (target.kind === 'local' && target.compare === 'commits' && !target.commits?.length) {
+      return <StatusMessage>{t('Select commits to compare their changes.')}</StatusMessage>;
+    }
     if (diff.isPending) {
       return (
         <StatusMessage title={t('Fetching changes…')}>

@@ -18,7 +18,13 @@ import {
 } from '@shared/github';
 import { isHost } from '@shared/hosts';
 import type { IpcMethod, PlotApi } from '@shared/ipc';
-import { isLocalCompare, isLocalRepositoryId, type LocalTarget } from '@shared/local';
+import {
+  isLocalCompare,
+  isLocalRef,
+  isLocalRepositoryId,
+  type LocalTarget,
+  MAX_LOCAL_COMMITS,
+} from '@shared/local';
 import { isPullRequestRef } from '@shared/pull-request-ref';
 import { isRepositoryRef } from '@shared/repository-ref';
 import type { ReviewQuestionRequest, ReviewVerificationRequest } from '@shared/review-activity';
@@ -83,6 +89,11 @@ export const argumentParsers: ArgumentParsers = {
   removeLocalRepository: ([id]) => [localRepositoryId(id)],
   getLocalStatus: ([id]) => [localRepositoryId(id)],
   findLocalPullRequest: ([id]) => [localRepositoryId(id)],
+  getLocalHistory: ([id, ref]) =>
+    ref === undefined ? [localRepositoryId(id)] : [localRepositoryId(id), localRef(ref)],
+  getLocalReviewStatus: ([target]) => [localTarget(target)],
+  startLocalReview: ([target]) => [localTarget(target)],
+  cancelLocalReview: ([target]) => [localTarget(target)],
   getLocalDiff: ([target]) => [localTarget(target)],
   getLocalSignature: ([target]) => [localTarget(target)],
   readLocalBlob: ([id, blob]) => [localRepositoryId(id), objectId(blob)],
@@ -177,12 +188,54 @@ function localRepositoryId(value: unknown): string {
   return value;
 }
 
+function localRef(value: unknown): string {
+  if (!isLocalRef(value)) {
+    throw new AppError('invalid-argument', 'Expected a Git branch name or object id.');
+  }
+  return value;
+}
+
 function localTarget(value: unknown): LocalTarget {
   const { repositoryId, compare } = (value ?? {}) as Record<string, unknown>;
   if (!isLocalCompare(compare)) {
     throw new AppError('invalid-argument', 'Expected branch or uncommitted changes.');
   }
-  return { repositoryId: localRepositoryId(repositoryId), compare };
+  const raw = value as Record<string, unknown>;
+  if (raw.includeUncommitted !== undefined && typeof raw.includeUncommitted !== 'boolean') {
+    throw new AppError('invalid-argument', 'Expected a boolean for uncommitted changes.');
+  }
+  if (compare === 'commits') {
+    if (
+      !Array.isArray(raw.commits) ||
+      raw.commits.length < 1 ||
+      raw.commits.length > MAX_LOCAL_COMMITS ||
+      new Set(raw.commits).size !== raw.commits.length ||
+      raw.baseRef !== undefined ||
+      raw.headRef !== undefined ||
+      raw.includeUncommitted === true
+    ) {
+      throw new AppError(
+        'invalid-argument',
+        'Select between one and 100 unique commits without branch references or uncommitted changes.',
+      );
+    }
+  } else if (
+    raw.commits !== undefined ||
+    (compare === 'uncommitted' &&
+      (raw.baseRef !== undefined || raw.headRef !== undefined || raw.includeUncommitted === false))
+  ) {
+    throw new AppError('invalid-argument', 'That comparison cannot use these options.');
+  }
+  return {
+    repositoryId: localRepositoryId(repositoryId),
+    compare,
+    ...(raw.baseRef !== undefined ? { baseRef: localRef(raw.baseRef) } : {}),
+    ...(raw.headRef !== undefined ? { headRef: localRef(raw.headRef) } : {}),
+    ...(raw.includeUncommitted !== undefined
+      ? { includeUncommitted: raw.includeUncommitted as boolean }
+      : {}),
+    ...(raw.commits !== undefined ? { commits: (raw.commits as unknown[]).map(objectId) } : {}),
+  };
 }
 
 function relativePath(value: unknown): string {

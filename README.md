@@ -18,7 +18,7 @@ A Mac app for understanding pull requests and local code changes. Read side-by-s
 - **Read the change in context.** Browse GitHub pull requests or paste a PR URL. Navigate side-by-side or unified diffs with a file tree, collapsed unchanged lines and configurable shortcuts.
 - **Understand the story.** Optional AI overviews explain the purpose, key changes and review questions, with before-and-after diagrams and links back to the code. Use your own Claude Code or Codex CLI account.
 - **Explore behavior.** For suitable conditional logic, expand **Try inputs and error cases** inside a key change. Change inputs or select boundary, invalid-input and failure scenarios to compare paths and predicted results before and after. These are bounded AI explanation models; they do not execute repository code, confirm bugs or measure test coverage. Broader calculations, loops and concurrency are outside this first version.
-- **Check your work as it happens.** Open a local repository to inspect branch changes, including uncommitted files. The diff refreshes as you or an AI agent edits files.
+- **Check your work and its history.** Open a local repository to compare branches, select one or several commits, or inspect uncommitted files. Choose whether to include working changes, and request an optional AI overview of the selected change.
 
 ## Get started
 
@@ -79,7 +79,7 @@ Use the same diff viewer for your own branch and work produced by coding agents.
 Plot is free and open source. **AI usage is handled by your chosen provider under your account's plan or API pricing.** Plot does not include an AI subscription.
 
 - **Optional:** read PRs and local diffs without AI. Overviews require Claude Code 2.1.248 or later, or an up-to-date Codex CLI, with a supported sign-in or your API key.
-- **Data:** analysis runs through the CLI on your Mac, which sends analysis input to its AI provider. Inputs include the PR diff and description, changed directories, repository file paths and bounded architecture context. Plot has no analysis server of its own; this is not offline AI.
+- **Data:** analysis runs through the CLI on your Mac, which sends analysis input to its AI provider. PR inputs include the diff and description, changed directories, repository file paths and bounded architecture context. Local inputs contain only the selected diff and selected before/after text-file snapshots, not broader repository context. Plot has no analysis server of its own; this is not offline AI.
 - **Credentials:** API keys and stored GitHub tokens are encrypted using the macOS keychain. GitHub CLI connections request the token when needed without storing a copy.
 - **Controls:** AI tools run with file-write and tool/network restrictions. Cited locations are checked against source; the explanation can still be wrong. You make the review decision.
 - **Reuse:** overviews are cached locally per commit and language. Reopening one does not generate another AI request.
@@ -88,15 +88,15 @@ Read [AI setup and data access](docs/GUIDE.md#ai-overviews-and-your-code) and th
 
 ## Supported today
 
-| Area           | Support                                                                             |
-| -------------- | ----------------------------------------------------------------------------------- |
-| Platform       | macOS 13+; Windows and Linux are not supported                                      |
-| Pull requests  | GitHub.com and GitHub Enterprise Server; GitLab and Bitbucket PRs are not supported |
-| Local work     | Git repositories, branch changes, uncommitted and untracked files                   |
-| AI overview    | Pull requests; local-only changes do not have AI overviews                          |
-| Review actions | Read and understand changes; comments, approvals and merging stay on GitHub         |
-| Languages      | English and Korean; the overview language can be selected separately                |
-| Appearance     | Light, Dark and Darcula, code fonts, colors and resizable panels                    |
+| Area           | Support                                                                                  |
+| -------------- | ---------------------------------------------------------------------------------------- |
+| Platform       | macOS 13+; Windows and Linux are not supported                                           |
+| Pull requests  | GitHub.com and GitHub Enterprise Server; GitLab and Bitbucket PRs are not supported      |
+| Local work     | Git repositories, selectable branch comparisons, selected commits, and uncommitted files |
+| AI overview    | Pull requests and explicitly selected local changes                                      |
+| Review actions | Read and understand changes; comments, approvals and merging stay on GitHub              |
+| Languages      | English and Korean; the overview language can be selected separately                     |
+| Appearance     | Light, Dark and Darcula, code fonts, colors and resizable panels                         |
 
 For setup problems, see [Troubleshooting](docs/TROUBLESHOOTING.md). Report a reproducible bug or suggest a feature in [Issues](https://github.com/gentledev10/plot/issues/new/choose). Planned distribution work is tracked in the [release guide](docs/RELEASING.md).
 

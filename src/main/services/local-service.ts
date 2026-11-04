@@ -12,6 +12,7 @@ export type LocalService = Pick<
   | 'listLocalRepositories'
   | 'removeLocalRepository'
   | 'getLocalStatus'
+  | 'getLocalHistory'
   | 'findLocalPullRequest'
   | 'getLocalDiff'
   | 'getLocalSignature'
@@ -64,12 +65,16 @@ export function createLocalService({
       return null;
     },
 
-    async getLocalDiff({ repositoryId, compare }) {
-      return git.diff(await repositories.root(repositoryId), compare);
+    async getLocalHistory(repositoryId, ref) {
+      return git.history(await repositories.root(repositoryId), ref);
     },
 
-    async getLocalSignature({ repositoryId, compare }) {
-      return git.signature(await repositories.root(repositoryId), compare);
+    async getLocalDiff({ repositoryId, compare, ...options }) {
+      return git.diff(await repositories.root(repositoryId), compare, options);
+    },
+
+    async getLocalSignature({ repositoryId, compare, ...options }) {
+      return git.signature(await repositories.root(repositoryId), compare, options);
     },
 
     async readLocalBlob(repositoryId, blob) {

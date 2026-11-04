@@ -31,6 +31,45 @@ function setup(findOpenPullRequest: (base: unknown, head: string) => Promise<unk
   });
 }
 
+describe('local history service', () => {
+  it('resolves the opaque repository id and forwards all comparison options', async () => {
+    const git = {
+      history: vi.fn().mockResolvedValue({ branches: [], commits: [], hasMore: false }),
+      diff: vi.fn().mockResolvedValue({ files: [] }),
+      signature: vi.fn().mockResolvedValue('signature'),
+    };
+    const repositories = { root: vi.fn().mockResolvedValue('/work/api') };
+    const service = createLocalService({
+      repositories: repositories as unknown as LocalRepositoryStore,
+      git: git as unknown as LocalGit,
+      chooseFolder: vi.fn(),
+      findOpenPullRequest: vi.fn(),
+    });
+    const target = {
+      repositoryId: '0123456789abcdef',
+      compare: 'branch' as const,
+      baseRef: 'main',
+      headRef: 'feature',
+      includeUncommitted: false,
+    };
+    await service.getLocalDiff(target);
+    await service.getLocalSignature(target);
+    await service.getLocalHistory(target.repositoryId, 'feature');
+    expect(git.diff).toHaveBeenCalledWith('/work/api', 'branch', {
+      baseRef: 'main',
+      headRef: 'feature',
+      includeUncommitted: false,
+    });
+    expect(git.signature).toHaveBeenCalledWith('/work/api', 'branch', {
+      baseRef: 'main',
+      headRef: 'feature',
+      includeUncommitted: false,
+    });
+    expect(git.history).toHaveBeenCalledWith('/work/api', 'feature');
+    expect(repositories.root).toHaveBeenCalledWith(target.repositoryId);
+  });
+});
+
 describe('findLocalPullRequest', () => {
   it('finds the pull request of the checked-out branch, trying the forked repository first', async () => {
     const asked: string[] = [];

@@ -13,7 +13,7 @@ import type {
   RepositoryPullRequestQuery,
   RepositoryRef,
 } from './github';
-import type { LocalDiff, LocalRepository, LocalStatus, LocalTarget } from './local';
+import type { LocalDiff, LocalHistory, LocalRepository, LocalStatus, LocalTarget } from './local';
 import type { ReviewStatus } from './review';
 import type {
   ReviewActivity,
@@ -69,6 +69,10 @@ export interface PlotApi {
   removeLocalRepository(id: string): Promise<void>;
   getLocalStatus(repositoryId: string): Promise<LocalStatus>;
   findLocalPullRequest(repositoryId: string): Promise<PullRequestSummary | null>;
+  getLocalHistory(repositoryId: string, ref?: string): Promise<LocalHistory>;
+  getLocalReviewStatus(target: LocalTarget): Promise<ReviewStatus>;
+  startLocalReview(target: LocalTarget): Promise<void>;
+  cancelLocalReview(target: LocalTarget): Promise<void>;
   getLocalDiff(target: LocalTarget): Promise<LocalDiff>;
   getLocalSignature(target: LocalTarget): Promise<string>;
   readLocalBlob(repositoryId: string, blob: string): Promise<BlobContent>;
@@ -124,6 +128,10 @@ const METHODS: Record<IpcMethod, true> = {
   removeLocalRepository: true,
   getLocalStatus: true,
   findLocalPullRequest: true,
+  getLocalHistory: true,
+  getLocalReviewStatus: true,
+  startLocalReview: true,
+  cancelLocalReview: true,
   getLocalDiff: true,
   getLocalSignature: true,
   readLocalBlob: true,

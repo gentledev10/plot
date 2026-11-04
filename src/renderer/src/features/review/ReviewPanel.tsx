@@ -574,7 +574,7 @@ interface ReviewMapViewProps {
   onExpandMap?(): void;
   includeKinds?: ReadonlySet<ReviewStep['kind']>;
 }
-function ReviewMapView({
+export function ReviewMapView({
   execution,
   review,
   changedPaths,

@@ -63,6 +63,59 @@ The build overrides minimatch 9/10 with 11.0.3. Older build dependencies still n
 - Prefer clear names over comments. Write a comment only when the code cannot explain why it is written that way.
 - Keep pull requests focused on one change, and describe what reviewers should look at closely.
 
+## Project language
+
+Write project-authored code identifiers, comments, documentation, test names, pull request
+text, and commit subjects/bodies in English. Preserve existing Git history: do not rewrite
+old commits to enforce this policy.
+
+This is not an ASCII-only rule or a restriction on application input. Preserve all Korean
+localization, native language names, Korean classification vocabulary, Unicode paths and
+content, internationalization tests/fixtures, and upstream license/copyright notices.
+Do not globally replace Korean text or change runtime behavior to satisfy a prose check.
+
+`npm run check:language` scans tracked and new nonignored text files for Hangul; it skips
+binary files. `npm run lint` runs that audit and its regression tests before Biome, so CI
+and release lint enforce the same gate. This targeted regression check is not a general
+natural-language detector: reviewers must still enforce English for other authored prose.
+
+Reviewed exceptions live in `scripts/check-language-allowlist.json`: each exact path has
+an English reason and a list of original line numbers and SHA-256 hashes of complete lines
+(without the newline). Line numbers locate the reviewed source; hashes allow English-only
+insertions above it without breaking localization. Each entry permits only one occurrence.
+There are no blanket test, translation-directory, or whole-file exclusions. Changing an
+allowed line, adding a translation/support fixture, or retaining a new upstream notice
+requires reviewing the exact line and updating this inventory with a specific reason.
+Never allowlist an authored Korean comment or document merely to make CI pass. Run
+`npm run test:language` after changing the checker or inventory. The suite checks the
+real canonical catalog against its reviewed hashes, rejects both standalone and inline
+Korean comments in that catalog, and rejects new unreviewed catalog values. New genuine
+translations must be reviewed and added to the inventory; they are not an exemption for
+other Korean prose in `src/shared/translations.ts`.
+
+### Commit messages
+
+The versioned `.githooks/commit-msg` hook checks the subject and body. Opt in for a normal
+clone with:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+That setting is shared by linked worktrees unless worktree-specific configuration is
+already enabled. Do not run it automatically or change shared configuration on behalf of
+other worktrees. For a single commit without changing configuration, use:
+
+```sh
+git -c core.hooksPath=.githooks commit
+```
+
+PR CI fetches complete history and runs `npm run check:commit-language -- --base BASE_SHA
+--head HEAD_SHA` using the PR's base and head commits. Only commits reachable from the
+head but not the base are checked; historical base commits and the synthetic CI merge
+commit are not audited or rewritten. This hook is optional locally; CI is the required
+commit-message gate for pull requests.
+
 ## Reporting security issues
 
 Please do not open public issues for security problems. See [SECURITY.md](SECURITY.md).

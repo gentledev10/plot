@@ -324,11 +324,15 @@ describe('App', () => {
       files: [file],
     });
     const getLocalSignature = vi.fn().mockResolvedValue('first');
+    const startLocalReview = vi.fn().mockResolvedValue(undefined);
+    const getLocalReviewStatus = vi.fn().mockResolvedValue({ state: 'idle' });
     const { queryClient } = renderWithApi(<App />, {
       ...api(),
       listLocalRepositories: vi.fn().mockResolvedValue([repository]),
       getLocalDiff,
       getLocalSignature,
+      startLocalReview,
+      getLocalReviewStatus,
       readLocalBlob: vi.fn().mockResolvedValue({ kind: 'text', text: 'listen(80)' }),
       readLocalFile: vi.fn().mockResolvedValue({ kind: 'text', text: 'listen(8080)' }),
     });
@@ -343,13 +347,26 @@ describe('App', () => {
     expect(screen.getByTestId('modified')).toHaveTextContent('listen(8080)');
     expect(screen.queryByRole('complementary', { name: 'AI overview' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'AI overview', pressed: false }));
-    expect(screen.getByText(/AI overviews work on pull requests for now/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Explain local changes' })).toBeEnabled();
+    expect(startLocalReview).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Explain local changes' }));
+    await vi.waitFor(() =>
+      expect(startLocalReview).toHaveBeenCalledWith({
+        repositoryId: repository.id,
+        compare: 'branch',
+      }),
+    );
+    expect(getLocalReviewStatus).toHaveBeenCalledWith({
+      repositoryId: repository.id,
+      compare: 'branch',
+    });
 
     getLocalSignature.mockResolvedValue('second');
     await act(() => queryClient.refetchQueries({ queryKey: ['local-signature'] }));
     await vi.waitFor(() => expect(getLocalDiff).toHaveBeenCalledTimes(2));
 
     await userEvent.click(screen.getByRole('radio', { name: 'Uncommitted only' }));
+    expect(screen.getByRole('complementary', { name: 'AI overview' })).toBeVisible();
     expect(getLocalDiff).toHaveBeenLastCalledWith({
       repositoryId: repository.id,
       compare: 'uncommitted',
@@ -361,6 +378,138 @@ describe('App', () => {
       'aria-current',
       'true',
     );
+  });
+
+  it('compares selected branches without checking out and preserves the full target on refresh', async () => {
+    const repository = { id: '0123456789abcdef', name: 'api', path: '/work/api' };
+    const getLocalDiff = vi.fn().mockResolvedValue({ branch: 'feature', base: null, files: [] });
+    const getLocalSignature = vi.fn().mockResolvedValue('same');
+    const getLocalHistory = vi.fn().mockResolvedValue({
+      branches: [
+        { name: 'main', current: false, remote: false },
+        { name: 'feature', current: true, remote: false },
+        { name: 'other', current: false, remote: false },
+      ],
+      commits: [],
+      hasMore: false,
+    });
+    const { queryClient } = renderWithApi(<App />, {
+      ...api(),
+      listLocalRepositories: vi.fn().mockResolvedValue([repository]),
+      getLocalDiff,
+      getLocalSignature,
+      getLocalHistory,
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Local changes' }));
+    await userEvent.click(await screen.findByRole('button', { name: /^api/ }));
+    const include = await screen.findByRole('checkbox', { name: 'Include uncommitted changes' });
+    expect(include).toBeChecked();
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Base branch' }), 'main');
+    await vi.waitFor(() =>
+      expect(getLocalDiff).toHaveBeenLastCalledWith({
+        repositoryId: repository.id,
+        compare: 'branch',
+        baseRef: 'main',
+        includeUncommitted: true,
+      }),
+    );
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Compare branch' }),
+      'other',
+    );
+    expect(
+      screen.queryByRole('checkbox', { name: 'Include uncommitted changes' }),
+    ).not.toBeInTheDocument();
+    const expected = {
+      repositoryId: repository.id,
+      compare: 'branch',
+      baseRef: 'main',
+      headRef: 'other',
+      includeUncommitted: false,
+    };
+    await vi.waitFor(() => expect(getLocalDiff).toHaveBeenLastCalledWith(expected));
+    await act(() => queryClient.refetchQueries({ queryKey: ['local-signature'] }));
+    expect(getLocalSignature).toHaveBeenLastCalledWith(expected);
+    fireEvent.keyDown(document.body, { key: 'r', code: 'KeyR', metaKey: true });
+    await vi.waitFor(() => expect(getLocalDiff).toHaveBeenLastCalledWith(expected));
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Compare branch' }),
+      'feature',
+    );
+    expect(
+      await screen.findByRole('checkbox', { name: 'Include uncommitted changes' }),
+    ).not.toBeChecked();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Include uncommitted changes' }));
+    await vi.waitFor(() =>
+      expect(getLocalDiff).toHaveBeenLastCalledWith({
+        ...expected,
+        headRef: 'feature',
+        includeUncommitted: true,
+      }),
+    );
+  });
+
+  it('compares only explicitly checked commits and clears them when the history branch changes', async () => {
+    const repository = { id: '0123456789abcdef', name: 'api', path: '/work/api' };
+    const commits = ['Newest fix', 'Unselected middle', 'Older fix'].map((subject, index) => ({
+      sha: String(index + 1).repeat(40),
+      parents: [],
+      subject,
+      author: 'A developer',
+      date: '2026-11-01T12:00:00Z',
+    }));
+    const getLocalDiff = vi.fn().mockResolvedValue({ branch: 'feature', base: null, files: [] });
+    const getLocalHistory = vi.fn().mockResolvedValue({
+      branches: [
+        { name: 'feature', current: true, remote: false },
+        { name: 'main', current: false, remote: false },
+      ],
+      commits,
+      hasMore: true,
+    });
+    renderWithApi(<App />, {
+      ...api(),
+      listLocalRepositories: vi.fn().mockResolvedValue([repository]),
+      getLocalDiff,
+      getLocalHistory,
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Local changes' }));
+    await userEvent.click(await screen.findByRole('button', { name: /^api/ }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Selected commits' }));
+    expect(await screen.findByText('Select commits to compare their changes.')).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Newest fix/ }));
+    await vi.waitFor(() =>
+      expect(getLocalDiff).toHaveBeenLastCalledWith({
+        repositoryId: repository.id,
+        compare: 'commits',
+        commits: ['1'.repeat(40)],
+      }),
+    );
+    await userEvent.click(screen.getByRole('checkbox', { name: /Older fix/ }));
+    await vi.waitFor(() =>
+      expect(getLocalDiff).toHaveBeenLastCalledWith({
+        repositoryId: repository.id,
+        compare: 'commits',
+        commits: ['1'.repeat(40), '3'.repeat(40)],
+      }),
+    );
+    expect(screen.getByRole('checkbox', { name: /Unselected middle/ })).not.toBeChecked();
+    expect(screen.getByText('Showing the latest 100 commits.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('checkbox', { name: /Newest fix/ }));
+    await vi.waitFor(() =>
+      expect(getLocalDiff).toHaveBeenLastCalledWith({
+        repositoryId: repository.id,
+        compare: 'commits',
+        commits: ['3'.repeat(40)],
+      }),
+    );
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Commit history branch' }),
+      'main',
+    );
+    await vi.waitFor(() => expect(getLocalHistory).toHaveBeenLastCalledWith(repository.id, 'main'));
+    expect(await screen.findByRole('checkbox', { name: /Older fix/ })).not.toBeChecked();
+    expect(screen.getByText('Select commits to compare their changes.')).toBeInTheDocument();
   });
 
   it('keeps pull requests and local changes in separate tool windows', async () => {

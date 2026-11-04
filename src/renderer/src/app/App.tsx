@@ -7,7 +7,7 @@ import { FolderGit2, GitPullRequest, Settings, Sparkles } from 'lucide-react';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { useCurrentAccount } from '../features/accounts/queries';
 import type { LocationRequest } from '../features/diff/DiffWorkspace';
-import { type DiffTarget, targetKey } from '../features/diff/target';
+import { type DiffTarget, localTargetOf, targetKey } from '../features/diff/target';
 import { FilesPanel } from '../features/files/FilesPanel';
 import { InboxPanel } from '../features/inbox/InboxPanel';
 import { useCommand, useShortcutLabel } from '../features/keymap/KeymapProvider';
@@ -15,6 +15,7 @@ import { formatStroke } from '../features/keymap/keystroke';
 import { useT } from '../features/language/LanguageProvider';
 import { LocalChangesPanel } from '../features/local/LocalChangesPanel';
 import { LocalPullRequestLink } from '../features/local/LocalPullRequestLink';
+import { LocalReviewWorkspace } from '../features/local/LocalReviewWorkspace';
 import { LocalWorkspace } from '../features/local/LocalWorkspace';
 import { useLocalRepositories, useLocalRepositoryActions } from '../features/local/queries';
 import { PullRequestWorkspace } from '../features/pull-request/PullRequestWorkspace';
@@ -98,7 +99,13 @@ export function App() {
   const reviewShortcut = useShortcutLabel('view.toggleReview');
   function show(target: DiffTarget) {
     reading.reset();
-    setContextReview(false);
+    if (
+      open?.kind !== 'local' ||
+      target.kind !== 'local' ||
+      open.repositoryId !== target.repositoryId
+    ) {
+      setContextReview(false);
+    }
     setOpen(target);
     setLastOpened(target);
     setToolWindow(target.kind === 'local' ? 'local-changes' : 'pull-requests');
@@ -386,15 +393,9 @@ export function App() {
         )}
         {open?.kind === 'local' && (
           <LocalWorkspace
-            key={targetKey(open)}
-            repositoryId={open.repositoryId}
-            compare={open.compare}
-            onCompareChange={(compare) =>
-              show({
-                ...open,
-                compare,
-              })
-            }
+            key={open.repositoryId}
+            target={localTargetOf(open)}
+            onTargetChange={(target) => show({ kind: 'local', ...target })}
             selectedPath={selectedPath}
             reveal={reveal}
             onSelectPath={setSelectedPath}
@@ -423,21 +424,26 @@ export function App() {
       </main>
       <div className={styles.review} hidden={!reviewShown}>
         {!maximized && resizeHandle('review', 'Resize the AI panel', 'left')}
-        <ReviewPanel
-          target={open?.kind === 'pull-request' ? open.ref : undefined}
-          notice={
-            open?.kind === 'local'
-              ? t(
-                  'AI overviews work on pull requests for now. Push the branch and open its pull request to get one.',
-                )
-              : undefined
-          }
-          onOpenLocation={openLocation}
-          onConfigureAi={() => setSettings('ai')}
-          onConfigurePlan={() => setSettings('review-format')}
-          maximized={maximized}
-          onToggleMaximize={() => setMaximized(!maximized)}
-        />
+        {open?.kind === 'local' ? (
+          <LocalReviewWorkspace
+            key={targetKey(open)}
+            target={localTargetOf(open)}
+            onOpenLocation={openLocation}
+            onConfigureAi={() => setSettings('ai')}
+            onConfigurePlan={() => setSettings('review-format')}
+            maximized={maximized}
+            onToggleMaximize={() => setMaximized(!maximized)}
+          />
+        ) : (
+          <ReviewPanel
+            target={open?.kind === 'pull-request' ? open.ref : undefined}
+            onOpenLocation={openLocation}
+            onConfigureAi={() => setSettings('ai')}
+            onConfigurePlan={() => setSettings('review-format')}
+            maximized={maximized}
+            onToggleMaximize={() => setMaximized(!maximized)}
+          />
+        )}
       </div>
       <div className={styles.rightBar}>
         <ToolWindowBar side="right" label={t('Right tool windows')}>

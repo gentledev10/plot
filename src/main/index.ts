@@ -54,6 +54,7 @@ import { createAiService } from './services/ai-service';
 import { createDiffService } from './services/diff-service';
 import { createFontService } from './services/font-service';
 import { createGitHubService, openPullRequestFinder } from './services/github-service';
+import { createLocalReviewService } from './services/local-review-service';
 import { createLocalService } from './services/local-service';
 import { createReviewActivityService } from './services/review-activity-service';
 import { createReviewExecutionService } from './services/review-execution-service';
@@ -184,6 +185,12 @@ function createApi(): PlotApi {
       ),
     onUnexpectedError: (error) => console.error('[review] failed', error),
   });
+  const local = createLocalService({
+    repositories: createLocalRepositoryStore(join(userData, 'local-repositories.json')),
+    git: createLocalGit({ run: runCommand, runForBuffer: runCommandForBuffer, env: process.env }),
+    chooseFolder: chooseRepositoryFolder,
+    findOpenPullRequest: openPullRequestFinder(connections),
+  });
   const reviewActivities = createReviewActivityService({
     connections,
     repositories,
@@ -240,11 +247,18 @@ function createApi(): PlotApi {
       if (key === LANGUAGE_PREFERENCE)
         installMenu(appLanguage(parseLanguages(value), systemLocale()));
     },
-    ...createLocalService({
-      repositories: createLocalRepositoryStore(join(userData, 'local-repositories.json')),
-      git: createLocalGit({ run: runCommand, runForBuffer: runCommandForBuffer, env: process.env }),
-      chooseFolder: chooseRepositoryFolder,
-      findOpenPullRequest: openPullRequestFinder(connections),
+    ...local,
+    ...createLocalReviewService({
+      local,
+      resolveAgent: resolveReviewAgent,
+      workspaceRoot: join(userData, 'local-review-workspaces'),
+      cacheRoot: join(userData, 'local-reviews'),
+      plan: async () => parseReviewPlan((await preferences.all())[REVIEW_PLAN_PREFERENCE]),
+      language: async () =>
+        reviewLanguage(
+          parseLanguages((await preferences.all())[LANGUAGE_PREFERENCE]),
+          systemLocale(),
+        ),
     }),
   };
 }
