@@ -377,7 +377,7 @@ function Introduction({ provider, onGenerate, onConfigure, busy }: IntroductionP
       </p>
       <button type="button" className={styles.primary} onClick={onGenerate} disabled={busy}>
         <Sparkles size={14} />
-        {t(' Explain this change')}
+        {t(' Review changes')}
       </button>
       <p className={styles.muted}>
         {name}

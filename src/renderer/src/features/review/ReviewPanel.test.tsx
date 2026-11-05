@@ -207,7 +207,7 @@ describe('ReviewPanel', () => {
     expect(
       await screen.findByText(/Claude Code reads this pull request.*read-only access/),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Explain this change/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Review changes' }));
     expect(api.startReview).toHaveBeenCalledWith(target);
     expect(await screen.findByText(/Reading the change…/)).toBeInTheDocument();
   });

@@ -397,7 +397,7 @@ export const korean: Record<string, string> = {
   'Enter this code on the GitHub page that opened in your browser.':
     '브라우저에 열린 GitHub 페이지에 이 코드를 입력해 주세요.',
   'Expand settings': '설정 창 확대',
-  'Explain this change': '변경 내용 설명하기',
+  'Review changes': '변경 내용 확인하기',
   'Fetching changes…': '변경 내용 가져오는 중…',
   'File too large to show': '표시하기에 너무 큰 파일입니다',
   'Filter, or paste a pull request URL': '검색하거나 풀 리퀘스트 URL을 붙여 넣으세요',

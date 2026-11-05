@@ -91,7 +91,7 @@ export const COMMANDS = [
   { id: 'navigation.refresh', title: 'Refresh', group: 'Navigation', keys: ['Meta+R'] },
   { id: 'pullRequest.openOnGitHub', title: 'Open on GitHub', group: 'Navigation', keys: [] },
   { id: 'local.open', title: 'Open a local repository', group: 'Navigation', keys: [] },
-  { id: 'review.generate', title: 'Explain this change', group: 'AI overview', keys: [] },
+  { id: 'review.generate', title: 'Review changes', group: 'AI overview', keys: [] },
 ] as const satisfies readonly CommandDefinition[];
 
 export type CommandId = (typeof COMMANDS)[number]['id'];

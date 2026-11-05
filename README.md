@@ -44,7 +44,7 @@ On macOS, `npm run dev` automatically prepares a locally signed development runt
 1. **Open local work:** choose **Open a local folder…** on the start screen, or **Local changes → Choose a folder…**, and pick a Git repository.
 2. **Or connect GitHub:** open **Settings → Accounts** and connect through your browser, a personal access token or the GitHub CLI. Development builds use a one-time browser code.
 3. **Open a pull request:** choose one from the list, or press **⌘O** and paste its URL. Select a file; use **F7 / ⇧F7** to move between changes.
-4. **Add an AI overview, if you want one:** configure an installed, signed-in tool in **Settings → AI overview**, then choose **Explain this change**. Select a cited code location to inspect its source.
+4. **Add an AI overview, if you want one:** configure an installed, signed-in tool in **Settings → AI overview**, then choose **Review changes**. Select a cited code location to inspect its source.
 
 See the [user guide](docs/GUIDE.md) for GitHub Enterprise, tokens, AI settings, languages, themes and the full shortcut list.
 

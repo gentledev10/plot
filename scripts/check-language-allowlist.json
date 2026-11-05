@@ -1867,7 +1867,7 @@
       },
       {
         "line": 400,
-        "sha256": "13bde7e24f26173b7845aeddbebc946c2e99b6a33c6e836b738349dda7bbec67"
+        "sha256": "26512a03e4fb98da38b4097f327e68a314943af2e3c5e9df805377340c219c1a"
       },
       {
         "line": 401,
@@ -3226,6 +3226,10 @@
   "src/shared/translations.test.ts": {
     "reason": "Reviewed Korean UI localization regression assertions, preserving exact translated values.",
     "lines": [
+      {
+        "line": 6,
+        "sha256": "4f477d7b96bb6b17f26a59ce87f81db1c91d5805d19c0377cfeb4d4331a46d8c"
+      },
       {
         "line": 6,
         "sha256": "a616ac683b7ba31b20cfcdbd29bee2d3829f93ee008f0a73c73b2ae6bce20d82"

@@ -3,6 +3,7 @@ import { createTranslator, korean } from './translations';
 
 describe('user-facing translations', () => {
   it.each([
+    ['Review changes', '변경 내용 확인하기'],
     ['Custom steps for the whole PR', '전체 PR에 대한 사용자 지정 단계'],
     ['Not modeled', '모델에 포함되지 않음'],
     ['Dependency failure', '의존 대상 오류'],

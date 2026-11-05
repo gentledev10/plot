@@ -427,7 +427,7 @@ try {
     .click();
   await page.getByRole('treeitem').filter({ hasText: 'sample.ts' }).click();
   await page.locator('.monaco-editor').first().waitFor();
-  await page.getByRole('button', { name: 'Explain this change', exact: true }).click();
+  await page.getByRole('button', { name: 'Review changes', exact: true }).click();
   await page.getByText(/Claude Code 2.1.248 or later is required/).waitFor();
   await page.getByRole('button', { name: 'Open AI settings', exact: true }).click();
   await settings.getByRole('radio', { name: /^Codex CLI/ }).click();
@@ -756,9 +756,9 @@ try {
   await settings.getByRole('button', { name: 'Language', exact: true }).click();
   await settings.getByLabel('AI review language', { exact: true }).selectOption('ko');
   await settings.getByRole('button', { name: 'Close settings' }).click();
-  await page.getByRole('button', { name: 'Explain this change', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Review changes', exact: true }).waitFor();
   assert.equal(await page.getByText(overview.summary, { exact: true }).count(), 0);
-  await page.getByRole('button', { name: 'Explain this change', exact: true }).click();
+  await page.getByRole('button', { name: 'Review changes', exact: true }).click();
   await page.getByText(koreanOverview.summary, { exact: true }).waitFor();
   await page.getByRole('heading', { name: 'At a glance', exact: true }).waitFor();
   pass('Generate Korean explanations with an English app without reusing an English review');
