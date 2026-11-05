@@ -1,10 +1,11 @@
 import type { ReviewStatus } from '@shared/review';
 import { retryUnit } from '@shared/review-unit.fixture';
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithApi } from '../../../test/render';
+import { diffKeys } from '../diff/queries';
 import { PullRequestWorkspace } from '../pull-request/PullRequestWorkspace';
 import { ReviewPanel } from './ReviewPanel';
 
@@ -68,6 +69,67 @@ describe('semantic reading workspace', () => {
     await user.selectOptions(screen.getByLabelText('Read by change'), 'all');
     expect(screen.getByRole('heading', { name: 'At a glance' })).toBeVisible();
   });
+  it('keeps the review scope visible and can return from the whole PR to a change', async () => {
+    const user = userEvent.setup();
+    renderWithApi(<Harness />, {
+      getReviewStatus: vi.fn().mockResolvedValue(done),
+      getPullRequestDiff: vi
+        .fn()
+        .mockResolvedValue({ files, head: done.head, mergeBase: 'b'.repeat(40) }),
+    });
+    const scope = await screen.findByRole('combobox', { name: 'Scope' });
+    await vi.waitFor(() => expect(scope).toHaveValue('unit:retry'));
+    await user.selectOptions(scope, 'all');
+    expect(screen.getByRole('heading', { name: 'At a glance' })).toBeVisible();
+    expect(scope).toBeVisible();
+    expect(scope).toHaveValue('all');
+    await user.selectOptions(scope, 'unit:retry');
+    expect(screen.getByRole('heading', { name: 'Retry temporary failures' })).toBeVisible();
+    expect(screen.getByLabelText('Read by change')).toHaveValue('unit:retry');
+    expect(screen.getByTestId('file-content')).toHaveTextContent('src/retry.ts');
+    expect(
+      screen.queryByRole('button', { name: 'Show the whole PR review' }),
+    ).not.toBeInTheDocument();
+  });
+  it.each(['mismatched', 'unavailable'] as const)(
+    'returns to the whole PR when a selected unit diff becomes %s',
+    async (state) => {
+      const user = userEvent.setup();
+      const { queryClient } = renderWithApi(<Harness />, {
+        getReviewStatus: vi.fn().mockResolvedValue(done),
+        getPullRequestDiff: vi
+          .fn()
+          .mockResolvedValueOnce({ files, head: done.head, mergeBase: 'b'.repeat(40) })
+          .mockImplementation(() => new Promise(() => {})),
+      });
+      const scope = await screen.findByRole('combobox', { name: 'Scope' });
+      await user.selectOptions(scope, 'all');
+      await user.selectOptions(scope, 'unit:retry');
+      expect(screen.getByRole('region', { name: 'Retry temporary failures' })).toBeVisible();
+
+      act(() => {
+        if (state === 'mismatched') {
+          queryClient.setQueryData(diffKeys.diff(ref), {
+            files,
+            head: 'c'.repeat(40),
+            mergeBase: 'b'.repeat(40),
+          });
+        } else {
+          void queryClient.resetQueries({ queryKey: diffKeys.diff(ref), exact: true });
+        }
+      });
+
+      await vi.waitFor(() =>
+        expect(screen.queryByRole('combobox', { name: 'Scope' })).not.toBeInTheDocument(),
+      );
+      expect(screen.queryByLabelText('Read by change')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('region', { name: 'Retry temporary failures' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'At a glance' })).toBeVisible();
+    },
+  );
+
   it('does not connect review units to diffs from another revision', async () => {
     renderWithApi(<Harness />, {
       getReviewStatus: vi.fn().mockResolvedValue(done),

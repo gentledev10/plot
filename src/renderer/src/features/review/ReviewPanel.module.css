@@ -284,21 +284,78 @@
   font-size: var(--font-size-small);
 }
 
-.changes {
+.changes,
+.concerns {
+  display: grid;
+  gap: 14px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.change {
-  margin-bottom: 12px;
+.change,
+.concerns > li {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-panel);
+}
+
+.itemTitle {
+  margin: 0 0 8px;
+  font-size: var(--font-size);
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.references {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0 0 10px;
+}
+
+.references .evidence,
+.references .location {
+  margin-left: 0;
+}
+
+.concerns .check {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--color-accent);
+  background: var(--color-bg-editor);
+}
+
+.check > strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--font-size-small);
 }
 
 .beforeAfter {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 2px 10px;
-  margin: 4px 0 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.beforeAfter dd {
+  padding: 0 0 10px;
+}
+
+.beforeAfter dd:last-child {
+  padding-bottom: 0;
+}
+
+@container (min-width: 540px) {
+  .beforeAfter {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 12px;
+  }
 }
 
 .beforeAfter dt {
@@ -445,7 +502,45 @@
 .unitIntro p {
   line-height: 1.6;
 }
+.panel .unitIntro h3 {
+  margin: 0 0 10px;
+  font-size: var(--font-size);
+  line-height: 1.5;
+}
+
+.unitOverview {
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.rationale {
+  margin-top: 16px;
+  padding: 12px;
+  border-left: 2px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg-editor);
+}
+
+.rationale .evidence {
+  margin: 10px 0 0;
+}
+
 .unitIntro h4 {
   font-size: var(--font-size);
-  margin: 14px 0 6px;
+  margin: 18px 0 8px;
+}
+
+.unitIntro .rationale h4 {
+  margin-top: 0;
+}
+
+.unitIntro .list > li,
+.cardBody > .list > li {
+  margin-bottom: 14px;
+}
+
+.cardBody > div + .list {
+  margin-top: 14px;
 }

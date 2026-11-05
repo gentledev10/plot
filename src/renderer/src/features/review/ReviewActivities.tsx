@@ -4,6 +4,7 @@ import type { CodeLocation } from '@shared/review';
 import type { ReviewTaskScope } from '@shared/review-activity';
 import type { ReviewUnit } from '@shared/review-unit';
 import { useEffect, useRef, useState } from 'react';
+import { InlineText, StructuredText } from '../../components/StructuredText';
 import { useT } from '../language/LanguageProvider';
 import { useReviewActivity } from './activity-queries';
 import styles from './ReviewActivities.module.css';
@@ -35,15 +36,10 @@ export function ReviewActivities({
       ? reading.question
       : undefined;
   const [question, setQuestion] = useState('');
-  const [open, setOpen] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
-    if (!context) return;
-    setOpen(true);
+    if (context) field.current?.focus();
   }, [context]);
-  useEffect(() => {
-    if (context && open) field.current?.focus();
-  }, [context, open]);
   const data = activity.query.data;
   const current = !!data && data.head === head;
   const questionJob = data?.questionTask;
@@ -67,8 +63,8 @@ export function ReviewActivities({
       {data && !current && (
         <p role="alert">{t('The PR changed. Refresh the diff before starting this activity.')}</p>
       )}
-      <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
-        <summary>{t('Ask about this change')}</summary>
+      <section className={styles.composer} aria-label={t('Ask about this change')}>
+        <h3>{t('Ask about this change')}</h3>
         {messages.map((entry) => (
           <article key={entry.id} className={styles.answer}>
             <h4>{entry.question}</h4>
@@ -78,7 +74,7 @@ export function ReviewActivities({
                 {t(entry.selection.side === 'original' ? 'Before' : 'After')}
               </p>
             )}
-            <p>{entry.answer}</p>
+            <StructuredText text={entry.answer} />
             <div className={styles.links}>
               {entry.locations.map((location) => (
                 <button
@@ -140,7 +136,7 @@ export function ReviewActivities({
         </form>
         {activity.ask.isError && <p role="alert">{t(activity.ask.error.message)}</p>}
         {questionJob?.state === 'failed' && <p role="alert">{t(questionJob.error.message)}</p>}
-      </details>
+      </section>
       <div className={styles.verification}>
         <h4>{t('AI code review')}</h4>
         <p className={styles.note}>
@@ -169,7 +165,7 @@ export function ReviewActivities({
         {verifyJob?.state === 'failed' && <p role="alert">{t(verifyJob.error.message)}</p>}
         {report && (
           <>
-            <p>{report.summary}</p>
+            <StructuredText text={report.summary} />
             {!report.findings.length && (
               <p>
                 {t(
@@ -179,7 +175,9 @@ export function ReviewActivities({
             )}
             {report.findings.map((finding) => (
               <article key={finding.id} className={styles.finding} data-verdict={finding.verdict}>
-                <h4>{finding.title}</h4>
+                <h4>
+                  <InlineText text={finding.title} />
+                </h4>
                 <p className={styles.note}>
                   {t(
                     finding.severity === 'high'
@@ -197,8 +195,11 @@ export function ReviewActivities({
                         : 'Uncertain — inspect the code',
                   )}
                 </p>
-                <p>{finding.reason}</p>
-                <p>{t('Check: {what}', { what: finding.check })}</p>
+                <StructuredText text={finding.reason} />
+                <div className={styles.check}>
+                  <strong>{t('Check: {what}', { what: '' })}</strong>
+                  <StructuredText text={finding.check} />
+                </div>
                 {finding.location && (
                   <button
                     type="button"
@@ -209,7 +210,7 @@ export function ReviewActivities({
                     {finding.location.path}:{finding.location.line}
                   </button>
                 )}
-                <p>{t(finding.verificationReason)}</p>
+                <StructuredText text={t(finding.verificationReason)} />
               </article>
             ))}
             <SuppliedContext scope={report} />

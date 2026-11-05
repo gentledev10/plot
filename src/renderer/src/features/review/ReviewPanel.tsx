@@ -31,6 +31,7 @@ import {
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { StatusMessage } from '../../components/StatusMessage';
+import { InlineText, StructuredText } from '../../components/StructuredText';
 import { formatAge } from '../../lib/format';
 import { useAiSettings } from '../ai/queries';
 import { useAppearance } from '../appearance/AppearanceProvider';
@@ -53,6 +54,7 @@ import { type ExecutionContext, ReviewExecution } from './ReviewExecution';
 import styles from './ReviewPanel.module.css';
 import { useReviewPlan } from './ReviewPlanProvider';
 import { useReviewReading } from './ReviewReadingProvider';
+import { ReviewScope } from './ReviewScope';
 import { VisualWalkthrough } from './VisualWalkthrough';
 
 interface ReviewPanelProps {
@@ -303,7 +305,13 @@ function PullRequestReview({
                 </button>
               </div>
             )}
-            {reading.focus?.target === pullRequestKey(target) &&
+            {!!current.review.units?.length &&
+              diff.data?.head === current.head &&
+              plan.steps.some((step) => step.kind === 'changes' && step.visible) && (
+                <ReviewScope target={target} head={current.head} units={current.review.units} />
+              )}
+            {diff.data?.head === current.head &&
+            reading.focus?.target === pullRequestKey(target) &&
             reading.focus.head === current.head &&
             reading.focus.mode === 'unit' &&
             plan.steps.some((step) => step.kind === 'changes' && step.visible) &&
@@ -319,13 +327,6 @@ function PullRequestReview({
                 changedPaths={changedPaths}
                 onOpenLocation={onOpenLocation}
                 onExpandMap={!maximizing.maximized ? maximizing.onToggleMaximize : undefined}
-                onShowAll={() =>
-                  reading.select({
-                    target: pullRequestKey(target),
-                    head: current.head,
-                    mode: 'all',
-                  })
-                }
               />
             ) : (
               <ReviewMapView
@@ -446,7 +447,6 @@ function UnitReview({
   changedPaths,
   onOpenLocation,
   onExpandMap,
-  onShowAll,
 }: {
   execution?: ExecutionContext;
   unit: ReviewUnit;
@@ -454,7 +454,6 @@ function UnitReview({
   changedPaths: ReadonlySet<string>;
   onOpenLocation(location: CodeLocation): void;
   onExpandMap?(): void;
-  onShowAll(): void;
 }) {
   const t = useT();
   const { plan } = useReviewPlan();
@@ -485,18 +484,17 @@ function UnitReview({
   return (
     <>
       <section className={styles.unitIntro} aria-label={unit.title}>
-        <button type="button" className={styles.link} onClick={onShowAll}>
-          {t('Show the whole PR review')}
-        </button>
         {review.summary && plan.steps.some((step) => step.kind === 'summary' && step.visible) && (
-          <p className={styles.muted}>{review.summary}</p>
+          <StructuredText className={styles.unitOverview} text={review.summary} />
         )}
-        <h3>{unit.title}</h3>
-        <p>{unit.summary}</p>
+        <h3>
+          <InlineText text={unit.title} />
+        </h3>
+        <StructuredText text={unit.summary} />
         {unit.rationale && (
-          <p>
-            <strong>{t('Why this change')}: </strong>
-            {unit.rationale}{' '}
+          <div className={styles.rationale}>
+            <h4>{t('Why this change')}</h4>
+            <StructuredText text={unit.rationale} />
             <span className={styles.evidence}>
               {t(
                 unit.rationaleEvidence === 'code'
@@ -506,7 +504,7 @@ function UnitReview({
                     : 'Inference — check this',
               )}
             </span>
-          </p>
+          </div>
         )}
         <h4>{t('Related implementation and tests')}</h4>
         <ul className={styles.list}>
@@ -530,7 +528,7 @@ function UnitReview({
                 changedPaths={changedPaths}
                 onOpen={onOpenLocation}
               />
-              <span className={styles.reason}>{file.reason}</span>
+              <StructuredText className={styles.reason} text={file.reason} />
             </li>
           ))}
         </ul>
@@ -602,9 +600,7 @@ export function ReviewMapView({
   const content = (step: ReviewStep): ReactNode => {
     switch (step.kind) {
       case 'summary':
-        return (
-          <p className={styles.text}>{review.summary || t('Generate again to fill this step.')}</p>
-        );
+        return <StructuredText text={review.summary || t('Generate again to fill this step.')} />;
       case 'changes':
         return review.changes.length > 0 ? (
           <ProgressiveList
@@ -614,19 +610,27 @@ export function ReviewMapView({
             {review.changes.map((change, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: stored analysis order is fixed
               <li key={`${index}-${change.title}`} className={styles.change}>
-                <strong>{change.title}</strong>
-                {link(change.location)}
+                <h4 className={styles.itemTitle}>
+                  <InlineText text={change.title} />
+                </h4>
+                {change.location && (
+                  <div className={styles.references}>{link(change.location)}</div>
+                )}
                 <dl className={styles.beforeAfter}>
                   {change.before && (
                     <>
                       <dt>{t('Before')}</dt>
-                      <dd>{change.before}</dd>
+                      <dd>
+                        <StructuredText text={change.before} />
+                      </dd>
                     </>
                   )}
                   {change.after && (
                     <>
                       <dt>{t('Now')}</dt>
-                      <dd>{change.after}</dd>
+                      <dd>
+                        <StructuredText text={change.after} />
+                      </dd>
                     </>
                   )}
                 </dl>
@@ -678,23 +682,30 @@ export function ReviewMapView({
             )}
           </p>
         ) : (
-          <ProgressiveList limit={step.detail === 'detailed' ? 8 : 3}>
+          <ProgressiveList className={styles.concerns} limit={step.detail === 'detailed' ? 8 : 3}>
             {review.reviewPoints.map((point, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: stored analysis order is fixed
               <li key={`${index}-${point.title}`}>
-                <strong>{point.title}</strong>
-                <span className={styles.evidence}>
-                  {t(
-                    point.evidence === 'code'
-                      ? 'Code reference'
-                      : point.evidence === 'description'
-                        ? 'PR description'
-                        : 'Inference — check this',
-                  )}
-                </span>
-                {link(point.location)}
-                <span className={styles.reason}>{point.reason}</span>
-                <p className={styles.check}>{t('Check: {what}', { what: point.check })}</p>
+                <h4 className={styles.itemTitle}>
+                  <InlineText text={point.title} />
+                </h4>
+                <div className={styles.references}>
+                  <span className={styles.evidence}>
+                    {t(
+                      point.evidence === 'code'
+                        ? 'Code reference'
+                        : point.evidence === 'description'
+                          ? 'PR description'
+                          : 'Inference — check this',
+                    )}
+                  </span>
+                  {link(point.location)}
+                </div>
+                <StructuredText text={point.reason} className={styles.reason} />
+                <div className={styles.check}>
+                  <strong>{t('Check: {what}', { what: '' })}</strong>
+                  <StructuredText text={point.check} />
+                </div>
               </li>
             ))}
           </ProgressiveList>
@@ -705,9 +716,11 @@ export function ReviewMapView({
             {review.impacts.map((impact, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: stored analysis order is fixed
               <li key={`${index}-${impact.area}`}>
-                <strong>{impact.area}</strong>
+                <h4 className={styles.itemTitle}>
+                  <InlineText text={impact.area} />
+                </h4>
                 {link(impact.location)}
-                <span className={styles.reason}>{impact.detail}</span>
+                <StructuredText className={styles.reason} text={impact.detail} />
               </li>
             ))}
           </ul>
@@ -718,7 +731,7 @@ export function ReviewMapView({
             {review.readingOrder.map((item) => (
               <li key={item.path}>
                 {link({ path: item.path, line: 1, verified: true })}
-                <span className={styles.reason}>{item.reason}</span>
+                <StructuredText className={styles.reason} text={item.reason} />
               </li>
             ))}
           </ProgressiveList>
@@ -737,15 +750,17 @@ export function ReviewMapView({
           );
         return (
           <>
-            {section.body && <p className={styles.text}>{section.body}</p>}
+            {section.body && <StructuredText text={section.body} />}
             {section.items.length > 0 && (
               <ul className={styles.list}>
                 {section.items.map((item, index) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: stored analysis order is fixed
                   <li key={`${index}-${item.area}`}>
-                    <strong>{item.area}</strong>
+                    <h4 className={styles.itemTitle}>
+                      <InlineText text={item.area} />
+                    </h4>
                     {link(item.location)}
-                    <span className={styles.reason}>{item.detail}</span>
+                    <StructuredText className={styles.reason} text={item.detail} />
                   </li>
                 ))}
               </ul>
@@ -900,7 +915,9 @@ function ArchitectureView({
   }, [architecture, displayed, scheme, diagramKind, showingAreas]);
   return (
     <>
-      {architecture.summary && <p className={styles.mapSummary}>{architecture.summary}</p>}
+      {architecture.summary && (
+        <StructuredText className={styles.mapSummary} text={architecture.summary} />
+      )}
       {diagramKind === 'flowchart' && <FlowchartLegend />}
       {areas && (
         <fieldset className={styles.mapViews} aria-label={t('Map detail')}>
@@ -946,7 +963,9 @@ function ArchitectureView({
       />
       <details className={styles.mapDetails}>
         <summary>{t('Components and analysis scope')}</summary>
-        {architecture.scope && <p className={styles.muted}>{architecture.scope}</p>}
+        {architecture.scope && (
+          <StructuredText className={styles.muted} text={architecture.scope} />
+        )}
         {architecture.grouping === 'source-files' && (
           <p className={styles.muted}>
             {t(

@@ -67,6 +67,18 @@
 .finding[data-verdict="dismissed"] {
   color: var(--color-text-muted);
 }
+.check {
+  margin: 12px 0;
+  padding: 10px;
+  background: var(--color-bg-editor);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.check > strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--font-size-small);
+}
 .links,
 .selection {
   display: flex;
@@ -74,8 +86,21 @@
   flex-wrap: wrap;
   align-items: center;
 }
+.composer {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--color-bg-editor);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.composer h3 {
+  margin: 0 0 12px;
+  font-size: var(--font-size);
+}
 .verification {
-  margin-top: 14px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
 }
 .context {
   margin-top: 8px;

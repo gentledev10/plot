@@ -156,9 +156,6 @@
   stroke: color-mix(in srgb, var(--drawing-accent) 40%, var(--drawing-border));
   stroke-width: 1.2;
 }
-.nodeAccent {
-  fill: var(--drawing-accent);
-}
 .nodeText {
   fill: var(--drawing-ink);
   font-size: 15px;

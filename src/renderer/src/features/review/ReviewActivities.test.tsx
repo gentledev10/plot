@@ -74,6 +74,13 @@ describe('review questions UI', () => {
       selection: { path: 'src/a.ts', side: 'original', startLine: 2, endLine: 3 },
     });
   });
+  it('shows the question composer immediately without a disclosure toggle', async () => {
+    renderWithApi(<Harness />, { getReviewActivity: vi.fn().mockResolvedValue(idle) });
+    expect(screen.getByRole('heading', { name: 'Ask about this change' })).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'Your question' })).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'Your question' }).closest('details')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Ask AI' })).toBeDisabled();
+  });
   it('sends a question only after an explicit submit', async () => {
     const user = userEvent.setup();
     const askReview = vi.fn().mockResolvedValue(undefined);
@@ -88,6 +95,53 @@ describe('review questions UI', () => {
       question: 'What happens on timeout?',
       selection: undefined,
     });
+  });
+  it('structures saved answers and code review explanations without interpreting HTML', async () => {
+    const scope = {
+      head,
+      createdAt: new Date().toISOString(),
+      provider: 'codex',
+      providedPaths: [],
+      omittedPaths: [],
+      diffTruncated: false,
+    };
+    renderWithApi(<Harness />, {
+      getReviewActivity: vi.fn().mockResolvedValue({
+        ...idle,
+        questions: [
+          {
+            ...scope,
+            id: 'answer',
+            question: 'What retries?',
+            answer: '**Temporary failures** only.\n\n- Keep `event.id`\n- <script>unsafe</script>',
+            locations: [],
+          },
+        ],
+        verifications: [
+          {
+            ...scope,
+            summary: 'Inspection summary.\n\n- Bound the retries',
+            findings: [
+              {
+                id: 'finding',
+                title: 'Review **boundary**',
+                severity: 'medium',
+                reason: 'Check the limit.\n\n- Inspect `MAX_ATTEMPTS`',
+                check: '1. Read the guard\n2. Inspect exhaustion',
+                verdict: 'uncertain',
+                verificationReason: 'The boundary remains **uncertain**.',
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    expect((await screen.findByText('Temporary failures')).tagName).toBe('STRONG');
+    expect(screen.getByText('event.id').tagName).toBe('CODE');
+    expect(screen.getByText('MAX_ATTEMPTS').closest('li')).not.toBeNull();
+    expect(screen.getByText('Read the guard').closest('ol')).not.toBeNull();
+    expect(screen.getByText('uncertain').tagName).toBe('STRONG');
+    expect(document.querySelector('script')).toBeNull();
   });
   it('keeps independent AI support distinct from executed tests', async () => {
     const report = {

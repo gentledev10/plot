@@ -186,7 +186,7 @@ describe('ReviewPanel', () => {
     ]);
     expect(screen.getAllByTestId('diagram')).toHaveLength(1);
     expect(screen.getByText('Inference — check this')).toBeInTheDocument();
-    expect(screen.getByText('Check: Inspect the migration test')).toBeInTheDocument();
+    expect(screen.getByText('Inspect the migration test')).toBeInTheDocument();
     expect(screen.queryByText('Change 4')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Show 2 more' }));
     expect(screen.getByText('Change 4')).toBeInTheDocument();

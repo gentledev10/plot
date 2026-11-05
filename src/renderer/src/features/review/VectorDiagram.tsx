@@ -196,16 +196,6 @@ export function VectorDiagram({
                       filter={`url(#${id}-shadow)`}
                     />
                   )}
-                  {!flow && node.role !== 'app' && (
-                    <rect
-                      className={styles.nodeAccent}
-                      x={node.x + 1}
-                      y={node.y + 19}
-                      width="3"
-                      height={node.height - 38}
-                      rx="2"
-                    />
-                  )}
                   {showIcon && (
                     <>
                       <rect
